@@ -58,7 +58,8 @@ export const createMilkItems = (scene, walls, player) => {
 
     // Sound
     if (scene.soundManager) {
-      scene.soundManager.playFishSound();
+      // Use construct sound as placeholder for milk, or remove if silent
+      scene.soundManager.playConstructSound();
     }
 
     // +1 jump

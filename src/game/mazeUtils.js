@@ -117,17 +117,8 @@ export const createMaze = (scene, player) => {
     }
   }
 
+  // Fish collision is handled in healthUtils.js
   scene.physics.add.collider(player, walls);
-
-  scene.physics.add.overlap(player, fishes, (player, fish) => {
-    if (!scene.gameOverStarted) {
-      scene.soundManager.playFishSound();
-      scene.events.emit('changeHealth', GameConfig.FISH.HEAL_AMOUNT);
-      // fish 카운트 업데이트
-      scene.events.emit('collectFish');
-      fish.destroy();
-    }
-  });
 
   return { walls, fishes, worldWidth, worldHeight, centerX, centerY };
 };
