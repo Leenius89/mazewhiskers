@@ -24,6 +24,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.createAnimations();
     }
 
+    createAnimations() {
+        if (!this.scene.anims.exists('enemyWalk')) {
+            this.scene.anims.create({
+                key: 'enemyWalk',
+                frames: [
+                    { key: 'enemy1' },
+                    { key: 'enemy2' }
+                ],
+                frameRate: 4,
+                repeat: -1
+            });
+        }
+    }
+
     initProperties() {
         this.setScale(GameConfig.ENEMY.SCALE);
         this.setDepth(GameConfig.ENEMY.DEPTH);
@@ -116,7 +130,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             onComplete: () => {
                 this.isJumping = false;
                 shadow.destroy();
-                this.play('enemyWalk');
+                this.play('enemyWalk', true);
             }
         });
     }

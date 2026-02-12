@@ -10,6 +10,7 @@ export class AssetLoader {
         this.scene.load.image('building1', 'sources/building1.png');
         this.scene.load.image('building2', 'sources/building2.png');
         this.scene.load.image('building3', 'sources/building3.png');
+        this.scene.load.image('building4', 'sources/building4.png');
         this.scene.load.image('milk', 'sources/milk.png');
         this.scene.load.image('fish1', 'sources/fish1.png');
         this.scene.load.image('fish2', 'sources/fish2.png');
