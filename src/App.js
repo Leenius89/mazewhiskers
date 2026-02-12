@@ -184,24 +184,14 @@ function App() {
         setIsVictory(true);
         setShowGame(false);
       } else if (action === 'retry') {
-        // Same robust retry logic as restartGame
-        destroyGame();
-        setIsVictory(false);
-        setHealth(100);
-        healthRef.current = 100;
-        setIsGameOver(false);
-
-        // Force unmount -> remount
-        setShowGame(false);
-        setTimeout(() => {
-          setShowGame(true);
-        }, 100);
+        // Use the centralized restart function to ensure consistent behavior
+        restartGame();
       }
     };
 
     document.addEventListener('gameVictory', handleVictory);
     return () => document.removeEventListener('gameVictory', handleVictory);
-  }, [destroyGame]);
+  }, [restartGame]);
 
   const startGame = () => {
     setShowGame(true);

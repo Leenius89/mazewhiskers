@@ -144,12 +144,11 @@ export class GameScene extends Phaser.Scene {
 
         // Camera Pan Sequence
         const originalZoom = this.cameras.main.zoom;
-        this.cameras.main.stopFollow();
 
         // Debug enemy position
         console.log(`Enemy Spawned at: ${this.enemy.x}, ${this.enemy.y}`);
 
-        // Pan to Enemy
+        // Pan to Enemy (Phaser automatically stops following player when pan starts)
         this.cameras.main.pan(this.enemy.x, this.enemy.y, 1000, 'Power2');
         this.cameras.main.zoomTo(1.3, 1000);
 
