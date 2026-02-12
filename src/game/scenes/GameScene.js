@@ -131,7 +131,7 @@ export class GameScene extends Phaser.Scene {
 
     setupHealthSystem(this, player, fishes);
 
-    const spawnDelay = Phaser.Math.Between(16000, 20000);
+    const spawnDelay = Phaser.Math.Between(8000, 12000);
     this.time.delayedCall(spawnDelay, () => {
       if (!this.gameOverStarted) {
         // Enemy 클래스 사용
@@ -139,6 +139,11 @@ export class GameScene extends Phaser.Scene {
         this.enemy = new Enemy(this, this.player, worldWidth, worldHeight, this.maze);
         this.enemy.enemySound = this.soundManager.playEnemySound();
         this.enemySpawned = true;
+
+        // Add collider to prevent walking through walls, trigger jump on contact
+        this.physics.add.collider(this.enemy, this.walls, () => {
+          if (this.enemy) this.enemy.performJump();
+        });
 
         // Camera Pan Sequence
         const originalZoom = this.cameras.main.zoom;
@@ -149,17 +154,16 @@ export class GameScene extends Phaser.Scene {
         // this.input.enabled = false; 
 
         // Pan to Enemy
-        this.cameras.main.pan(this.enemy.x, this.enemy.y, 1000, 'Power2');
-        this.cameras.main.zoomTo(1.5, 1000);
+        this.cameras.main.pan(this.enemy.x, this.enemy.y, 500, 'Power2');
+        this.cameras.main.zoomTo(1.3, 500);
 
-        this.time.delayedCall(2000, () => {
+        this.time.delayedCall(1000, () => {
           // Pan back to Player
-          this.cameras.main.pan(this.player.x, this.player.y, 1000, 'Power2');
-          this.cameras.main.zoomTo(originalZoom, 1000);
+          this.cameras.main.pan(this.player.x, this.player.y, 500, 'Power2');
+          this.cameras.main.zoomTo(originalZoom, 500);
 
-          this.time.delayedCall(1000, () => {
+          this.time.delayedCall(500, () => {
             this.cameras.main.startFollow(this.player, true);
-            // this.input.enabled = true;
           });
         });
 

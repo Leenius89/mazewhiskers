@@ -22,6 +22,59 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.isJumping = false;
         this.lastDirection = 'right';
         this.speed = GameConfig.PLAYER.SPEED;
+
+        // Goal Indicator
+        this.goalIndicator = this.scene.add.graphics();
+        this.goalIndicator.setDepth(100); // UI layer
+    }
+
+    // ...
+
+    update(cursors) {
+        if (this.isJumping) {
+            this.updateGoalIndicator();
+            return;
+        }
+
+        this.handleMovement(cursors);
+        this.updateDepth();
+        this.updateGoalIndicator();
+    }
+
+    updateGoalIndicator() {
+        if (!this.scene.goal || !this.goalIndicator) return;
+
+        this.goalIndicator.clear();
+
+        const goal = this.scene.goal;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, goal.x, goal.y);
+        const distance = 60; // Distance from player
+
+        const arrowX = this.x + Math.cos(angle) * distance;
+        const arrowY = this.y + Math.sin(angle) * distance;
+
+        // Draw Arrow
+        this.goalIndicator.fillStyle(0xffff00, 1);
+        this.goalIndicator.lineStyle(2, 0x000000, 1);
+
+        // Save context to rotate
+        // Graphics rotation is around 0,0 (world). simpler to draw rotated geometry manually or use a container?
+        // Simple triangle pointing in direction
+
+        const size = 10;
+        // Tip of arrow
+        const p1 = { x: arrowX + Math.cos(angle) * size, y: arrowY + Math.sin(angle) * size };
+        // Back corners
+        const p2 = { x: arrowX + Math.cos(angle + 2.5) * size, y: arrowY + Math.sin(angle + 2.5) * size };
+        const p3 = { x: arrowX + Math.cos(angle - 2.5) * size, y: arrowY + Math.sin(angle - 2.5) * size };
+
+        this.goalIndicator.beginPath();
+        this.goalIndicator.moveTo(p1.x, p1.y);
+        this.goalIndicator.lineTo(p2.x, p2.y);
+        this.goalIndicator.lineTo(p3.x, p3.y);
+        this.goalIndicator.closePath();
+        this.goalIndicator.fill();
+        this.goalIndicator.strokePath();
     }
 
     initPhysics() {
@@ -57,6 +110,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(cursors) {
+        // Goal Indicator Update
+        this.updateGoalIndicator();
+
         if (this.isJumping) return;
 
         this.handleMovement(cursors);

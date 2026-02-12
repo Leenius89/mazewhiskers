@@ -12,7 +12,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         do {
             x = Phaser.Math.Between(0, worldWidth);
             y = Phaser.Math.Between(0, worldHeight);
+
+            // Check if valid grid position
+            const gridX = Math.floor(x / (GameConfig.TILE_SIZE * GameConfig.SPACING));
+            const gridY = Math.floor(y / (GameConfig.TILE_SIZE * GameConfig.SPACING));
+
+            let validPosition = true;
+            if (this.mazeGrid) {
+                if (gridY >= 0 && gridY < this.mazeGrid.length &&
+                    gridX >= 0 && gridX < this.mazeGrid[0].length) {
+                    if (this.mazeGrid[gridY][gridX] === 1) {
+                        validPosition = false;
+                    }
+                }
+            }
+
             attempts++;
+            if (!validPosition) continue;
+
         } while (Phaser.Math.Distance.Between(x, y, player.x, player.y) < minDistance && attempts < 100);
 
         if (attempts >= 100) {

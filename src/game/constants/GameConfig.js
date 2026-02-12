@@ -24,7 +24,7 @@ export const GameConfig = {
         SPEED: 80,
         JUMP: {
             HEIGHT: 120,
-            DISTANCE: 160,
+            DISTANCE: 200,
             DURATION: 800
         },
         DEPTH: 15,
