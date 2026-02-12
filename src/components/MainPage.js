@@ -195,7 +195,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
         </motion.div>
 
         {/* Start Button */}
-        {showButton && !showTutorial && (
+        {showButton && (
           <div style={{
             position: 'fixed',
             bottom: isMobile ? '15%' : '20%',
@@ -237,86 +237,15 @@ const MainPage = ({ onStartGame, gameSize }) => {
                 boxShadow: '2px 2px 0px #8b0000',
               }}
               onClick={() => {
-                setShowTutorial(true);
-              }}
-            >
-              GAME START
-            </motion.button>
-          </div>
-        )}
-
-        {/* Tutorial Overlay */}
-        {showTutorial && (
-          <motion.div
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '90%',
-              maxWidth: '600px',
-              backgroundColor: 'rgba(0, 0, 0, 0.9)',
-              border: '4px solid #ffffff',
-              padding: '20px',
-              color: 'white',
-              fontFamily: "'Press Start 2P', cursive",
-              zIndex: 10,
-              fontSize: isMobile ? '0.8rem' : '1rem',
-              lineHeight: '1.5',
-              textAlign: 'center'
-            }}
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-          >
-            <h2 style={{ color: '#ffff00', marginBottom: '20px' }}>HOW TO PLAY</h2>
-
-            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-              <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>CONTROLS</h3>
-              {isMobile ? (
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li>🕹️ Joystick: Move</li>
-                  <li>🔴 Button: Jump</li>
-                </ul>
-              ) : (
-                <ul style={{ listStyle: 'none', padding: 0 }}>
-                  <li>⬆️⬇️⬅️➡️ Arrow Keys: Move</li>
-                  <li>SPACE Bar: Jump</li>
-                </ul>
-              )}
-            </div>
-
-            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-              <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>RULES</h3>
-              <ul style={{ listStyle: 'none', padding: 0 }}>
-                <li style={{ marginBottom: '10px' }}>❤️ Health drops over time!</li>
-                <li style={{ marginBottom: '10px' }}>🐟 Eat FISH to Heal (+20)</li>
-                <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Double Jumps</li>
-              </ul>
-            </div>
-
-            <motion.button
-              style={{
-                backgroundColor: '#00ff00',
-                color: 'black',
-                border: '4px solid #004d00',
-                padding: '10px 30px',
-                fontSize: '1.2rem',
-                fontFamily: "'Press Start 2P', cursive",
-                cursor: 'pointer',
-                marginTop: '10px'
-              }}
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={() => {
                 if (audioRef.current) {
                   audioRef.current.pause();
                 }
                 onStartGame();
               }}
             >
-              GO!
+              GAME START
             </motion.button>
-          </motion.div>
+          </div>
         )}
       </div>
     </div>

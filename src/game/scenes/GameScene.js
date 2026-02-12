@@ -86,6 +86,7 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('collectFish', currentCount + 1);
     });
 
+    const centerPosX = centerX * this.tileSize * this.spacing;
     const centerPosY = centerY * this.tileSize * this.spacing;
     this.goal = createGoal(this, player, centerPosX, centerPosY);
 
