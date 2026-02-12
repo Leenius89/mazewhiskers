@@ -198,6 +198,7 @@ function App() {
             restartGame={restartGame}
             health={health}
             jumpCount={jumpCount}
+            milkCount={milkCount}
             gameSize={gameSize}
           />
           <div

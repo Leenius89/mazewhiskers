@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, player, worldWidth, worldHeight) {
+    constructor(scene, player, worldWidth, worldHeight, maze) {
+        this.mazeGrid = maze;
         // 초기 위치는 랜덤 결정 (안전한 거리 확보)
         let x, y;
         const minDistance = GameConfig.ENEMY.SPAWN.MIN_DISTANCE;
@@ -77,10 +78,24 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const hitbox = new Phaser.Geom.Rectangle(lookX - 16, lookY - 16, 32, 32);
 
         let wallAhead = false;
-        if (this.scene.walls) {
-            wallAhead = this.scene.walls.getChildren().some(wall =>
-                Phaser.Geom.Rectangle.Overlaps(hitbox, wall.getBounds())
-            );
+
+        if (this.mazeGrid) {
+            const tileSize = GameConfig.TILE_SIZE;
+            const spacing = GameConfig.SPACING;
+            const totalTileSize = tileSize * spacing;
+
+            // Check center point of LookAhead hitbox
+            // Simply check the tile at lookX, lookY
+            const gridX = Math.floor(lookX / totalTileSize);
+            const gridY = Math.floor(lookY / totalTileSize);
+
+            // Check bounds
+            if (gridY >= 0 && gridY < this.mazeGrid.length &&
+                gridX >= 0 && gridX < this.mazeGrid[0].length) {
+                if (this.mazeGrid[gridY][gridX] === 1) {
+                    wallAhead = true;
+                }
+            }
         }
 
         if (wallAhead) {

@@ -39,7 +39,8 @@ export class GameScene extends Phaser.Scene {
     // Player 클래스 사용
     const player = new Player(this, 100, 100);
 
-    const { walls, fishes, worldWidth, worldHeight, centerX, centerY } = createMaze(this, player);
+    const { walls, fishes, worldWidth, worldHeight, centerX, centerY, maze } = createMaze(this, player);
+    this.maze = maze;
 
     // 플레이어 위치를 시작 지점으로 이동
     player.setPosition(this.tileSize * this.spacing, this.tileSize * this.spacing);
@@ -134,9 +135,36 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(spawnDelay, () => {
       if (!this.gameOverStarted) {
         // Enemy 클래스 사용
-        this.enemy = new Enemy(this, this.player, worldWidth, worldHeight);
+        // Pass maze grid to Enemy for optimized collision
+        this.enemy = new Enemy(this, this.player, worldWidth, worldHeight, this.maze);
         this.enemy.enemySound = this.soundManager.playEnemySound();
         this.enemySpawned = true;
+
+        // Camera Pan Sequence
+        const originalZoom = this.cameras.main.zoom;
+        const originalScrollX = this.cameras.main.scrollX;
+        const originalScrollY = this.cameras.main.scrollY;
+
+        // Pause player input during cutscene (optional, keeps game flow smooth)
+        // this.input.enabled = false; 
+
+        // Pan to Enemy
+        this.cameras.main.pan(this.enemy.x, this.enemy.y, 1000, 'Power2');
+        this.cameras.main.zoomTo(1.5, 1000);
+
+        this.time.delayedCall(2000, () => {
+          // Pan back to Player
+          this.cameras.main.pan(this.player.x, this.player.y, 1000, 'Power2');
+          this.cameras.main.zoomTo(originalZoom, 1000);
+
+          this.time.delayedCall(1000, () => {
+            this.cameras.main.startFollow(this.player, true);
+            // this.input.enabled = true;
+          });
+        });
+
+        // Stop following player during pan
+        this.cameras.main.stopFollow();
 
         this.physics.add.overlap(this.player, this.enemy, () => {
           if (!this.gameOverStarted) {
