@@ -7,10 +7,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         let x, y;
         const minDistance = GameConfig.ENEMY.SPAWN.MIN_DISTANCE;
 
+        let attempts = 0;
         do {
             x = Phaser.Math.Between(0, worldWidth);
             y = Phaser.Math.Between(0, worldHeight);
-        } while (Phaser.Math.Distance.Between(x, y, player.x, player.y) < minDistance);
+            attempts++;
+        } while (Phaser.Math.Distance.Between(x, y, player.x, player.y) < minDistance && attempts < 100);
+
+        if (attempts >= 100) {
+            console.warn("Could not find suitable spawn location for enemy");
+            // Default to far corner
+            x = 0;
+            y = 0;
+        }
 
         super(scene, x, y, 'enemy1');
 

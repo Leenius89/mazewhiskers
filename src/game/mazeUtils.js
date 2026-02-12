@@ -65,7 +65,7 @@ export const createMaze = (scene, player) => {
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
       if (maze[y][x] === 1) {
-        const buildingType = Phaser.Math.Between(1, 4);
+        const buildingType = Phaser.Math.Between(1, 3);
         const wall = walls.create(x * tileSize * spacing, y * tileSize * spacing, `building${buildingType}`);
 
         // 이미지 크기에 따라 스케일 동적 계산 (타일 크기에 맞춤)
