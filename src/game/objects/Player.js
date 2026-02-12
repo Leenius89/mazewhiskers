@@ -5,11 +5,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, x, y) {
         super(scene, x, y, 'cat1');
 
-        // 씬에 추가
+        // Add to scene
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // 속성 초기화
+        // Initialize
         this.initProperties();
         this.initPhysics();
         this.createAnimations();
@@ -23,69 +23,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.lastDirection = 'right';
         this.speed = GameConfig.PLAYER.SPEED;
 
-        // Goal Indicator
+        // Goal Indicator arrow
         this.goalIndicator = this.scene.add.graphics();
-        this.goalIndicator.setDepth(100); // UI layer
-    }
-
-    // ...
-
-    update(cursors) {
-        if (this.isJumping) {
-            this.updateGoalIndicator();
-            return;
-        }
-
-        this.handleMovement(cursors);
-        this.updateDepth();
-        this.updateGoalIndicator();
-    }
-
-    updateGoalIndicator() {
-        if (!this.scene.goal || !this.goalIndicator) return;
-
-        this.goalIndicator.clear();
-
-        const goal = this.scene.goal;
-        const angle = Phaser.Math.Angle.Between(this.x, this.y, goal.x, goal.y);
-        const distance = 60; // Distance from player
-
-        const arrowX = this.x + Math.cos(angle) * distance;
-        const arrowY = this.y + Math.sin(angle) * distance;
-
-        // Draw Arrow
-        this.goalIndicator.fillStyle(0xffff00, 1);
-        this.goalIndicator.lineStyle(2, 0x000000, 1);
-
-        // Save context to rotate
-        // Graphics rotation is around 0,0 (world). simpler to draw rotated geometry manually or use a container?
-        // Simple triangle pointing in direction
-
-        const size = 10;
-        // Tip of arrow
-        const p1 = { x: arrowX + Math.cos(angle) * size, y: arrowY + Math.sin(angle) * size };
-        // Back corners
-        const p2 = { x: arrowX + Math.cos(angle + 2.5) * size, y: arrowY + Math.sin(angle + 2.5) * size };
-        const p3 = { x: arrowX + Math.cos(angle - 2.5) * size, y: arrowY + Math.sin(angle - 2.5) * size };
-
-        this.goalIndicator.beginPath();
-        this.goalIndicator.moveTo(p1.x, p1.y);
-        this.goalIndicator.lineTo(p2.x, p2.y);
-        this.goalIndicator.lineTo(p3.x, p3.y);
-        this.goalIndicator.closePath();
-        this.goalIndicator.fill();
-        this.goalIndicator.strokePath();
+        this.goalIndicator.setDepth(100);
     }
 
     initPhysics() {
         this.setCollideWorldBounds(true);
 
-        // 히트박스 조정
         const imageWidth = this.width * this.scaleX;
         const imageHeight = this.height * this.scaleY;
         this.body.setSize(imageWidth, imageHeight);
         this.body.setOffset((this.width - imageWidth) / 2, (this.height - imageHeight) / 2);
     }
+
     createAnimations() {
         if (!this.scene.anims.exists('walk')) {
             this.scene.anims.create({
@@ -110,7 +61,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     update(cursors) {
-        // Goal Indicator Update
+        // Always update goal indicator
         this.updateGoalIndicator();
 
         if (this.isJumping) return;
@@ -151,7 +102,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.setTexture('cat1');
         }
 
-        // 방향 전환
+        // Flip direction
         if (this.body.velocity.x < 0) {
             this.setFlipX(true);
         } else if (this.body.velocity.x > 0) {
@@ -163,12 +114,44 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setDepth(this.y);
     }
 
+    updateGoalIndicator() {
+        if (!this.scene.goal || !this.goalIndicator) return;
+
+        this.goalIndicator.clear();
+
+        const goal = this.scene.goal;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, goal.x, goal.y);
+        const dist = 60; // Distance from player center
+
+        const arrowX = this.x + Math.cos(angle) * dist;
+        const arrowY = this.y + Math.sin(angle) * dist;
+
+        // Yellow arrow triangle
+        this.goalIndicator.fillStyle(0xffff00, 0.9);
+        this.goalIndicator.lineStyle(2, 0x000000, 0.8);
+
+        const size = 12;
+        // Tip of arrow
+        const p1x = arrowX + Math.cos(angle) * size;
+        const p1y = arrowY + Math.sin(angle) * size;
+        // Back corners (120 degrees apart)
+        const p2x = arrowX + Math.cos(angle + 2.5) * size;
+        const p2y = arrowY + Math.sin(angle + 2.5) * size;
+        const p3x = arrowX + Math.cos(angle - 2.5) * size;
+        const p3y = arrowY + Math.sin(angle - 2.5) * size;
+
+        this.goalIndicator.beginPath();
+        this.goalIndicator.moveTo(p1x, p1y);
+        this.goalIndicator.lineTo(p2x, p2y);
+        this.goalIndicator.lineTo(p3x, p3y);
+        this.goalIndicator.closePath();
+        this.goalIndicator.fill();
+        this.goalIndicator.strokePath();
+    }
+
     jump() {
         if (this.isJumping || this.jumpCount <= 0) return false;
 
-        // 벽 체크 로직은 Scene에서 Wall Group 접근이 필요하므로,
-        // 충돌 체크는 Scene이나 별도 메서드로 분리하는게 좋지만,
-        // 여기서는 간단히 Scene의 walls에 접근한다고 가정합니다.
         if (!this.checkWallAhead()) return false;
 
         return this.performJump();
@@ -180,14 +163,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const lookX = this.x + Math.cos(angle) * lookAheadDist;
         const lookY = this.y + Math.sin(angle) * lookAheadDist;
 
-        const bounds = new Phaser.Geom.Rectangle(lookX - 16, lookY - 16, 32, 32);
+        // Use maze grid for O(1) check instead of iterating all walls
+        if (this.scene.maze) {
+            const tileUnit = GameConfig.TILE_SIZE * GameConfig.SPACING;
+            const gridX = Math.floor(lookX / tileUnit);
+            const gridY = Math.floor(lookY / tileUnit);
 
-        // Scene의 walls 그룹에 접근 (GameScene에서 this.walls로 저장해뒀다고 가정)
-        if (!this.scene.walls) return false;
-
-        return this.scene.walls.getChildren().some(wall =>
-            Phaser.Geom.Rectangle.Overlaps(bounds, wall.getBounds())
-        );
+            if (gridY >= 0 && gridY < this.scene.maze.length &&
+                gridX >= 0 && gridX < this.scene.maze[0].length) {
+                return this.scene.maze[gridY][gridX] === 1;
+            }
+        }
+        return false;
     }
 
     performJump() {
@@ -208,7 +195,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         const targetX = this.x + Math.cos(angle) * jumpDistance;
         const targetY = this.y + Math.sin(angle) * jumpDistance;
 
-        // 그림자
+        // Shadow
         const shadow = this.scene.add.ellipse(this.x, this.y + 5, 40, 10, 0x000000, 0.3);
         shadow.setDepth(this.depth - 1);
 

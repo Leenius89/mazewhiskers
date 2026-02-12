@@ -147,11 +147,6 @@ export class GameScene extends Phaser.Scene {
 
         // Camera Pan Sequence
         const originalZoom = this.cameras.main.zoom;
-        const originalScrollX = this.cameras.main.scrollX;
-        const originalScrollY = this.cameras.main.scrollY;
-
-        // Pause player input during cutscene (optional, keeps game flow smooth)
-        // this.input.enabled = false; 
 
         // Pan to Enemy
         this.cameras.main.pan(this.enemy.x, this.enemy.y, 500, 'Power2');

@@ -3,46 +3,56 @@ import { GameConfig } from '../constants/GameConfig';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     constructor(scene, player, worldWidth, worldHeight, maze) {
-        this.mazeGrid = maze;
-        // 초기 위치는 랜덤 결정 (안전한 거리 확보)
+        // Calculate spawn position BEFORE super() (cannot use `this` yet)
         let x, y;
         const minDistance = GameConfig.ENEMY.SPAWN.MIN_DISTANCE;
+        const tileUnit = GameConfig.TILE_SIZE * GameConfig.SPACING;
 
         let attempts = 0;
-        do {
+        let found = false;
+        while (attempts < 100) {
             x = Phaser.Math.Between(0, worldWidth);
             y = Phaser.Math.Between(0, worldHeight);
 
-            // Check if valid grid position
-            const gridX = Math.floor(x / (GameConfig.TILE_SIZE * GameConfig.SPACING));
-            const gridY = Math.floor(y / (GameConfig.TILE_SIZE * GameConfig.SPACING));
+            // Check if position is in empty space (not a wall)
+            const gridX = Math.floor(x / tileUnit);
+            const gridY = Math.floor(y / tileUnit);
 
             let validPosition = true;
-            if (this.mazeGrid) {
-                if (gridY >= 0 && gridY < this.mazeGrid.length &&
-                    gridX >= 0 && gridX < this.mazeGrid[0].length) {
-                    if (this.mazeGrid[gridY][gridX] === 1) {
+            if (maze) {
+                if (gridY >= 0 && gridY < maze.length &&
+                    gridX >= 0 && gridX < maze[0].length) {
+                    if (maze[gridY][gridX] === 1) {
                         validPosition = false;
                     }
+                } else {
+                    validPosition = false;
                 }
             }
 
             attempts++;
             if (!validPosition) continue;
 
-        } while (Phaser.Math.Distance.Between(x, y, player.x, player.y) < minDistance && attempts < 100);
-
-        if (attempts >= 100) {
-            console.warn("Could not find suitable spawn location for enemy");
-            // Default to far corner
-            x = 0;
-            y = 0;
+            // Check distance from player
+            if (Phaser.Math.Distance.Between(x, y, player.x, player.y) >= minDistance) {
+                found = true;
+                break;
+            }
         }
 
+        if (!found) {
+            console.warn("Could not find suitable spawn location for enemy after 100 attempts");
+            x = worldWidth - 100;
+            y = worldHeight - 100;
+        }
+
+        // NOW call super() with the calculated position
         super(scene, x, y, 'enemy1');
 
+        // Store references AFTER super()
         this.scene = scene;
         this.player = player;
+        this.mazeGrid = maze;
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
@@ -63,6 +73,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 repeat: -1
             });
         }
+        this.play('enemyWalk', true);
     }
 
     initProperties() {
@@ -73,11 +84,14 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const imageWidth = this.width * this.scaleX;
         const imageHeight = this.height * this.scaleY;
-        const hitboxScale = GameConfig.ENEMY.HITBOX_SCALE;
+        const hitboxScale = GameConfig.ENEMY.HITBOX_SCALE || 1;
         this.body.setSize(imageWidth * hitboxScale, imageHeight * hitboxScale);
-        this.body.setOffset((this.width - imageWidth * hitboxScale) / 2, (this.height - imageHeight * hitboxScale) / 2);
+        this.body.setOffset(
+            (this.width - imageWidth * hitboxScale) / 2,
+            (this.height - imageHeight * hitboxScale) / 2
+        );
     }
-    // ...
+
     update() {
         if (!this.active || this.isJumping) return;
 
@@ -86,27 +100,20 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     handleMovement() {
-        // 벽 감지 및 점프 판단
+        // Move directly towards player (shortest path, jump over walls)
         const angle = Phaser.Math.Angle.Between(this.x, this.y, this.player.x, this.player.y);
+        const tileUnit = GameConfig.TILE_SIZE * GameConfig.SPACING;
+
+        // Check ahead for walls
         const lookAheadDist = GameConfig.ENEMY.LOOK_AHEAD_DIST;
         const lookX = this.x + Math.cos(angle) * lookAheadDist;
         const lookY = this.y + Math.sin(angle) * lookAheadDist;
 
-        const hitbox = new Phaser.Geom.Rectangle(lookX - 16, lookY - 16, 32, 32);
-
         let wallAhead = false;
-
         if (this.mazeGrid) {
-            const tileSize = GameConfig.TILE_SIZE;
-            const spacing = GameConfig.SPACING;
-            const totalTileSize = tileSize * spacing;
+            const gridX = Math.floor(lookX / tileUnit);
+            const gridY = Math.floor(lookY / tileUnit);
 
-            // Check center point of LookAhead hitbox
-            // Simply check the tile at lookX, lookY
-            const gridX = Math.floor(lookX / totalTileSize);
-            const gridY = Math.floor(lookY / totalTileSize);
-
-            // Check bounds
             if (gridY >= 0 && gridY < this.mazeGrid.length &&
                 gridX >= 0 && gridX < this.mazeGrid[0].length) {
                 if (this.mazeGrid[gridY][gridX] === 1) {
@@ -120,13 +127,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // 일반 이동
+        // Normal movement towards player
         const velocityX = Math.cos(angle) * this.speed;
         const velocityY = Math.sin(angle) * this.speed;
-
         this.setVelocity(velocityX, velocityY);
 
-        // 방향 전환
+        // Flip sprite based on direction
         if (velocityX < 0) {
             this.setFlipX(true);
         } else if (velocityX > 0) {
@@ -138,7 +144,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isJumping) return;
 
         this.isJumping = true;
-        this.anims.stop();
         this.setVelocity(0, 0);
 
         const jumpDuration = GameConfig.ENEMY.JUMP.DURATION;
@@ -151,7 +156,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const endX = startX + Math.cos(angle) * jumpDistance;
         const endY = startY + Math.sin(angle) * jumpDistance;
 
-        // 그림자
+        // Shadow
         const shadow = this.scene.add.ellipse(this.x, this.y + 5, 40, 10, 0x000000, 0.3);
         shadow.setDepth(this.depth - 1);
 

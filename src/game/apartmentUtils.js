@@ -13,6 +13,8 @@ export class ApartmentSystem {
     this.wallScale = GameConfig.APARTMENT.WALL_SCALE;
     this.isGameOver = false;
     this.baseDepth = GameConfig.APARTMENT.BASE_DEPTH;
+    // O(1) position tracking
+    this.occupiedPositions = new Set();
 
     // 각 방향별 현재 진행 상태
     this.progress = {
@@ -140,12 +142,14 @@ export class ApartmentSystem {
     this.checkGameOver();
   }
 
+  _posKey(x, y) {
+    // Round to grid for O(1) lookup
+    const unit = this.tileSize * this.spacing;
+    return `${Math.round(x / unit)},${Math.round(y / unit)}`;
+  }
+
   isPositionOccupied(x, y) {
-    const tolerance = this.tileSize * this.spacing * 0.8; // 약간의 여유 허용
-    return this.apartments.getChildren().some(apartment => {
-      const distance = Phaser.Math.Distance.Between(x, y, apartment.x, apartment.y);
-      return distance < tolerance;
-    });
+    return this.occupiedPositions.has(this._posKey(x, y));
   }
 
   createApartment(xPos, yPos, index, dust, direction) {
@@ -154,6 +158,9 @@ export class ApartmentSystem {
       dust.destroy();
       return;
     }
+
+    // Mark position as occupied
+    this.occupiedPositions.add(this._posKey(xPos, yPos));
 
     const apartmentType = Phaser.Math.Between(1, 3);
     const apartment = this.apartments.create(xPos, yPos, `apt${apartmentType}`);
@@ -181,12 +188,15 @@ export class ApartmentSystem {
   }
 
   removeExistingWalls(x, y) {
+    // Only check walls within a reasonable distance
+    const threshold = this.tileSize * this.spacing;
     const walls = this.scene.walls.getChildren();
-    walls.forEach(wall => {
-      if (Math.abs(wall.x - x) < this.tileSize && Math.abs(wall.y - y) < this.tileSize) {
+    for (let i = walls.length - 1; i >= 0; i--) {
+      const wall = walls[i];
+      if (wall.active && Math.abs(wall.x - x) < threshold && Math.abs(wall.y - y) < threshold) {
         wall.destroy();
       }
-    });
+    }
   }
 
   checkCollisions(apartment) {
