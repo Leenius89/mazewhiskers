@@ -34,6 +34,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // Prevent duplicate BGM by stopping all previous sounds
+    this.sound.stopAll();
     this.soundManager.playMainBGM();
 
     // Player 클래스 사용

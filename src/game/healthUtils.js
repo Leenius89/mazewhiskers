@@ -18,6 +18,7 @@ export const setupHealthSystem = (scene, player, fishes) => {
     if (scene.gameOverStarted) return;
 
     // Heal HP via game event bus (reaches App.js)
+    console.log('Fish eaten. Emitting changeHealth:', GameConfig.FISH.HEAL_AMOUNT);
     scene.game.events.emit('changeHealth', GameConfig.FISH.HEAL_AMOUNT);
 
     // Sound

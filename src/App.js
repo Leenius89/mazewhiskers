@@ -78,6 +78,7 @@ function App() {
   const handleHealthChange = useCallback((amount) => {
     setHealth(prevHealth => {
       const newHealth = Math.max(0, Math.min(prevHealth + amount, 100));
+      console.log(`Health Update: ${prevHealth} -> ${newHealth} (Amount: ${amount})`);
       healthRef.current = newHealth;
       return newHealth;
     });
