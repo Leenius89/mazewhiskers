@@ -142,21 +142,25 @@ export class GameScene extends Phaser.Scene {
           if (this.enemy && !this.enemy.isJumping) this.enemy.performJump();
         });
 
-        // Camera Pan Sequence — MUST stopFollow BEFORE panning!
+        // Camera Pan Sequence
         const originalZoom = this.cameras.main.zoom;
-        this.cameras.main.stopFollow();  // Stop following player FIRST
+        this.cameras.main.stopFollow();
 
-        // Pan to Enemy location
-        this.cameras.main.pan(this.enemy.x, this.enemy.y, 500, 'Power2');
-        this.cameras.main.zoomTo(1.3, 500);
+        // Debug enemy position
+        console.log(`Enemy Spawned at: ${this.enemy.x}, ${this.enemy.y}`);
 
-        this.time.delayedCall(1200, () => {
+        // Pan to Enemy
+        this.cameras.main.pan(this.enemy.x, this.enemy.y, 1000, 'Power2');
+        this.cameras.main.zoomTo(1.3, 1000);
+
+        this.time.delayedCall(2000, () => {
           if (this.gameOverStarted) return;
-          // Pan back to Player
-          this.cameras.main.pan(this.player.x, this.player.y, 500, 'Power2');
-          this.cameras.main.zoomTo(originalZoom, 500);
 
-          this.time.delayedCall(600, () => {
+          // Pan back to Player
+          this.cameras.main.pan(this.player.x, this.player.y, 1000, 'Power2');
+          this.cameras.main.zoomTo(originalZoom, 1000);
+
+          this.time.delayedCall(1000, () => {
             if (!this.gameOverStarted) {
               this.cameras.main.startFollow(this.player, true);
             }

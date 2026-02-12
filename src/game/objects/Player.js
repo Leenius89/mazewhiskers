@@ -150,6 +150,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     jump() {
+        console.log(`Jump Requested. Jumping: ${this.isJumping}, Count: ${this.jumpCount}`);
         if (this.isJumping || this.jumpCount <= 0) return false;
         return this.performJump();
     }

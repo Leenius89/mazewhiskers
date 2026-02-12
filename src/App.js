@@ -209,7 +209,10 @@ function App() {
   };
 
   const restartGame = () => {
-    // Reset React state
+    // 1. Destroy and cleanup
+    destroyGame();
+
+    // 2. Reset local state
     setIsGameOver(false);
     setHealth(100);
     healthRef.current = 100;
@@ -217,27 +220,11 @@ function App() {
     setFishCount(0);
     setJumpCount(0);
 
-    if (game.current) {
-      // Re-register game-level event listeners (shutdown() clears them)
-      game.current.events.off('changeHealth');
-      game.current.events.on('changeHealth', (amount) => {
-        handleHealthChange(amount);
-        setTimeout(() => {
-          if (healthRef.current <= 0) {
-            const scene = game.current?.scene?.scenes?.[0];
-            if (scene && !scene.gameOverStarted) {
-              scene.gameOverAnimation();
-            }
-          }
-        }, 50);
-      });
-
-      // Stop and restart the scene (keeps canvas alive, no grey screen)
-      const scene = game.current.scene.getScene('GameScene');
-      if (scene) {
-        scene.scene.restart();
-      }
-    }
+    // 3. Force Unmount -> Remount to ensure fresh DOM and Phaser instance
+    setShowGame(false);
+    setTimeout(() => {
+      setShowGame(true);
+    }, 100);
   };
 
   return (
