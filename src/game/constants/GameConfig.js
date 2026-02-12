@@ -3,7 +3,7 @@ export const GameConfig = {
     TILE_SIZE: 64,
     SPACING: 1.5,
     MAZE_SIZE: 41,
-    WALL_SCALE: 0.1,
+    WALL_SCALE: 0.5,
 
     // Player
     PLAYER: {

@@ -98,6 +98,9 @@ export class GameScene extends Phaser.Scene {
 
     this.game.events.on('resumeGame', () => {
       this.scene.resume();
+      this.physics.resume();
+      this.input.keyboard.enabled = true;
+      this.input.enabled = true;
       if (this.soundManager) this.soundManager.playMainBGM(); // BGM 재개
     });
 
@@ -142,6 +145,9 @@ export class GameScene extends Phaser.Scene {
         });
       }
     });
+
+    // 게임 준비 완료 이벤트 발송
+    this.game.events.emit('gameReady');
   }
 
   setupMobileControls(player) {

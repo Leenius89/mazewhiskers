@@ -24,13 +24,22 @@ function App() {
   const [showTutorial, setShowTutorial] = useState(false);
 
   useEffect(() => {
-    if (showGame && showTutorial && game.current) {
-      // 게임 루프가 시작된 후 잠시 대기했다가 일시정지
-      setTimeout(() => {
-        game.current.events.emit('pauseGame');
-      }, 100);
+    if (game.current) {
+      const pauseHandler = () => {
+        if (showTutorial) {
+          game.current.events.emit('pauseGame');
+        }
+      };
+
+      game.current.events.on('gameReady', pauseHandler);
+
+      return () => {
+        if (game.current) {
+          game.current.events.off('gameReady', pauseHandler);
+        }
+      };
     }
-  }, [showGame, showTutorial]);
+  }, [showTutorial]);
 
   useEffect(() => {
     const handleResize = () => {
