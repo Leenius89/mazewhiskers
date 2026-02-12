@@ -6,6 +6,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
   const [showTitle, setShowTitle] = useState(false);
   const [cameraPosition, setCameraPosition] = useState(0);
   const [showStartScreen, setShowStartScreen] = useState(true);
+  const [showTutorial, setShowTutorial] = useState(false);
   const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
   const audioRef = useRef(null);
 
@@ -15,9 +16,9 @@ const MainPage = ({ onStartGame, gameSize }) => {
       audioRef.current.loop = true;
       audioRef.current.volume = 0.5;
       await audioRef.current.play();
-      
+
       setShowStartScreen(false);
-      
+
       setTimeout(() => {
         setCameraPosition(1);
         setTimeout(() => {
@@ -63,7 +64,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
             padding: '20px',
             fontSize: isMobile ? '18px' : '24px'
           }}
-          animate={{ 
+          animate={{
             opacity: [0, 1, 1, 0],
           }}
           transition={{
@@ -80,18 +81,18 @@ const MainPage = ({ onStartGame, gameSize }) => {
   }
 
   return (
-    <div style={{ 
+    <div style={{
       width: '100%',
-      height: '100vh', 
+      height: '100vh',
       display: 'flex',
       justifyContent: 'center',
       backgroundColor: '#2d3748',
       overflow: 'hidden'
     }}>
-      <div style={{ 
-        width: gameSize.width, 
-        height: '100%', 
-        position: 'relative', 
+      <div style={{
+        width: gameSize.width,
+        height: '100%',
+        position: 'relative',
         overflow: 'hidden'
       }}>
         {/* Background */}
@@ -106,14 +107,14 @@ const MainPage = ({ onStartGame, gameSize }) => {
           }}
           initial={{ y: "-50%" }}
           animate={{ y: "0%" }}
-          transition={{ 
+          transition={{
             duration: 4,
             ease: "linear"
           }}
         >
-          <img 
-            src="/sources/main.png" 
-            alt="Background" 
+          <img
+            src="/sources/main.png"
+            alt="Background"
             style={{
               width: '100%',
               height: '100%',
@@ -137,7 +138,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
             justifyContent: 'center',
             alignItems: 'center'
           }}
-          animate={{ 
+          animate={{
             x: [0, 10, 0, -10, 0],
             y: [0, -10, 0, -10, 0]
           }}
@@ -160,7 +161,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
               padding: '0 20px'
             }}
             initial={{ opacity: 0 }}
-            animate={{ 
+            animate={{
               opacity: showTitle ? 1 : 0,
               color: [
                 '#000000',
@@ -195,7 +196,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
         </motion.div>
 
         {/* Start Button */}
-        {showButton && (
+        {showButton && !showTutorial && (
           <div style={{
             position: 'fixed',
             bottom: isMobile ? '15%' : '20%',
@@ -227,7 +228,7 @@ const MainPage = ({ onStartGame, gameSize }) => {
                 type: "steps",
                 steps: 5
               }}
-              whileHover={{ 
+              whileHover={{
                 y: -2,
                 boxShadow: '8px 8px 0px #8b0000',
                 transition: { duration: 0.1 }
@@ -237,15 +238,86 @@ const MainPage = ({ onStartGame, gameSize }) => {
                 boxShadow: '2px 2px 0px #8b0000',
               }}
               onClick={() => {
+                setShowTutorial(true);
+              }}
+            >
+              GAME START
+            </motion.button>
+          </div>
+        )}
+
+        {/* Tutorial Overlay */}
+        {showTutorial && (
+          <motion.div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '600px',
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              border: '4px solid #ffffff',
+              padding: '20px',
+              color: 'white',
+              fontFamily: "'Press Start 2P', cursive",
+              zIndex: 10,
+              fontSize: isMobile ? '0.8rem' : '1rem',
+              lineHeight: '1.5',
+              textAlign: 'center'
+            }}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+          >
+            <h2 style={{ color: '#ffff00', marginBottom: '20px' }}>HOW TO PLAY</h2>
+
+            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+              <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>CONTROLS</h3>
+              {isMobile ? (
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li>🕹️ Joystick: Move</li>
+                  <li>🔴 Button: Jump</li>
+                </ul>
+              ) : (
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li>⬆️⬇️⬅️➡️ Arrow Keys: Move</li>
+                  <li>SPACE Bar: Jump</li>
+                </ul>
+              )}
+            </div>
+
+            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+              <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>RULES</h3>
+              <ul style={{ listStyle: 'none', padding: 0 }}>
+                <li style={{ marginBottom: '10px' }}>❤️ Health drops over time!</li>
+                <li style={{ marginBottom: '10px' }}>🐟 Eat FISH to Heal (+20)</li>
+                <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Double Jumps</li>
+              </ul>
+            </div>
+
+            <motion.button
+              style={{
+                backgroundColor: '#00ff00',
+                color: 'black',
+                border: '4px solid #004d00',
+                padding: '10px 30px',
+                fontSize: '1.2rem',
+                fontFamily: "'Press Start 2P', cursive",
+                cursor: 'pointer',
+                marginTop: '10px'
+              }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => {
                 if (audioRef.current) {
                   audioRef.current.pause();
                 }
                 onStartGame();
               }}
             >
-              GAME START
+              GO!
             </motion.button>
-          </div>
+          </motion.div>
         )}
       </div>
     </div>

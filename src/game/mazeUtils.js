@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
+import { GameConfig } from './constants/GameConfig';
 
 export const createMaze = (scene, player) => {
-  const tileSize = 64;
-  const wallScale = 0.1;
-  const mazeSize = 41;
-  const spacing = 1.5;
+  const tileSize = GameConfig.TILE_SIZE;
+  const wallScale = GameConfig.WALL_SCALE;
+  const mazeSize = GameConfig.MAZE_SIZE;
+  const spacing = GameConfig.SPACING;
 
   // 미로 배열 초기화 - 모든 칸을 벽(1)으로 채움
   let maze = Array(mazeSize).fill().map(() => Array(mazeSize).fill(1));
@@ -15,10 +16,10 @@ export const createMaze = (scene, player) => {
 
   // 중앙 위치와 주변을 비움 (0으로 설정)
   maze[centerY][centerX] = 0;
-  maze[centerY-1][centerX] = 0;
-  maze[centerY+1][centerX] = 0;
-  maze[centerY][centerX-1] = 0;
-  maze[centerY][centerX+1] = 0;
+  maze[centerY - 1][centerX] = 0;
+  maze[centerY + 1][centerX] = 0;
+  maze[centerY][centerX - 1] = 0;
+  maze[centerY][centerX + 1] = 0;
 
   // 시작 위치와 주변을 비움
   maze[1][1] = 0;
@@ -70,7 +71,7 @@ export const createMaze = (scene, player) => {
         wall.setScale(wallScale);
         wall.setOrigin(0.5, 0.5);
         wall.setDepth(y);
-        
+
         const imageWidth = wall.width * wallScale;
         const imageHeight = wall.height * wallScale;
         wall.body.setSize(imageWidth, imageHeight);
@@ -94,11 +95,11 @@ export const createMaze = (scene, player) => {
   }
 
   scene.physics.add.collider(player, walls);
-  
+
   scene.physics.add.overlap(player, fishes, (player, fish) => {
     if (!scene.gameOverStarted) {
       scene.soundManager.playFishSound();
-      scene.events.emit('changeHealth', 20);
+      scene.events.emit('changeHealth', GameConfig.FISH.HEAL_AMOUNT);
       // fish 카운트 업데이트
       scene.events.emit('collectFish');
       fish.destroy();

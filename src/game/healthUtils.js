@@ -1,3 +1,5 @@
+import { GameConfig } from './constants/GameConfig';
+
 export const setupHealthSystem = (scene, player, fishes) => {
   // 체력 자동 감소 타이머 설정
   scene.time.addEvent({
@@ -15,8 +17,8 @@ export const setupHealthSystem = (scene, player, fishes) => {
     if (scene.gameOverStarted) return;
 
     // 체력 회복을 위한 이벤트 발생
-    scene.events.emit('changeHealth', 20);
-    
+    scene.events.emit('changeHealth', GameConfig.FISH.HEAL_AMOUNT);
+
     // 사운드 직접 재생
     if (scene.soundManager) {
       scene.soundManager.playFishSound();
@@ -24,7 +26,7 @@ export const setupHealthSystem = (scene, player, fishes) => {
     } else {
       console.warn("Sound manager not found"); // 디버깅용
     }
-    
+
     // fish 제거
     fish.destroy();
   });

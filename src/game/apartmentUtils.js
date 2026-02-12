@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GameConfig } from './constants/GameConfig';
 
 export class ApartmentSystem {
   constructor(scene, player, goal) {
@@ -6,12 +7,12 @@ export class ApartmentSystem {
     this.player = player;
     this.goal = goal;
     this.apartments = scene.physics.add.staticGroup();
-    this.mazeSize = 41;
-    this.tileSize = 64;
-    this.spacing = 1.5;
-    this.wallScale = 0.22;
+    this.mazeSize = GameConfig.MAZE_SIZE;
+    this.tileSize = GameConfig.TILE_SIZE;
+    this.spacing = GameConfig.SPACING;
+    this.wallScale = GameConfig.APARTMENT.WALL_SCALE;
     this.isGameOver = false;
-    this.baseDepth = 1000;
+    this.baseDepth = GameConfig.APARTMENT.BASE_DEPTH;
 
     // 각 방향별 현재 진행 상태
     this.progress = {
@@ -25,7 +26,7 @@ export class ApartmentSystem {
     this.createDustAnimation();
 
     // 15초 후에 시작
-    this.scene.time.delayedCall(15000, () => this.startApartmentSpawn(), [], this);
+    this.scene.time.delayedCall(GameConfig.APARTMENT.DELAY, () => this.startApartmentSpawn(), [], this);
   }
 
   createDustAnimation() {
@@ -61,7 +62,7 @@ export class ApartmentSystem {
 
   createSpawnTimer(direction) {
     return this.scene.time.addEvent({
-      delay: 10000,
+      delay: GameConfig.APARTMENT.SPAWN_INTERVAL,
       callback: () => this.spawnApartmentRow(direction),
       callbackScope: this,
       loop: true
@@ -96,7 +97,7 @@ export class ApartmentSystem {
           y: () => progress * this.tileSize * this.spacing
         };
     }
-}
+  }
 
   spawnApartmentRow(direction) {
     if (this.isGameOver || this.progress[direction] >= this.mazeSize / 2) return;
@@ -122,12 +123,12 @@ export class ApartmentSystem {
       const dust = this.scene.add.sprite(xPos, yPos, 'dust1');
       dust.setScale(this.wallScale);
       dust.setDepth(this.baseDepth + this.progress[direction] * 10);
-      
+
       dust.play('dust');
       dust.on('animationcomplete', () => {
         this.createApartment(xPos, yPos, i, dust, direction);
       });
-      
+
       dustSprites.push(dust);
     }
 
@@ -156,7 +157,7 @@ export class ApartmentSystem {
 
     const apartmentType = Phaser.Math.Between(1, 3);
     const apartment = this.apartments.create(xPos, yPos, `apt${apartmentType}`);
-    
+
     apartment.setScale(this.wallScale);
     apartment.setOrigin(0.5, 0.5);
     apartment.setDepth(this.baseDepth + this.progress[direction] * 10);
