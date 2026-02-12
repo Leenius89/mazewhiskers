@@ -175,6 +175,25 @@ function App() {
     };
   }, [showGame, isGameOver, createGame, destroyGame]);
 
+  const restartGame = useCallback(() => {
+    // 1. Destroy and cleanup
+    destroyGame();
+
+    // 2. Reset local state
+    setIsGameOver(false);
+    setHealth(100);
+    healthRef.current = 100;
+    setMilkCount(0);
+    setFishCount(0);
+    setJumpCount(0);
+
+    // 3. Force Unmount -> Remount to ensure fresh DOM and Phaser instance
+    setShowGame(false);
+    setTimeout(() => {
+      setShowGame(true);
+    }, 100);
+  }, [destroyGame]);
+
   // Victory handler
   useEffect(() => {
     const handleVictory = (event) => {
@@ -204,24 +223,6 @@ function App() {
     setJumpCount(0);
   };
 
-  const restartGame = () => {
-    // 1. Destroy and cleanup
-    destroyGame();
-
-    // 2. Reset local state
-    setIsGameOver(false);
-    setHealth(100);
-    healthRef.current = 100;
-    setMilkCount(0);
-    setFishCount(0);
-    setJumpCount(0);
-
-    // 3. Force Unmount -> Remount to ensure fresh DOM and Phaser instance
-    setShowGame(false);
-    setTimeout(() => {
-      setShowGame(true);
-    }, 100);
-  };
 
   return (
     <div style={{
