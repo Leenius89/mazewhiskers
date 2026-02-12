@@ -14,7 +14,8 @@ export const GameConfig = {
             DISTANCE: 200,
             DURATION: 600
         },
-        DEPTH: 21
+        DEPTH: 21,
+        LOOK_AHEAD_DIST: 50
     },
 
     // Enemy
@@ -42,7 +43,8 @@ export const GameConfig = {
     FISH: {
         PROBABILITY: 0.1,
         SCALE: 0.05,
-        ANIM_DURATION: 1000
+        ANIM_DURATION: 1000,
+        HEAL_AMOUNT: 20
     },
 
     // Apartment System

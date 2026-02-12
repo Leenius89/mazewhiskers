@@ -33,7 +33,29 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.body.setSize(imageWidth, imageHeight);
         this.body.setOffset((this.width - imageWidth) / 2, (this.height - imageHeight) / 2);
     }
-    // ... (skip animations)
+    createAnimations() {
+        if (!this.scene.anims.exists('walk')) {
+            this.scene.anims.create({
+                key: 'walk',
+                frames: [
+                    { key: 'cat1' },
+                    { key: 'cat2' }
+                ],
+                frameRate: 8,
+                repeat: -1
+            });
+        }
+
+        if (!this.scene.anims.exists('idle')) {
+            this.scene.anims.create({
+                key: 'idle',
+                frames: [{ key: 'cat1' }],
+                frameRate: 1,
+                repeat: -1
+            });
+        }
+    }
+
     update(cursors) {
         if (this.isJumping) return;
 
