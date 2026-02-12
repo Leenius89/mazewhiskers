@@ -139,28 +139,29 @@ export class GameScene extends Phaser.Scene {
 
         // Add collider to prevent walking through walls, trigger jump on contact
         this.physics.add.collider(this.enemy, this.walls, () => {
-          if (this.enemy) this.enemy.performJump();
+          if (this.enemy && !this.enemy.isJumping) this.enemy.performJump();
         });
 
-        // Camera Pan Sequence
+        // Camera Pan Sequence — MUST stopFollow BEFORE panning!
         const originalZoom = this.cameras.main.zoom;
+        this.cameras.main.stopFollow();  // Stop following player FIRST
 
-        // Pan to Enemy
+        // Pan to Enemy location
         this.cameras.main.pan(this.enemy.x, this.enemy.y, 500, 'Power2');
         this.cameras.main.zoomTo(1.3, 500);
 
-        this.time.delayedCall(1000, () => {
+        this.time.delayedCall(1200, () => {
+          if (this.gameOverStarted) return;
           // Pan back to Player
           this.cameras.main.pan(this.player.x, this.player.y, 500, 'Power2');
           this.cameras.main.zoomTo(originalZoom, 500);
 
-          this.time.delayedCall(500, () => {
-            this.cameras.main.startFollow(this.player, true);
+          this.time.delayedCall(600, () => {
+            if (!this.gameOverStarted) {
+              this.cameras.main.startFollow(this.player, true);
+            }
           });
         });
-
-        // Stop following player during pan
-        this.cameras.main.stopFollow();
 
         this.physics.add.overlap(this.player, this.enemy, () => {
           if (!this.gameOverStarted) {
@@ -386,8 +387,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   shutdown() {
+    // Clean up game-level event listeners (scene-level auto-cleanup on restart)
+    this.game.events.off('pauseGame');
+    this.game.events.off('resumeGame');
+    this.game.events.off('changeHealth');
+
     if (this.apartmentSystem) {
       this.apartmentSystem.destroy();
+      this.apartmentSystem = null;
+    }
+    if (this.enemy) {
+      if (this.enemy.enemySound) {
+        this.soundManager.stopEnemySound(this.enemy.enemySound);
+      }
+      this.enemy.destroy();
+      this.enemy = null;
+    }
+    if (this.soundManager) {
+      this.soundManager.stopAllSounds();
     }
     if (this.mobileControls) {
       this.mobileControls.controlsContainer.remove();

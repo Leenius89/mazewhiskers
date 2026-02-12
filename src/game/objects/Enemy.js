@@ -78,7 +78,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     initProperties() {
         this.setScale(GameConfig.ENEMY.SCALE);
-        this.setDepth(GameConfig.ENEMY.DEPTH);
+        this.setDepth(2000); // Always above apartments (baseDepth=1000)
         this.isJumping = false;
         this.speed = GameConfig.ENEMY.SPEED;
 
@@ -96,7 +96,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (!this.active || this.isJumping) return;
 
         this.handleMovement();
-        this.setDepth(this.y);
+        // Keep enemy depth above all apartments
+        this.setDepth(2000);
     }
 
     handleMovement() {

@@ -151,35 +151,12 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     jump() {
         if (this.isJumping || this.jumpCount <= 0) return false;
-
-        if (!this.checkWallAhead()) return false;
-
         return this.performJump();
-    }
-
-    checkWallAhead() {
-        const angle = this.lastDirection === 'left' ? Math.PI : 0;
-        const lookAheadDist = GameConfig.PLAYER.LOOK_AHEAD_DIST;
-        const lookX = this.x + Math.cos(angle) * lookAheadDist;
-        const lookY = this.y + Math.sin(angle) * lookAheadDist;
-
-        // Use maze grid for O(1) check instead of iterating all walls
-        if (this.scene.maze) {
-            const tileUnit = GameConfig.TILE_SIZE * GameConfig.SPACING;
-            const gridX = Math.floor(lookX / tileUnit);
-            const gridY = Math.floor(lookY / tileUnit);
-
-            if (gridY >= 0 && gridY < this.scene.maze.length &&
-                gridX >= 0 && gridX < this.scene.maze[0].length) {
-                return this.scene.maze[gridY][gridX] === 1;
-            }
-        }
-        return false;
     }
 
     performJump() {
         this.jumpCount--;
-        this.scene.events.emit('updateJumpCount', this.jumpCount);
+        this.scene.game.events.emit('updateJumpCount', this.jumpCount);
 
         if (this.scene.soundManager) {
             this.scene.soundManager.playJumpSound();
