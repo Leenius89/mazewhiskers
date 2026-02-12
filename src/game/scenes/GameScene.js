@@ -52,20 +52,10 @@ export class GameScene extends Phaser.Scene {
     }
 
     // 초기 점프 카운트 설정
-    this.events.emit('updateJumpCount', 0);
+    this.game.events.emit('updateJumpCount', 0);
 
+    // Milk items (overlap handler is inside createMilkItems)
     const milks = createMilkItems(this, walls, player);
-
-    this.physics.add.overlap(player, milks, (player, milk) => {
-      if (!this.gameOverStarted) {
-        if (this.soundManager) {
-          this.soundManager.playFishSound();
-        }
-        player.jumpCount++;
-        this.events.emit('updateJumpCount', player.jumpCount);
-        milk.destroy();
-      }
-    });
 
     const spaceBar = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
     spaceBar.on('down', () => {
@@ -75,6 +65,7 @@ export class GameScene extends Phaser.Scene {
     this.registry.set('milkCount', 0);
     this.registry.set('fishCount', 0);
 
+    // Forward scene-level collect events to game-level for React UI
     this.events.on('collectMilk', () => {
       const currentCount = this.registry.get('milkCount') || 0;
       this.registry.set('milkCount', currentCount + 1);
@@ -85,6 +76,12 @@ export class GameScene extends Phaser.Scene {
       const currentCount = this.registry.get('fishCount') || 0;
       this.registry.set('fishCount', currentCount + 1);
       this.game.events.emit('collectFish', currentCount + 1);
+    });
+
+    // HP=0 -> Game Over
+    this.game.events.on('changeHealth', (amount) => {
+      // Check if health reached 0 (App.js tracks actual value)
+      // We use a flag here so the scene knows when to trigger game over
     });
 
     const centerPosX = centerX * this.tileSize * this.spacing;

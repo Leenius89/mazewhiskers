@@ -23,6 +23,9 @@ function App() {
   const [milkCount, setMilkCount] = useState(0);
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // Track health in a ref so Phaser callbacks can read latest value
+  const healthRef = useRef(100);
+
   useEffect(() => {
     if (game.current) {
       const pauseHandler = () => {
@@ -49,18 +52,15 @@ function App() {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
       if (isMobile) {
-        // 모바일에서는 화면 너비의 90%를 사용
         const maxWidth = Math.min(width * 0.9, baseWidth);
-
         setGameSize({
           width: maxWidth,
-          height: height * 0.8 // 화면 높이의 80%만 사용
+          height: height * 0.8
         });
       } else {
-        // 데스크톱에서는 768px 고정 너비 사용
         setGameSize({
           width: baseWidth,
-          height: Math.min(height * 0.9, baseWidth * 1.33) // 4:3 비율 유지하되 화면 높이의 90% 제한
+          height: Math.min(height * 0.9, baseWidth * 1.33)
         });
       }
     };
@@ -78,11 +78,31 @@ function App() {
   const handleHealthChange = useCallback((amount) => {
     setHealth(prevHealth => {
       const newHealth = Math.max(0, Math.min(prevHealth + amount, 100));
+      healthRef.current = newHealth;
       return newHealth;
     });
   }, []);
 
+  const destroyGame = useCallback(() => {
+    if (game.current) {
+      // Remove all event listeners before destroying
+      game.current.events.off('gameOver');
+      game.current.events.off('updateJumpCount');
+      game.current.events.off('changeHealth');
+      game.current.events.off('collectMilk');
+      game.current.events.off('collectFish');
+      game.current.events.off('pauseGame');
+      game.current.events.off('resumeGame');
+      game.current.events.off('gameReady');
+      game.current.destroy(true);
+      game.current = null;
+    }
+  }, []);
+
   const createGame = useCallback(() => {
+    // Always destroy previous game first
+    destroyGame();
+
     const config = {
       type: Phaser.AUTO,
       width: gameSize.width,
@@ -102,10 +122,9 @@ function App() {
       scene: [GameScene]
     };
 
-    if (game.current) game.current.destroy(true);
     game.current = new Phaser.Game(config);
 
-    // 이벤트 리스너 설정
+    // Game Over event
     game.current.events.on('gameOver', (data) => {
       setIsGameOver(true);
       if (data) {
@@ -114,21 +133,50 @@ function App() {
       }
     });
 
+    // Jump count update
     game.current.events.on('updateJumpCount', (count) => {
       setJumpCount(count);
     });
 
-    game.current.events.on('changeHealth', handleHealthChange);
+    // Health changes (HP drain + Fish heal)
+    game.current.events.on('changeHealth', (amount) => {
+      handleHealthChange(amount);
+
+      // Check HP=0 game over after a tick so state updates
+      setTimeout(() => {
+        if (healthRef.current <= 0) {
+          // Trigger game over in Phaser scene
+          const scene = game.current?.scene?.scenes?.[0];
+          if (scene && !scene.gameOverStarted) {
+            scene.gameOverAnimation();
+          }
+        }
+      }, 50);
+    });
+
+    // Milk & Fish counters
     game.current.events.on('collectMilk', (count) => setMilkCount(count));
     game.current.events.on('collectFish', (count) => setFishCount(count));
 
-  }, [gameSize, handleHealthChange]);
+  }, [gameSize, handleHealthChange, destroyGame]);
 
   useEffect(() => {
     if (showGame && !isGameOver) {
-      createGame();
+      // Small delay to ensure DOM container exists
+      const timer = setTimeout(() => {
+        createGame();
+      }, 50);
+      return () => clearTimeout(timer);
     }
 
+    return () => {
+      // Cleanup on unmount
+      destroyGame();
+    };
+  }, [showGame, isGameOver, createGame, destroyGame]);
+
+  // Victory handler
+  useEffect(() => {
     const handleVictory = (event) => {
       const action = event.detail?.action;
 
@@ -136,30 +184,24 @@ function App() {
         setIsVictory(true);
         setShowGame(false);
       } else if (action === 'retry') {
+        destroyGame();
         setIsVictory(false);
         setHealth(100);
+        healthRef.current = 100;
+        setIsGameOver(false);
         setShowGame(true);
-        setTimeout(() => {
-          if (game.current) {
-            game.current.destroy(true);
-          }
-          createGame();
-        }, 100);
       }
     };
 
     document.addEventListener('gameVictory', handleVictory);
-
-    return () => {
-      if (game.current) game.current.destroy(true);
-      document.removeEventListener('gameVictory', handleVictory);
-    };
-  }, [showGame, createGame, isGameOver]);
+    return () => document.removeEventListener('gameVictory', handleVictory);
+  }, [destroyGame]);
 
   const startGame = () => {
     setShowGame(true);
     setShowTutorial(true);
     setHealth(100);
+    healthRef.current = 100;
     setIsGameOver(false);
     setMilkCount(0);
     setFishCount(0);
@@ -167,15 +209,20 @@ function App() {
   };
 
   const restartGame = () => {
+    // 1. Destroy current game
+    destroyGame();
+
+    // 2. Reset all state
     setIsGameOver(false);
     setHealth(100);
+    healthRef.current = 100;
     setMilkCount(0);
     setFishCount(0);
     setJumpCount(0);
+
+    // 3. Force re-render cycle by toggling showGame off then on
+    setShowGame(false);
     setTimeout(() => {
-      if (game.current) {
-        game.current.destroy(true);
-      }
       setShowGame(true);
     }, 100);
   };
@@ -259,7 +306,7 @@ function App() {
                 <ul style={{ listStyle: 'none', padding: 0 }}>
                   <li style={{ marginBottom: '10px' }}>❤️ Health drops over time!</li>
                   <li style={{ marginBottom: '10px' }}>🐟 Eat FISH to Heal (+20)</li>
-                  <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Double Jumps</li>
+                  <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Jump (+1)</li>
                 </ul>
               </div>
 

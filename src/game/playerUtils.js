@@ -7,7 +7,7 @@ export const createMilkItems = (scene, walls, player) => {
   const tileSize = GameConfig.TILE_SIZE;
   const spacing = GameConfig.SPACING;
 
-  // milk 애니메이션 생성
+  // Milk animation
   if (!scene.anims.exists('milkFloat')) {
     scene.anims.create({
       key: 'milkFloat',
@@ -17,24 +17,33 @@ export const createMilkItems = (scene, walls, player) => {
     });
   }
 
+  // Use maze grid for fast wall check instead of iterating all wall sprites
+  const tileUnit = tileSize * spacing;
+
   for (let y = 0; y < mazeSize; y++) {
     for (let x = 0; x < mazeSize; x++) {
-      const posX = x * tileSize * spacing;
-      const posY = y * tileSize * spacing;
+      const posX = x * tileUnit;
+      const posY = y * tileUnit;
 
-      const hasWall = walls.getChildren().some(wall =>
-        Math.abs(wall.x - posX) < tileSize && Math.abs(wall.y - posY) < tileSize
-      );
+      // Check maze grid (O(1)) instead of iterating walls (O(N))
+      let hasWall = false;
+      if (scene.maze) {
+        hasWall = scene.maze[y] && scene.maze[y][x] === 1;
+      } else {
+        hasWall = walls.getChildren().some(wall =>
+          Math.abs(wall.x - posX) < tileSize && Math.abs(wall.y - posY) < tileSize
+        );
+      }
 
-      if (!hasWall && Math.random() < 0.05 && !(x === 1 && y === 1)) {
+      if (!hasWall && Math.random() < GameConfig.MILK.PROBABILITY && !(x === 1 && y === 1)) {
         const milk = milks.create(posX, posY, 'milk');
-        milk.setScale(0.05);
+        milk.setScale(GameConfig.MILK.SCALE);
         milk.setDepth(y);
 
         scene.tweens.add({
           targets: milk,
           y: milk.y - 10,
-          duration: 1500,
+          duration: GameConfig.MILK.ANIM_DURATION,
           ease: 'Sine.easeInOut',
           yoyo: true,
           repeat: -1
@@ -43,18 +52,23 @@ export const createMilkItems = (scene, walls, player) => {
     }
   }
 
-  // milk 충돌 처리를 여기서 직접 구현
+  // Milk collision: +1 jump per milk
   scene.physics.add.overlap(player, milks, (player, milk) => {
-    if (!scene.gameOverStarted) {
-      if (scene.soundManager) {
-        scene.soundManager.playFishSound();
-      }
-      player.jumpCount++;
-      // milk 카운트 업데이트
-      scene.events.emit('collectMilk');
-      scene.events.emit('updateJumpCount', player.jumpCount);
-      milk.destroy();
+    if (scene.gameOverStarted) return;
+
+    // Sound
+    if (scene.soundManager) {
+      scene.soundManager.playFishSound();
     }
+
+    // +1 jump
+    player.jumpCount++;
+
+    // Emit events to update React UI
+    scene.game.events.emit('updateJumpCount', player.jumpCount);
+    scene.events.emit('collectMilk');
+
+    milk.destroy();
   });
 
   return milks;
