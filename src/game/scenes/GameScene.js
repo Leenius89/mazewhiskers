@@ -86,9 +86,19 @@ export class GameScene extends Phaser.Scene {
       this.game.events.emit('collectFish', currentCount + 1);
     });
 
-    const centerPosX = centerX * this.tileSize * this.spacing;
     const centerPosY = centerY * this.tileSize * this.spacing;
     this.goal = createGoal(this, player, centerPosX, centerPosY);
+
+    // Pause/Resume 이벤트 리스너
+    this.game.events.on('pauseGame', () => {
+      this.scene.pause();
+      if (this.soundManager) this.soundManager.stopAllSounds(); // 소리도 멈춤 (선택사항)
+    });
+
+    this.game.events.on('resumeGame', () => {
+      this.scene.resume();
+      if (this.soundManager) this.soundManager.playMainBGM(); // BGM 재개
+    });
 
     this.apartmentSystem = new ApartmentSystem(this, player, this.goal);
 

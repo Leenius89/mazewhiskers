@@ -21,6 +21,16 @@ function App() {
   const [jumpCount, setJumpCount] = useState(0);
   const [fishCount, setFishCount] = useState(0);
   const [milkCount, setMilkCount] = useState(0);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    if (showGame && showTutorial && game.current) {
+      // 게임 루프가 시작된 후 잠시 대기했다가 일시정지
+      setTimeout(() => {
+        game.current.events.emit('pauseGame');
+      }, 100);
+    }
+  }, [showGame, showTutorial]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -139,6 +149,7 @@ function App() {
 
   const startGame = () => {
     setShowGame(true);
+    setShowTutorial(true);
     setHealth(100);
     setIsGameOver(false);
     setMilkCount(0);
@@ -196,6 +207,74 @@ function App() {
               boxShadow: '0 0 10px rgba(0,0,0,0.3)'
             }}
           />
+
+          {/* Tutorial Overlay */}
+          {showTutorial && (
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '90%',
+              maxWidth: '600px',
+              backgroundColor: 'rgba(0, 0, 0, 0.9)',
+              border: '4px solid #ffffff',
+              padding: '20px',
+              color: 'white',
+              fontFamily: "'Press Start 2P', cursive",
+              zIndex: 2000,
+              fontSize: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? '0.8rem' : '1rem',
+              lineHeight: '1.5',
+              textAlign: 'center'
+            }}>
+              <h2 style={{ color: '#ffff00', marginBottom: '20px', marginTop: 0 }}>HOW TO PLAY</h2>
+
+              <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>CONTROLS</h3>
+                {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                    <li>🕹️ Joystick: Move</li>
+                    <li>🔴 Button: Jump</li>
+                  </ul>
+                ) : (
+                  <ul style={{ listStyle: 'none', padding: 0 }}>
+                    <li>⬆️⬇️⬅️➡️ Arrow Keys: Move</li>
+                    <li>SPACE Bar: Jump</li>
+                  </ul>
+                )}
+              </div>
+
+              <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>RULES</h3>
+                <ul style={{ listStyle: 'none', padding: 0 }}>
+                  <li style={{ marginBottom: '10px' }}>❤️ Health drops over time!</li>
+                  <li style={{ marginBottom: '10px' }}>🐟 Eat FISH to Heal (+20)</li>
+                  <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Double Jumps</li>
+                </ul>
+              </div>
+
+              <button
+                style={{
+                  backgroundColor: '#00ff00',
+                  color: 'black',
+                  border: '4px solid #004d00',
+                  padding: '10px 30px',
+                  fontSize: '1.2rem',
+                  fontFamily: "'Press Start 2P', cursive",
+                  cursor: 'pointer',
+                  marginTop: '10px'
+                }}
+                onClick={() => {
+                  setShowTutorial(false);
+                  if (game.current) {
+                    game.current.events.emit('resumeGame');
+                  }
+                }}
+              >
+                GO!
+              </button>
+            </div>
+          )}
         </>
       ) : (
         <MainPage

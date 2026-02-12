@@ -6,7 +6,6 @@ const MainPage = ({ onStartGame, gameSize }) => {
   const [showTitle, setShowTitle] = useState(false);
   const [cameraPosition, setCameraPosition] = useState(0);
   const [showStartScreen, setShowStartScreen] = useState(true);
-  const [showTutorial, setShowTutorial] = useState(false);
   const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
   const audioRef = useRef(null);
 
