@@ -2,11 +2,11 @@ import Phaser from 'phaser';
 
 export const showEndingMessages = async (scene: Phaser.Scene, width: number, height: number): Promise<{ texts: Phaser.GameObjects.Text[] }> => {
     const messages = [
-        "인생에 튜토리얼은 없다",
-        "모든 예측불가능함과",
-        "모든 불안 속에서",
-        "그저 무언가를 향해 나아가자",
-        "다시 태어나더라도 똑같이 살자"
+        "Life begins without a rehearsal.",
+        "Using the rough waves of anxiety as our drive",
+        "we simply plunge toward an unknown point.",
+        "Even if I were to open my eyes again,",
+        "my choice remains the repetition of this very life."
     ];
 
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
