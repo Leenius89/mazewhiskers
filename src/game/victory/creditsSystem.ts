@@ -1,12 +1,26 @@
-export const showCredits = (scene, width, height, onStart, onEnd) => {
+import Phaser from 'phaser';
+
+interface CreditsObjects {
+    creditsBg: Phaser.GameObjects.Graphics;
+    creditsText: Phaser.GameObjects.Text;
+    clickableArea: Phaser.GameObjects.Rectangle;
+}
+
+export const showCredits = (
+    scene: Phaser.Scene,
+    width: number,
+    height: number,
+    onStart?: () => void,
+    onEnd?: () => void
+): CreditsObjects => {
     if (onStart) onStart();
-  
+
     const creditsBg = scene.add.graphics();
     creditsBg.fillStyle(0x000000, 1);
     creditsBg.fillRect(0, 0, width, height);
     creditsBg.setDepth(1000);
     creditsBg.setAlpha(0);
-  
+
     const credits = [
         "Maze Whiskers",
         "",
@@ -30,56 +44,55 @@ export const showCredits = (scene, width, height, onStart, onEnd) => {
         "",
         "Click anywhere to return"
     ];
-  
-    // 화면 중앙에 텍스트 배치
+
+    // Place text in center
     const creditsText = scene.add.text(width / 2, height / 2, credits.join('\n'), {
         fontFamily: 'Arial',
         fontSize: '20px',
         color: '#ffffff',
         align: 'center',
         lineSpacing: 10
-    });
+    } as Phaser.Types.GameObjects.Text.TextStyle); // Explicit cast for stricter typing if needed
     creditsText.setOrigin(0.5, 0.5);
     creditsText.setDepth(1001);
     creditsText.setAlpha(0);
-  
-    // 전체 화면을 커버하는 인터랙티브 영역 생성
+
+    // Full screen clickable area
     const clickableArea = scene.add.rectangle(width / 2, height / 2, width, height);
     clickableArea.setOrigin(0.5, 0.5);
     clickableArea.setDepth(1002);
     clickableArea.setInteractive({ useHandCursor: true });
-    clickableArea.input.enabled = true;
-  
-    // 페이드인
+    clickableArea.input!.enabled = true;
+
+    // Fade in
     scene.tweens.add({
         targets: [creditsBg, creditsText],
         alpha: 1,
         duration: 1000,
         ease: 'Power2'
     });
-  
-    // 클릭 이벤트 핸들러
+
+    // Click handler
     const handleClick = () => {
-      // 중복 클릭 방지를 위해 즉시 이벤트 리스너 제거
-      clickableArea.removeInteractive();
-      
-      scene.tweens.add({
-          targets: [creditsBg, creditsText],
-          alpha: 0,
-          duration: 500,
-          ease: 'Power2',
-          onComplete: () => {
-              creditsBg.destroy();
-              creditsText.destroy();
-              clickableArea.destroy();
-              if (onEnd) onEnd();
-          }
-      });
+        // Remove listener immediately
+        clickableArea.removeInteractive();
+
+        scene.tweens.add({
+            targets: [creditsBg, creditsText],
+            alpha: 0,
+            duration: 500,
+            ease: 'Power2',
+            onComplete: () => {
+                creditsBg.destroy();
+                creditsText.destroy();
+                clickableArea.destroy();
+                if (onEnd) onEnd();
+            }
+        });
     };
-  
-    // 클릭 이벤트 리스너 추가
+
+    // Add listener
     clickableArea.on('pointerdown', handleClick);
-  
-    // 씬이 종료될 때 정리하기 위해 객체들 반환
+
     return { creditsBg, creditsText, clickableArea };
-  };
+};

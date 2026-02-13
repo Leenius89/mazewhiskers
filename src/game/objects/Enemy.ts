@@ -1,10 +1,18 @@
 import Phaser from 'phaser';
+
 import { GameConfig } from '../constants/GameConfig';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, player, worldWidth, worldHeight, maze) {
+    public isJumping: boolean;
+    private mazeGrid: number[][] | undefined; // Allow undefined if maze is optional or initially missing
+    private player: Phaser.Physics.Arcade.Sprite;
+    private speed: number;
+    public enemySound?: Phaser.Sound.BaseSound;
+
+    // Use specific types if possible, otherwise keep generic
+    constructor(scene: Phaser.Scene, player: Phaser.Physics.Arcade.Sprite, worldWidth: number, worldHeight: number, maze: number[][]) {
         // Calculate spawn position BEFORE super() (cannot use `this` yet)
-        let x, y;
+        let x = 0, y = 0;
         const minDistance = GameConfig.ENEMY.SPAWN.MIN_DISTANCE;
         const tileUnit = GameConfig.TILE_SIZE * GameConfig.SPACING;
 
@@ -52,10 +60,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // Store references AFTER super()
         this.scene = scene;
         this.player = player;
-        this.mazeGrid = maze;
+        this.mazeGrid = maze; // Renamed to mazeGrid match original
 
         scene.add.existing(this);
         scene.physics.add.existing(this);
+
+        this.isJumping = false;
+        this.speed = GameConfig.ENEMY.SPEED;
 
         this.initProperties();
         this.createAnimations();
@@ -84,9 +95,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const imageWidth = this.width * this.scaleX;
         const imageHeight = this.height * this.scaleY;
-        const hitboxScale = GameConfig.ENEMY.HITBOX_SCALE || 1;
-        this.body.setSize(imageWidth * hitboxScale, imageHeight * hitboxScale);
-        this.body.setOffset(
+        const hitboxScale = (GameConfig.ENEMY as any).HITBOX_SCALE || 1; // Type assertion if property missing in GameConfig type
+        this.body!.setSize(imageWidth * hitboxScale, imageHeight * hitboxScale);
+        this.body!.setOffset(
             (this.width - imageWidth * hitboxScale) / 2,
             (this.height - imageHeight * hitboxScale) / 2
         );
@@ -166,7 +177,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             x: endX,
             duration: jumpDuration,
             ease: 'Linear',
-            onUpdate: (tween) => {
+            onUpdate: (tween: Phaser.Tweens.Tween) => {
                 const progress = tween.progress;
                 const heightOffset = Math.sin(progress * Math.PI) * jumpHeight;
                 this.y = Phaser.Math.Linear(startY, endY, progress) - heightOffset;

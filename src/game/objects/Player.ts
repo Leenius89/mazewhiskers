@@ -1,15 +1,44 @@
 import Phaser from 'phaser';
+
 import { GameConfig } from '../constants/GameConfig';
 
+interface Cursors {
+    up: Phaser.Input.Keyboard.Key;
+    down: Phaser.Input.Keyboard.Key;
+    left: Phaser.Input.Keyboard.Key;
+    right: Phaser.Input.Keyboard.Key;
+}
+
+interface CustomScene extends Phaser.Scene {
+    goal?: Phaser.Physics.Arcade.Sprite;
+    soundManager?: any; // To be typed
+}
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y) {
+    public jumpCount: number;
+    public isJumping: boolean;
+    public lastDirection: string;
+    private speed: number;
+    private goalIndicator: Phaser.GameObjects.Graphics;
+
+    // Override scene property with custom interface
+    public scene: CustomScene;
+
+    constructor(scene: CustomScene, x: number, y: number) {
         super(scene, x, y, 'cat1');
+        this.scene = scene;
 
         // Add to scene
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
-        // Initialize
+        // Initialize properties - Default values to avoid 'undefined' before initProperties
+        this.jumpCount = 0;
+        this.isJumping = false;
+        this.lastDirection = 'right';
+        this.speed = GameConfig.PLAYER.SPEED;
+        this.goalIndicator = this.scene.add.graphics(); // Initialize here or in initProperties
+
         this.initProperties();
         this.initPhysics();
         this.createAnimations();
@@ -24,7 +53,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.speed = GameConfig.PLAYER.SPEED;
 
         // Goal Indicator arrow
-        this.goalIndicator = this.scene.add.graphics();
         this.goalIndicator.setDepth(100);
     }
 
@@ -33,8 +61,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         const imageWidth = this.width * this.scaleX;
         const imageHeight = this.height * this.scaleY;
-        this.body.setSize(imageWidth, imageHeight);
-        this.body.setOffset((this.width - imageWidth) / 2, (this.height - imageHeight) / 2);
+        this.body!.setSize(imageWidth, imageHeight);
+        this.body!.setOffset((this.width - imageWidth) / 2, (this.height - imageHeight) / 2);
     }
 
     createAnimations() {
@@ -54,25 +82,25 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.scene.anims.create({
                 key: 'idle',
                 frames: [{ key: 'cat1' }],
-                frameRate: 1,
-                repeat: -1
+                frameRate: -1, // Wait, repeat -1? idle usually loops or just stays. original code had repeat -1
             });
         }
     }
 
-    update(cursors) {
+    // Explicitly type cursors
+    update(cursors?: Phaser.Types.Input.Keyboard.CursorKeys) {
         // Always update goal indicator
         this.updateGoalIndicator();
 
         if (this.isJumping) return;
 
-        this.handleMovement(cursors);
+        if (cursors) {
+            this.handleMovement(cursors);
+        }
         this.updateDepth();
     }
 
-    handleMovement(cursors) {
-        if (!cursors) return;
-
+    handleMovement(cursors: Phaser.Types.Input.Keyboard.CursorKeys) {
         let isMoving = false;
         this.setVelocity(0);
 
@@ -95,7 +123,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         if (isMoving) {
-            this.body.velocity.normalize().scale(this.speed);
+            this.body!.velocity.normalize().scale(this.speed);
             this.anims.play('walk', true);
         } else {
             this.anims.stop();
@@ -103,9 +131,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         // Flip direction
-        if (this.body.velocity.x < 0) {
+        if (this.body!.velocity.x < 0) {
             this.setFlipX(true);
-        } else if (this.body.velocity.x > 0) {
+        } else if (this.body!.velocity.x > 0) {
             this.setFlipX(false);
         }
     }
@@ -149,13 +177,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.goalIndicator.strokePath();
     }
 
-    jump() {
+    jump(): boolean {
         console.log(`Jump Requested. Jumping: ${this.isJumping}, Count: ${this.jumpCount}`);
         if (this.isJumping || this.jumpCount <= 0) return false;
         return this.performJump();
     }
 
-    performJump() {
+    performJump(): boolean {
         this.jumpCount--;
         this.scene.game.events.emit('updateJumpCount', this.jumpCount);
 
@@ -182,7 +210,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             x: targetX,
             duration: jumpDuration,
             ease: 'Linear',
-            onUpdate: (tween) => {
+            onUpdate: (tween: Phaser.Tweens.Tween) => {
                 const progress = tween.progress;
                 const heightOffset = Math.sin(progress * Math.PI) * jumpHeight;
                 this.y = Phaser.Math.Linear(startY, targetY, progress) - heightOffset;

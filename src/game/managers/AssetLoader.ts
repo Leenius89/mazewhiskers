@@ -1,5 +1,9 @@
+import Phaser from 'phaser';
+
 export class AssetLoader {
-    constructor(scene) {
+    private scene: Phaser.Scene;
+
+    constructor(scene: Phaser.Scene) {
         this.scene = scene;
     }
 
