@@ -1,0 +1,22 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # 매주 월요일과 목요일 자정(UTC)에 실행하여 7일 이상 유휴 상태가 되지 않도록 방지
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # 수동으로도 실행할 수 있도록 허용
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Database
+        run: |
+          SUPABASE_URL="https://ibkskmriavpvyueudjhx.supabase.co"
+          SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlia3NrbXJpYXZwdnl1ZXVkamh4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTY0MjYsImV4cCI6MjA4NjQ5MjQyNn0.t3yVQ3yNVbQ1RreXksC6zKAeyiqtYZPjNv24Ium7iXc"
+          
+          echo "Pinging Supabase to prevent project from pausing..."
+          curl -X GET "${SUPABASE_URL}/rest/v1/scores?select=id&limit=1" \
+               -H "apikey: ${SUPABASE_ANON_KEY}" \
+               -H "Authorization: Bearer ${SUPABASE_ANON_KEY}"
+          echo "Ping complete."
