@@ -50,12 +50,13 @@ function App() {
         }
     }, [showTutorial]);
 
-    // 튜토리얼 오버레이에서 엔터키/스페이스바로 닫기
+    // 튜토리얼 오버레이에서 마우스 왼쪽 클릭으로 닫기
     useEffect(() => {
         if (!showTutorial) return;
 
-        const handleTutorialKey = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+        const handleTutorialClick = (e: MouseEvent) => {
+            // 마우스 왼쪽 클릭(button === 0) 시 동작
+            if (e.button === 0) {
                 e.preventDefault();
                 setShowTutorial(false);
                 if (game.current) {
@@ -64,8 +65,8 @@ function App() {
             }
         };
 
-        window.addEventListener('keydown', handleTutorialKey);
-        return () => window.removeEventListener('keydown', handleTutorialKey);
+        window.addEventListener('click', handleTutorialClick);
+        return () => window.removeEventListener('click', handleTutorialClick);
     }, [showTutorial]);
 
     useEffect(() => {
@@ -347,19 +348,12 @@ function App() {
                                 HOW TO PLAY
                             </h2>
 
-                            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
+                             <div style={{ marginBottom: '20px', textAlign: 'left' }}>
                                 <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>조작법 / CONTROLS</h3>
-                                {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
-                                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>🕹️ 조이스틱: 이동 / Move</li>
-                                        <li>🔴 버튼: 점프 / Jump</li>
-                                    </ul>
-                                ) : (
-                                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>⬆️⬇️⬅️➡️ 방향키: 이동 / Move</li>
-                                        <li>SPACE 스페이스바: 점프 / Jump</li>
-                                    </ul>
-                                )}
+                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                    <li style={{ marginBottom: '10px' }}>🕹️ 조이스틱 드래그: 이동 / Drag to Move</li>
+                                    <li style={{ marginBottom: '10px' }}>🖱️ 화면 왼쪽 클릭: 점프 / Left Click to Jump</li>
+                                </ul>
                             </div>
 
                             <div style={{ marginBottom: '20px', textAlign: 'left' }}>
@@ -391,13 +385,13 @@ function App() {
                             >
                                 GO!
                             </button>
-                            <div style={{
+                             <div style={{
                                 color: '#a0a0a0',
                                 fontSize: '0.6rem',
                                 marginTop: '10px',
                                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                             }}>
-                                PRESS ENTER
+                                CLICK ANYWHERE TO START
                             </div>
                         </div>
                     )}
