@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
 
 /* 기본 리셋 및 전역 설정 */
 * {
@@ -9,17 +10,17 @@
 
 body {
   margin: 0;
-  /* 기본 텍스트는 일반 폰트 사용 (가독성을 위해) */
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+  /* 기본 텍스트는 깔끔한 Pretendard 폰트 사용 */
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* 제목 요소들에 픽셀 폰트 적용 */
+/* 제목 요소들에 픽셀 폰트 적용 (한글은 Pretendard로 폴백) */
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
 }
 
 /* 코드 블록은 기존 모노스페이스 폰트 유지 */
@@ -30,43 +31,43 @@ code {
 
 /* 픽셀 폰트를 적용하고 싶은 요소에 사용할 수 있는 유틸리티 클래스 */
 .pixel-font {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
 }
 
 /* 픽셀 폰트 사용시 텍스트 크기 가이드라인 */
 .pixel-text-xs {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 0.75rem;
   line-height: 1.5;
 }
 
 .pixel-text-sm {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 0.875rem;
   line-height: 1.5;
 }
 
 .pixel-text-base {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
 }
 
 .pixel-text-lg {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 1.125rem;
   line-height: 1.5;
 }
 
 .pixel-text-xl {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 1.25rem;
   line-height: 1.5;
 }
 
 /* 버튼 스타일링을 위한 기본 클래스 */
 .pixel-button {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   font-size: 1rem;
   padding: 0.5rem 1rem;
   border: 4px solid #000;
@@ -89,7 +90,7 @@ code {
 
 /* 특별한 게임 UI 요소를 위한 스타일 */
 .game-ui {
-  font-family: 'Press Start 2P', cursive;
+  font-family: 'Press Start 2P', 'Pretendard', cursive, sans-serif;
   image-rendering: pixelated;
 }
 

@@ -70,8 +70,8 @@ export const createMilkItems = (scene: CustomScene, walls: Phaser.Physics.Arcade
 
         // Sound
         if (scene.soundManager) {
-            // Use construct sound as placeholder for milk, or remove if silent
-            scene.soundManager.playConstructSound();
+            // 우유를 획득할 때 생선과 동일한 효과음이 재생되도록 수정
+            scene.soundManager.playFishSound();
         }
 
         // +1 jump

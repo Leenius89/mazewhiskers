@@ -71,7 +71,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) =>
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 2000,
-            fontFamily: "'Press Start 2P', cursive",
+            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
         }}>
             <motion.div
                 style={{

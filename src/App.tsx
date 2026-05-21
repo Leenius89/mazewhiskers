@@ -50,6 +50,24 @@ function App() {
         }
     }, [showTutorial]);
 
+    // 튜토리얼 오버레이에서 엔터키/스페이스바로 닫기
+    useEffect(() => {
+        if (!showTutorial) return;
+
+        const handleTutorialKey = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setShowTutorial(false);
+                if (game.current) {
+                    game.current.events.emit('resumeGame');
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleTutorialKey);
+        return () => window.removeEventListener('keydown', handleTutorialKey);
+    }, [showTutorial]);
+
     useEffect(() => {
         const handleResize = () => {
             const baseWidth = 768;
@@ -319,35 +337,37 @@ function App() {
                             border: '4px solid #ffffff',
                             padding: '20px',
                             color: 'white',
-                            fontFamily: "'Press Start 2P', cursive",
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                             zIndex: 2000,
                             fontSize: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? '0.8rem' : '1rem',
                             lineHeight: '1.5',
                             textAlign: 'center'
                         }}>
-                            <h2 style={{ color: '#ffff00', marginBottom: '20px', marginTop: 0 }}>HOW TO PLAY</h2>
+                            <h2 style={{ color: '#ffff00', marginBottom: '20px', marginTop: 0 }}>
+                                HOW TO PLAY
+                            </h2>
 
                             <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>CONTROLS</h3>
+                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>조작법 / CONTROLS</h3>
                                 {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>🕹️ Joystick: Move</li>
-                                        <li>🔴 Button: Jump</li>
+                                        <li>🕹️ 조이스틱: 이동 / Move</li>
+                                        <li>🔴 버튼: 점프 / Jump</li>
                                     </ul>
                                 ) : (
                                     <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>⬆️⬇️⬅️➡️ Arrow Keys: Move</li>
-                                        <li>SPACE Bar: Jump</li>
+                                        <li>⬆️⬇️⬅️➡️ 방향키: 이동 / Move</li>
+                                        <li>SPACE 스페이스바: 점프 / Jump</li>
                                     </ul>
                                 )}
                             </div>
 
                             <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>RULES</h3>
+                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>규칙 / RULES</h3>
                                 <ul style={{ listStyle: 'none', padding: 0 }}>
-                                    <li style={{ marginBottom: '10px' }}>❤️ Health drops over time!</li>
-                                    <li style={{ marginBottom: '10px' }}>🐟 Eat FISH to Heal (+20)</li>
-                                    <li style={{ marginBottom: '10px' }}>🥛 Drink MILK for Jump (+1)</li>
+                                    <li style={{ marginBottom: '10px' }}>❤️ 체력이 서서히 줄어듭니다! / HP drops!</li>
+                                    <li style={{ marginBottom: '10px' }}>🐟 생선 → 체력 회복 / Fish → Heal (+20)</li>
+                                    <li style={{ marginBottom: '10px' }}>🥛 우유 → 점프 증가 / Milk → Jump (+1)</li>
                                 </ul>
                             </div>
 
@@ -358,7 +378,7 @@ function App() {
                                     border: '4px solid #004d00',
                                     padding: '10px 30px',
                                     fontSize: '1.2rem',
-                                    fontFamily: "'Press Start 2P', cursive",
+                                    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                                     cursor: 'pointer',
                                     marginTop: '10px'
                                 }}
@@ -371,6 +391,14 @@ function App() {
                             >
                                 GO!
                             </button>
+                            <div style={{
+                                color: '#a0a0a0',
+                                fontSize: '0.6rem',
+                                marginTop: '10px',
+                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
+                            }}>
+                                PRESS ENTER
+                            </div>
                         </div>
                     )}
                 </>

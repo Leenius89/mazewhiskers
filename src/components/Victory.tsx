@@ -82,18 +82,18 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                 {/* Victory Text */}
                 <motion.h1
                     style={{
-                        fontSize: '3rem',
+                        fontSize: '2rem', // 한글 병기를 위해 폰트 사이즈를 조금 줄임
                         fontWeight: 'bold',
                         color: '#48bb78',
                         textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
                         marginBottom: '0',
                         textAlign: 'center',
-                        fontFamily: "'Press Start 2P', cursive"
+                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                     }}
-                    animate={{ scale: [1, 1.1, 1] }}
+                    animate={{ scale: [1, 1.05, 1] }}
                     transition={{ repeat: Infinity, duration: 2 }}
                 >
-                    VICTORY!
+                    성공! VICTORY!
                 </motion.h1>
 
                 {/* Time Display */}
@@ -101,12 +101,12 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                     style={{
                         color: '#fbbf24',
                         fontSize: '1.2rem',
-                        fontFamily: "'Press Start 2P', cursive",
+                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                         textAlign: 'center',
                         lineHeight: '1.5'
                     }}
                 >
-                    <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>CLEAR TIME</div>
+                    <div style={{ fontSize: '0.7em', marginBottom: '5px' }}>클리어 시간 / CLEAR TIME</div>
                     <div style={{ fontSize: '2rem', color: '#fff' }}>{formatTime(timeMs)}</div>
                 </motion.div>
 
@@ -116,7 +116,7 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                     gap: '2rem',
                     justifyContent: 'center',
                     width: '100%',
-                    fontFamily: "'Press Start 2P', cursive",
+                    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                     color: 'white',
                     fontSize: '1rem'
                 }}>
@@ -135,14 +135,14 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                     <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
                         <input
                             type="text"
-                            placeholder="YOUR NAME"
+                            placeholder="이름 입력 / YOUR NAME"
                             maxLength={10}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
                             style={{
                                 padding: '15px',
-                                fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', cursive",
+                                fontSize: '0.9rem',
+                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                                 textAlign: 'center',
                                 width: '80%',
                                 textTransform: 'uppercase',
@@ -156,8 +156,8 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             disabled={isSubmitting || !username.trim()}
                             style={{
                                 padding: '15px 20px',
-                                fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', cursive",
+                                fontSize: '0.9rem',
+                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                                 cursor: isSubmitting || !username.trim() ? 'not-allowed' : 'pointer',
                                 backgroundColor: isSubmitting || !username.trim() ? '#718096' : '#48bb78',
                                 color: 'white',
@@ -165,13 +165,13 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                                 width: '80%'
                             }}
                         >
-                            {isSubmitting ? 'SUBMITTING...' : 'SUBMIT TIME'}
+                            {isSubmitting ? '전송 중 / SUBMITTING...' : '기록 등록 / SUBMIT TIME'}
                         </button>
                     </div>
                 ) : (
-                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', cursive", padding: '10px', textAlign: 'center' }}>
-                        TIME SUBMITTED!
-                        <div style={{ fontSize: '0.8rem', marginTop: '10px', color: '#a0aec0' }}>CHECK LEADERBOARD</div>
+                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', 'Pretendard', sans-serif", padding: '10px', textAlign: 'center', fontSize: '0.9rem' }}>
+                        등록 완료! / TIME SUBMITTED!
+                        <div style={{ fontSize: '0.7rem', marginTop: '10px', color: '#a0aec0' }}>랭킹 확인 / CHECK LEADERBOARD</div>
                     </div>
                 )}
 
@@ -183,7 +183,7 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             color: 'black',
                             padding: '1rem',
                             borderRadius: '0.5rem',
-                            fontSize: '0.8rem',
+                            fontSize: '0.75rem',
                             fontWeight: 'bold',
                             border: 'none',
                             cursor: 'pointer',
@@ -191,14 +191,14 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             alignItems: 'center',
                             gap: '0.5rem',
                             boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', cursive"
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                         }}
                         onClick={onShowLeaderboard}
                         whileHover={{ y: -2 }}
                         whileTap={{ y: 0 }}
                     >
                         <Trophy size={16} />
-                        RANKING
+                        랭킹 / RANKING
                     </MotionClickable>
 
                     <MotionClickable
@@ -207,7 +207,7 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             color: 'white',
                             padding: '1rem',
                             borderRadius: '0.5rem',
-                            fontSize: '0.8rem',
+                            fontSize: '0.75rem',
                             fontWeight: 'bold',
                             border: 'none',
                             cursor: 'pointer',
@@ -215,14 +215,14 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             alignItems: 'center',
                             gap: '0.5rem',
                             boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', cursive"
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                         }}
                         onClick={onRetry}
                         whileHover={{ y: -2 }}
                         whileTap={{ y: 0 }}
                     >
                         <RotateCcw size={16} />
-                        RETRY
+                        재시도 / RETRY
                     </MotionClickable>
 
                     <MotionClickable
@@ -231,7 +231,7 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             color: 'white',
                             padding: '1rem',
                             borderRadius: '0.5rem',
-                            fontSize: '0.8rem',
+                            fontSize: '0.75rem',
                             fontWeight: 'bold',
                             border: 'none',
                             cursor: 'pointer',
@@ -239,14 +239,14 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
                             alignItems: 'center',
                             gap: '0.5rem',
                             boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', cursive"
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                         }}
                         onClick={onMainMenu}
                         whileHover={{ y: -2 }}
                         whileTap={{ y: 0 }}
                     >
                         <Home size={16} />
-                        MENU
+                        메뉴 / MENU
                     </MotionClickable>
                 </div>
             </motion.div>

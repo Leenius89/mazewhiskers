@@ -2,16 +2,16 @@ import Phaser from 'phaser';
 
 export const showEndingMessages = async (scene: Phaser.Scene, width: number, height: number): Promise<{ texts: Phaser.GameObjects.Text[] }> => {
     const messages = [
-        "Life begins without a rehearsal.",
-        "Using the rough waves of anxiety as our drive",
-        "we simply plunge toward an unknown point.",
-        "Even if I were to open my eyes again,",
-        "my choice remains the repetition of this very life."
+        "Life begins without a rehearsal.\n인생은 리허설 없이 시작된다.",
+        "Using the rough waves of anxiety as our drive\n불안이라는 거친 파도를 동력 삼아",
+        "we simply plunge toward an unknown point.\n우리는 그저 미지의 점을 향해 뛰어든다.",
+        "Even if I were to open my eyes again,\n내가 다시 눈을 뜬다 해도,",
+        "my choice remains the repetition of this very life.\n나의 선택은 바로 이 삶의 반복이다."
     ];
 
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
-        fontFamily: 'Arial',
-        fontSize: '20px',
+        fontFamily: "'Pretendard', sans-serif",
+        fontSize: '18px',
         color: '#ffffff',
         align: 'center',
         fixedWidth: width * 0.8,
@@ -19,7 +19,7 @@ export const showEndingMessages = async (scene: Phaser.Scene, width: number, hei
     };
 
     // Calculate positions
-    const lineSpacing = 60;
+    const lineSpacing = 85;
     const startY = height / 2 - ((messages.length - 1) * lineSpacing) / 2;
 
     // Create text objects

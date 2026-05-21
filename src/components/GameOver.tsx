@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
@@ -17,6 +17,30 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+
+    // 게임 오버 상태에서 스페이스바를 누르면 retry(재시작)가 작동하도록 키 바인딩 추가
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            // 이름 입력란(input) 등에 포커스가 있을 때는 스페이스바 재시작 방지
+            const activeElement = document.activeElement;
+            if (
+                activeElement &&
+                (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.getAttribute('contenteditable') === 'true')
+            ) {
+                return;
+            }
+
+            if (e.key === ' ' || e.code === 'Space') {
+                e.preventDefault(); // 스페이스바로 인한 브라우저 스크롤 등의 기본 동작 방지
+                onRetry();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [onRetry]);
 
     const handleSubmitScore = async () => {
         if (!username.trim()) return;
@@ -82,7 +106,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                         textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
                         marginBottom: '0.5rem',
                         textAlign: 'center',
-                        fontFamily: "'Press Start 2P', cursive"
+                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                     }}
                     initial={{ scale: 0.5, opacity: 0 }}
                     animate={{ scale: 1, opacity: 1 }}
@@ -96,7 +120,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                     style={{
                         color: '#fbbf24',
                         fontSize: '1.2rem',
-                        fontFamily: "'Press Start 2P', cursive",
+                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                         marginBottom: '1rem'
                     }}
                     initial={{ opacity: 0 }}
@@ -115,7 +139,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                         color: 'white',
                         fontSize: '1.2rem',
                         marginBottom: '1rem',
-                        fontFamily: "'Press Start 2P', cursive"
+                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                     }}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -143,7 +167,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                             style={{
                                 padding: '10px',
                                 fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', cursive",
+                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                                 textAlign: 'center',
                                 width: '80%',
                                 textTransform: 'uppercase'
@@ -155,7 +179,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                             style={{
                                 padding: '10px 20px',
                                 fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', cursive",
+                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                                 cursor: isSubmitting || !username.trim() ? 'not-allowed' : 'pointer',
                                 backgroundColor: isSubmitting || !username.trim() ? '#718096' : '#48bb78',
                                 color: 'white',
@@ -167,7 +191,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                         </button>
                     </div>
                 ) : (
-                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', cursive", padding: '10px' }}>
+                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', 'Pretendard', sans-serif", padding: '10px' }}>
                         SCORE SUBMITTED!
                     </div>
                 )}
@@ -188,7 +212,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                             alignItems: 'center',
                             gap: '0.5rem',
                             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                            fontFamily: "'Press Start 2P', cursive"
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                         }}
                         onClick={onRetry}
                         initial={{ scale: 0 }}
@@ -218,7 +242,7 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
                             alignItems: 'center',
                             gap: '0.5rem',
                             boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                            fontFamily: "'Press Start 2P', cursive"
+                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
                         }}
                         onClick={onShowLeaderboard}
                         initial={{ scale: 0 }}
