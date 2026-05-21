@@ -84,9 +84,11 @@ export class GameScene extends Phaser.Scene {
         // Move player to start position
         player.setPosition(this.tileSize * this.spacing, this.tileSize * this.spacing);
 
-        // 마우스 전용 환경을 위해 데스크톱 PC를 포함한 모든 환경에서 가상 조이스틱 UI 상시 표시
-        this.input.addPointer(1);
-        this.setupMobileControls(player);
+        // Mobile controls
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+            this.input.addPointer(1);
+            this.setupMobileControls(player);
+        }
 
         // Reset Jump Count
         this.game.events.emit('updateJumpCount', 0);
@@ -96,11 +98,9 @@ export class GameScene extends Phaser.Scene {
             createMilkItems(this as any, walls, player as any);
         }
 
-        // 스페이스바 점프 키 바인딩 대신 화면 전체 마우스 왼쪽 클릭 시 점프 작동
-        this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
-            if (pointer.leftButtonDown()) {
-                player.jump();
-            }
+        const spaceBar = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+        spaceBar.on('down', () => {
+            player.jump();
         });
 
         this.registry.set('milkCount', 0);
@@ -220,7 +220,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     setupMobileControls(player: Player) {
-        // 데스크톱 PC(마우스 단독 비치 환경)에서도 조이스틱 조작을 위해 항상 표시하도록 모바일 체크 제거
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (!isMobile) return;
 
         // UI Container
         const gameContainer = document.getElementById('game-container');
@@ -291,7 +292,6 @@ export class GameScene extends Phaser.Scene {
         let joystickOrigin: JoystickOrigin = { x: 0, y: 0 };
 
         joystickArea.addEventListener('pointerdown', (e) => {
-            e.stopPropagation(); // 조이스틱 마우스 조작 시 플레이어가 점프하지 않도록 이벤트 전파 차단
             isJoystickActive = true;
             const rect = joystickArea.getBoundingClientRect();
             joystickOrigin.x = e.clientX - rect.left;
@@ -351,8 +351,7 @@ export class GameScene extends Phaser.Scene {
         document.addEventListener('pointercancel', endJoystick);
 
         // Jump Button Event
-        const handleJump = (e: PointerEvent) => {
-            e.stopPropagation(); // 점프 버튼 클릭 시 Phaser 캔버스로 이벤트가 전파되어 중복 점프되는 것 차단
+        const handleJump = () => {
             if (!player.isJumping && player.jumpCount > 0) {
                 player.jump();
             }
