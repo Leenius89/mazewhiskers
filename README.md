@@ -1,70 +1,188 @@
-# Getting Started with Create React App
+# 🐱 Maze Whiskers
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+> 재개발로 사라지는 도시에서, 길고양이가 집을 찾아 달린다
+> *A game about housing and equality*
+>
+> **주제: 청년 주거 불평등 — 길고양이는 청년의 알레고리입니다**
 
-## Available Scripts
+**▶ 지금 바로 플레이: [mazewhiskers.vercel.app](https://mazewhiskers.vercel.app)**
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## 개요
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+| 항목 | 내용 |
+|---|---|
+| 주제 | **청년 주거 불평등** |
+| 장르 | 2D 탑다운 미로 탈출 · 서바이벌 아케이드 |
+| 플랫폼 | 웹 브라우저 (PC · 모바일 반응형) |
+| 플레이 시간 | 1회 약 3~5분 |
+| 개발 | 이중민 (Joongmin Lee) / studio 凹凸 — 1인 개발 |
+| 기술 | Phaser 3.86 · React 18 · TypeScript 5.9 · Supabase |
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+사방에서 아파트가 지어지며 좁혀 오는 도시 미로에서, 길고양이가 중앙의 집에 도달해야 하는 생존 게임입니다.
+플레이어를 죽이는 것은 몬스터가 아니라 **'개발' 그 자체**입니다.
 
-### `npm test`
+### 왜 길고양이인가
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+플레이어 캐릭터인 길고양이는 **청년의 알레고리**입니다.
+도시에 분명히 살고 있지만 도시가 자기 자리로 인정해 주지 않는 존재, 고정된 집 없이 골목과 틈새 공간에 의존해 살아가는 존재, 그리고 재개발이 시작되면 가장 먼저 가장 조용히 사라지는 존재라는 점에서 —
+원룸·반지하·옥탑방에 거주하며 이주 대책의 협상 주체가 되지 못한 채 밀려나는 **청년 세입자**의 위치와 정확히 겹치기 때문입니다.
 
-### `npm run build`
+| 게임 요소 | 대응하는 청년의 현실 |
+|---|---|
+| **플레이어 = 길고양이** | **자기 자리를 보장받지 못하는 청년 세입자** |
+| 낡은 저층 건물로 된 미로 | 청년이 실제로 거주 가능한 재개발 이전의 주거지 |
+| 사방에서 건설되는 아파트 | 살 곳이 늘어나는 동시에 *내가* 살 곳은 사라지는 역설 |
+| 초당 감소하는 체력 | 가만히 있어도 빠져나가는 월세와 생활비 |
+| 🐟 생선 (체력 회복) | 노동 소득 — 계속 구해야 하고 모아 둘 수 없다 |
+| 🥛 우유 (점프 자원) | 도약에 필요한 여유 자산 — **기회를 쓰려면 먼저 자원이 있어야 한다** |
+| 중앙의 목표 지점 | 도달하기 전에 사라질 수도 있는 '내 집' |
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+이 게임은 청년을 *피해자*로 그리지 않습니다.
+고양이는 적보다 두 배 빠르고, 벽을 넘을 수 있으며, 미로를 읽어 낼 수 있습니다.
+**능력의 부족이 아니라 조건의 축소가 사람을 밀어낸다** — 실력이 충분해도 판이 좁아지면 진다는 감각을 남기는 것이 이 작품의 목표입니다.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+---
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## 플레이 방법
 
-### `npm run eject`
+### 조작
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+| 동작 | PC | 모바일 |
+|---|---|---|
+| 이동 | 방향키 `↑ ↓ ← →` | 좌측 하단 가상 조이스틱 |
+| 점프 | `Space` | 우측 하단 `JUMP` 버튼 |
+| 시작 / 재시작 | `Enter` / `Space` | 화면 탭 |
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### 규칙
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+| 요소 | 효과 |
+|---|---|
+| ❤️ 체력 | 시작 100, **초당 -1**. 0이 되면 게임 오버 |
+| 🐟 생선 | 체력 **+20** 회복 |
+| 🥛 우유 | 점프 가능 횟수 **+1** (벽을 넘을 수 있음) |
+| 👹 적 | 시작 약 14초 후 등장. 접촉 시 즉시 게임 오버 |
+| 🏢 아파트 | **15초 후** 사방에서 건설 시작, 이후 **10초마다 한 줄**씩 잠식. 깔리면 게임 오버 |
+| 🏠 목표 | 미로 정중앙. 도달 시 클리어 (아파트에 덮이면 게임 오버) |
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### 점수
 
-## Learn More
+```
+최종 점수 = (우유 × 50) + (생선 × 100) + (점프 × 10)
+```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+**HIGH SCORE** 랭킹과 **SPEEDRUN**(클리어 타임) 랭킹이 온라인으로 집계됩니다.
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+---
 
-### Code Splitting
+## 실행 방법
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+### 웹에서 바로 (권장)
 
-### Analyzing the Bundle Size
+```
+https://mazewhiskers.vercel.app
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
+설치 불필요. 최신 Chrome / Edge / Safari 권장.
+> 브라우저 정책상 첫 화면에서 `Enter` 또는 탭을 한 번 눌러야 BGM이 재생됩니다.
 
-### Making a Progressive Web App
+### 로컬 실행
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+**사전 준비:** Node.js 18 이상, Git
 
-### Advanced Configuration
+```bash
+# 1. 저장소 복제
+git clone https://github.com/Leenius89/mazewhiskers.git
+cd mazewhiskers
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+# 2. 의존성 설치 (최초 1회)
+npm install
 
-### Deployment
+# 3. 개발 서버 실행
+npm start
+# → http://localhost:3000
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+**빌드**
 
-### `npm run build` fails to minify
+```bash
+npm run build      # build/ 폴더에 정적 파일 생성
+npx serve -s build # 빌드 결과 로컬 확인
+```
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+> 리더보드는 원격 Supabase에 연결되어 있어 별도 환경 변수 설정 없이 동작합니다.
+
+---
+
+## 프로젝트 구조
+
+```
+src/
+├── App.tsx                     React 루트 · Phaser 인스턴스 생명주기 관리
+├── components/                 React UI 레이어
+│   ├── MainPage.tsx            타이틀 · 게임 안내
+│   ├── Header.tsx              HUD (HP · 점프 · 우유)
+│   ├── GameOver.tsx            게임 오버 · 점수 등록
+│   ├── Victory.tsx             클리어 · 타임 등록
+│   └── Leaderboard.tsx         Supabase 랭킹 조회
+├── game/                       Phaser 게임 로직
+│   ├── scenes/GameScene.ts     메인 씬 · 모바일 컨트롤
+│   ├── objects/Player.ts       플레이어 이동 · 점프
+│   ├── objects/Enemy.ts        적 오브젝트
+│   ├── constants/GameConfig.ts 게임 밸런스 수치 중앙 관리
+│   ├── managers/AssetLoader.ts 리소스 일괄 로딩
+│   ├── mazeUtils.ts            절차적 미로 생성 (재귀 백트래킹)
+│   ├── apartmentUtils.ts       아파트 잠식 시스템
+│   ├── enemyPathfinding.ts     적 경로 탐색
+│   ├── healthUtils.ts          HP 감소 · 생선 회복
+│   ├── goalUtils.ts            목표 지점 · 인트로 카메라 · 승리 처리
+│   ├── soundUtils.ts           BGM · 효과음
+│   └── victory/                승리 씬 · 엔딩 · 크레딧
+└── lib/supabaseClient.ts       Supabase 연결
+
+public/sources/                 스프라이트 · 사운드 리소스
+```
+
+---
+
+## 아키텍처
+
+게임 로직(Phaser)과 UI(React)를 완전히 분리하고, **Phaser 전역 이벤트 버스로만 통신**합니다.
+
+```
+[ Phaser GameScene ]                        [ React App.tsx ]
+        |                                          |
+        |-- emit('changeHealth', -1) -------------> setHealth()
+        |-- emit('collectFish' | 'collectMilk') --> setFishCount() / setMilkCount()
+        |-- emit('gameOver' | 'victory') ---------> <GameOver /> / <Victory />
+        |                                          |
+   scene.pause() <----------- emit('pauseGame') ---|  (튜토리얼 오버레이)
+```
+
+### 주요 시스템
+
+- **절차적 미로 생성** — 41×41 그리드에 재귀 백트래킹 알고리즘 적용, 매 판 다른 미로
+- **아파트 잠식** — 상·하·좌·우 4개 독립 타이머가 안쪽으로 전진. 좌표 중복 판정을 `Set` 기반 O(1)로 처리
+- **깊이 정렬** — Y 좌표 기반 동적 렌더링 순서로 탑다운 원근감 구현
+- **모바일 컨트롤** — User Agent 감지 후 DOM 가상 조이스틱 동적 생성, 각도·거리 기반 아날로그 이동
+- **8비트 트랜지션** — 클리어 시 화면 중앙부터 픽셀 블록이 거리순으로 채워지는 전환 효과
+
+---
+
+## 개발 방식
+
+프로그래밍 비전공자가 **생성형 AI를 페어 프로그래밍 파트너로 삼아** 개발한 프로젝트입니다.
+청년 주거 불평등이라는 주제 의식, 길고양이라는 알레고리의 선택, 게임 밸런스와 연출 판단은 전부 개발자가 직접 결정했습니다.
+
+---
+
+## 크레딧
+
+| 역할 | 담당 |
+|---|---|
+| 기획 · 개발 · 아트 · 디자인 | 이중민 (Joongmin Lee) |
+| 음악 · 사운드 | Pixabay — Lesiakower *Battle Time* / Spencer_YK *Little Slime's Adventure* |
+| Special Thanks | 알투스통합예술연구소 |
+
+© 2024 studio 凹凸
