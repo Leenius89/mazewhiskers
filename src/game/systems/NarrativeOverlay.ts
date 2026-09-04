@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
+import { fontPx } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 export interface SpotlightTarget {
@@ -54,6 +55,7 @@ export class NarrativeOverlay {
     private readonly box: Phaser.GameObjects.Graphics;
     private readonly speakerText: Phaser.GameObjects.Text;
     private readonly bodyText: Phaser.GameObjects.Text;
+    private readonly measure: Phaser.GameObjects.Text;
     private readonly hintText: Phaser.GameObjects.Text;
     private readonly skipText: Phaser.GameObjects.Text;
 
@@ -62,12 +64,25 @@ export class NarrativeOverlay {
     private liftedDepth = 0;
     private waitingForInput = false;
     private skipped = false;
+
+    /**
+     * The whole line, kept so the box can be sized before it is typed.
+     *
+     * Measuring the visible text instead would grow the box one line at a
+     * time as the typewriter ran, which reads as the interface twitching.
+     */
+    private fullText = '';
+    private measureKey = '';
+    private measuredHeight = 0;
+    /** Top edge of the box as last drawn; the pointer aims at it. */
+    private boxTop = 0;
     private resolveWait: (() => void) | null = null;
     private typingEvent: Phaser.Time.TimerEvent | null = null;
 
     constructor(scene: GameScene) {
         this.scene = scene;
         const cfg = GameConfig.NARRATIVE;
+        const camera = scene.cameras.main;
 
         this.shade = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY + 100);
         this.pointer = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY + 101);
@@ -76,7 +91,7 @@ export class NarrativeOverlay {
         this.speakerText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                fontSize: '10px',
+                fontSize: fontPx(10, camera),
                 color: cfg.SPEAKER_COLOR
             })
             .setScrollFactor(0)
@@ -85,7 +100,7 @@ export class NarrativeOverlay {
         this.bodyText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: '15px',
+                fontSize: fontPx(15, camera),
                 color: cfg.TEXT_COLOR,
                 lineSpacing: 7,
                 wordWrap: { width: 100 }
@@ -93,10 +108,23 @@ export class NarrativeOverlay {
             .setScrollFactor(0)
             .setDepth(DEPTH.OVERLAY + 103);
 
+        // Never drawn. It exists only so the finished line can be measured while
+        // the visible one is still being typed.
+        this.measure = scene.add
+            .text(0, 0, '', {
+                fontFamily: "'Pretendard', sans-serif",
+                fontSize: fontPx(15, camera),
+                color: cfg.TEXT_COLOR,
+                lineSpacing: 7,
+                wordWrap: { width: 100 }
+            })
+            .setVisible(false)
+            .setActive(false);
+
         this.hintText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                fontSize: '8px',
+                fontSize: fontPx(8, camera),
                 color: cfg.HINT_COLOR
             })
             .setOrigin(1, 1)
@@ -111,7 +139,7 @@ export class NarrativeOverlay {
         this.skipText = scene.add
             .text(0, 0, 'SKIP ▸', {
                 fontFamily: "'Press Start 2P', monospace",
-                fontSize: cfg.SKIP_SIZE,
+                fontSize: fontPx(parseInt(cfg.SKIP_SIZE, 10), camera),
                 color: cfg.SKIP_COLOR,
                 backgroundColor: 'rgba(11,13,19,0.92)',
                 padding: { x: 11, y: 8 }
@@ -172,6 +200,7 @@ export class NarrativeOverlay {
         this.speakerText.setText(options.speaker ?? '');
         this.bodyText.setText('');
         this.hintText.setText('');
+        this.fullText = text;
 
         this.setVisible(true);
         this.lift(options.subject ?? null);
@@ -385,7 +414,7 @@ export class NarrativeOverlay {
 
         this.drawCorners(left, top, right, bottom, cfg.HIGHLIGHT_COLOR);
         this.pointer.lineStyle(1, cfg.HIGHLIGHT_COLOR, 0.5 * pulse);
-        this.pointer.lineBetween(cx, bottom, cx, height - GameConfig.NARRATIVE.BOX_HEIGHT - 24);
+        this.pointer.lineBetween(cx, bottom, cx, this.boxTop - 6);
     }
 
     /** Corner ticks read as a viewfinder rather than a plain box. */
@@ -402,12 +431,42 @@ export class NarrativeOverlay {
         this.pointer.lineBetween(right, bottom, right, bottom - arm);
     }
 
+    /**
+     * Height of the full line at this width, measured once and remembered.
+     *
+     * A separate, invisible Text carries the whole sentence so the visible
+     * one can stay mid-typewriter while the box is sized for the finished
+     * line. Re-measured only when the line or the width actually changes.
+     */
+    private bodyHeightFor(wrapWidth: number): number {
+        const key = `${Math.round(wrapWidth)}|${this.fullText}`;
+        if (key === this.measureKey) return this.measuredHeight;
+
+        this.measure.setWordWrapWidth(wrapWidth);
+        this.measure.setText(this.fullText);
+
+        this.measureKey = key;
+        this.measuredHeight = this.measure.height;
+        return this.measuredHeight;
+    }
+
     private drawBox(width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
         const margin = cfg.BOX_MARGIN;
         const boxWidth = width - margin * 2;
-        const boxHeight = cfg.BOX_HEIGHT;
         const left = margin;
+
+        // Wrapped first: the box is measured from the text, so the text has to
+        // know how wide it may be before anything can be sized.
+        const wrapWidth = boxWidth - cfg.PADDING_X * 2;
+        this.bodyText.setWordWrapWidth(wrapWidth);
+
+        const bodyTop = this.speakerText.text ? cfg.BODY_TOP_WITH_SPEAKER : cfg.BODY_TOP;
+        const boxHeight = Math.max(
+            cfg.BOX_MIN_HEIGHT,
+            bodyTop + this.bodyHeightFor(wrapWidth) + cfg.HINT_ROOM
+        );
         const top = height - boxHeight - margin;
+        this.boxTop = top;
 
         this.box.clear();
         this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
@@ -415,11 +474,10 @@ export class NarrativeOverlay {
         this.box.lineStyle(2, cfg.HIGHLIGHT_COLOR, 0.9);
         this.box.strokeRect(left, top, boxWidth, boxHeight);
 
-        this.speakerText.setPosition(left + 14, top + 12);
-        this.bodyText.setPosition(left + 14, top + (this.speakerText.text ? 32 : 18));
-        this.bodyText.setWordWrapWidth(boxWidth - 28);
+        this.speakerText.setPosition(left + cfg.PADDING_X, top + 12);
+        this.bodyText.setPosition(left + cfg.PADDING_X, top + bodyTop);
 
-        this.hintText.setPosition(left + boxWidth - 12, top + boxHeight - 10);
+        this.hintText.setPosition(left + boxWidth - 12, top + boxHeight - 8);
         this.hintText.setText(this.waitingForInput ? '▸ ENTER / CLICK' : '');
 
         this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP);
@@ -430,6 +488,7 @@ export class NarrativeOverlay {
         this.shade.destroy();
         this.pointer.destroy();
         this.box.destroy();
+        this.measure.destroy();
         this.speakerText.destroy();
         this.bodyText.destroy();
         this.hintText.destroy();

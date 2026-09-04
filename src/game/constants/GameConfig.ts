@@ -159,8 +159,21 @@ export const GameConfig = {
         HIGHLIGHT_COLOR: 0xf0b429,
         BOX_COLOR: 0x0b0d13,
         BOX_ALPHA: 0.94,
-        BOX_HEIGHT: 104,
+        /**
+         * A floor, not a height. The box grows to whatever the line needs.
+         *
+         * It used to be fixed, which was fine at 768 pixels wide and wrong
+         * everywhere else: on a phone the same sentence wraps to four lines
+         * instead of two and 31 pixels of it fell out of the bottom.
+         */
+        BOX_MIN_HEIGHT: 104,
         BOX_MARGIN: 18,
+        /** Inner gaps the box is measured from. */
+        PADDING_X: 14,
+        BODY_TOP: 18,
+        BODY_TOP_WITH_SPEAKER: 32,
+        /** Room kept under the text for the ENTER hint. */
+        HINT_ROOM: 26,
         TEXT_COLOR: '#e7e9ee',
         SPEAKER_COLOR: '#f0b429',
         HINT_COLOR: '#8b919c',
@@ -182,6 +195,8 @@ export const GameConfig = {
      */
     BARKS: {
         MAX_WIDTH: 190,
+        /** And never wider than this share of a narrow screen. */
+        MAX_WIDTH_FRACTION: 0.52,
         PADDING: { X: 10, Y: 6 },
         FONT_SIZE: 13,
         BOX_COLOR: 0x05070c,
@@ -531,6 +546,8 @@ export const GameConfig = {
         RESERVED_TAIL: 18,
         MINIMAP: {
             CELL: 3,
+            /** Never more than this share of the canvas width. */
+            MAX_WIDTH_FRACTION: 0.26,
             BACKGROUND: 0x11131a,
             OPEN: 0x4a5568,
             WALL: 0x22262f,

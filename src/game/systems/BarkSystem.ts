@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
+import { barkWrapWidth, fontPx } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /** Anything that can hold a bubble over its head. */
@@ -53,10 +54,10 @@ class Bubble {
         this.label = scene.add
             .text(0, -cfg.TAIL - cfg.PADDING.Y, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: `${cfg.FONT_SIZE}px`,
+                fontSize: fontPx(cfg.FONT_SIZE, scene.cameras.main),
                 color: colour,
                 align: 'center',
-                wordWrap: { width: cfg.MAX_WIDTH }
+                wordWrap: { width: barkWrapWidth(scene.cameras.main) }
             })
             .setOrigin(0.5, 1);
 
@@ -155,7 +156,28 @@ class Bubble {
         }
 
         const y = flipped ? speaker.y + cfg.OFFSET_Y_BELOW : above;
-        this.container.setPosition(this.dodgeHud(speaker.x, y, camera), y);
+        this.container.setPosition(this.fitOnScreen(speaker.x, y, camera), y);
+    }
+
+    /**
+     * Keeps the whole bubble inside the view.
+     *
+     * On a phone the bubble is half the width of the screen, so a speaker
+     * anywhere near an edge would have had its line cut off by it. Clamped
+     * after the HUD dodge, because staying on screen matters more than
+     * clearing the minimap.
+     */
+    private fitOnScreen(x: number, y: number, camera: Phaser.Cameras.Scene2D.Camera): number {
+        const view = camera.worldView;
+        const margin = GameConfig.BARKS.EDGE_MARGIN / (camera.zoom || 1);
+        const half = this.boxWidth / 2;
+
+        const dodged = this.dodgeHud(x, y, camera);
+
+        // A bubble wider than the view cannot satisfy both edges; centre it.
+        if (half * 2 + margin * 2 >= view.width) return view.centerX;
+
+        return Phaser.Math.Clamp(dodged, view.left + margin + half, view.right - margin - half);
     }
 
     /**

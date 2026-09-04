@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
+import { fontPx, minimapCell } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -49,7 +50,7 @@ export class HudOverlay {
         this.readout = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', monospace",
-                fontSize: '9px',
+                fontSize: fontPx(9, scene.cameras.main),
                 color: GameConfig.HUD.TEXT_COLOR,
                 align: 'right'
             })
@@ -92,7 +93,7 @@ export class HudOverlay {
         pinToScreen(this.readout, viewport);
         pinToScreen(this.flash, viewport);
 
-        const cell = GameConfig.HUD.MINIMAP.CELL;
+        const cell = minimapCell(camera);
         const size = GameConfig.MAZE_SIZE * cell;
         const margin = GameConfig.HUD.MARGIN;
 
@@ -177,7 +178,7 @@ export class HudOverlay {
 
     /** Time-to-rent bar under the minimap, turning amber as the deadline nears. */
     private drawRentBar(): void {
-        const cell = GameConfig.HUD.MINIMAP.CELL;
+        const cell = minimapCell(this.scene.cameras.main);
         const width = GameConfig.MAZE_SIZE * cell;
         const y = this.readoutOffset.y + this.readout.height + 6;
         const rent = GameConfig.HEALTH.RENT;
