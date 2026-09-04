@@ -1,0 +1,438 @@
+import Phaser from 'phaser';
+import { GameConfig } from '../constants/GameConfig';
+import { DEPTH } from '../core/depth';
+import { pinToScreen, viewportOf } from '../core/screenSpace';
+import type { GameScene } from '../scenes/GameScene';
+
+export interface SpotlightTarget {
+    /** World position to cut a hole around. */
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+
+export interface BeatOptions {
+    /** Who is speaking. Shown above the line. */
+    speaker?: string;
+    /** World rectangle to cut out of the dimming. */
+    spotlight?: SpotlightTarget | null;
+    /**
+     * The object being talked about.
+     *
+     * Lifted above the buildings for the duration of the beat. A spotlight on a
+     * fish that a tower happens to be standing in front of explains nothing —
+     * the hole in the darkness was there, but the fish was not.
+     */
+    subject?: Phaser.GameObjects.Sprite | null;
+    /** Pan the camera here before the line starts. */
+    lookAt?: { x: number; y: number } | null;
+    /** Skip waiting for input and continue after this long instead. */
+    autoAdvanceMs?: number;
+}
+
+/**
+ * The game speaking directly to the player.
+ *
+ * Used for the opening tutorial and for the enemy's entrance. Both need the same
+ * three things, so they share one implementation: darken everything except the
+ * thing being talked about, type the line out rather than dumping it, and wait
+ * for the player to acknowledge before moving on.
+ *
+ * A wall of explanatory text before the game starts is the thing this replaces.
+ * Nobody reads it, and it describes systems the player has not seen yet — a
+ * spotlight on the actual fish, with the camera looking at it, does not have
+ * that problem.
+ */
+export class NarrativeOverlay {
+    private readonly scene: GameScene;
+
+    /** Dimming plus the cut-out, in screen space. */
+    private readonly shade: Phaser.GameObjects.Graphics;
+    /** Leader line from the box to the highlighted thing. */
+    private readonly pointer: Phaser.GameObjects.Graphics;
+    private readonly box: Phaser.GameObjects.Graphics;
+    private readonly speakerText: Phaser.GameObjects.Text;
+    private readonly bodyText: Phaser.GameObjects.Text;
+    private readonly hintText: Phaser.GameObjects.Text;
+    private readonly skipText: Phaser.GameObjects.Text;
+
+    private activeSpotlight: SpotlightTarget | null = null;
+    private liftedSubject: Phaser.GameObjects.Sprite | null = null;
+    private liftedDepth = 0;
+    private waitingForInput = false;
+    private skipped = false;
+    private resolveWait: (() => void) | null = null;
+    private typingEvent: Phaser.Time.TimerEvent | null = null;
+
+    constructor(scene: GameScene) {
+        this.scene = scene;
+        const cfg = GameConfig.NARRATIVE;
+
+        this.shade = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY + 100);
+        this.pointer = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY + 101);
+        this.box = scene.add.graphics().setScrollFactor(0).setDepth(DEPTH.OVERLAY + 102);
+
+        this.speakerText = scene.add
+            .text(0, 0, '', {
+                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
+                fontSize: '10px',
+                color: cfg.SPEAKER_COLOR
+            })
+            .setScrollFactor(0)
+            .setDepth(DEPTH.OVERLAY + 103);
+
+        this.bodyText = scene.add
+            .text(0, 0, '', {
+                fontFamily: "'Pretendard', sans-serif",
+                fontSize: '15px',
+                color: cfg.TEXT_COLOR,
+                lineSpacing: 7,
+                wordWrap: { width: 100 }
+            })
+            .setScrollFactor(0)
+            .setDepth(DEPTH.OVERLAY + 103);
+
+        this.hintText = scene.add
+            .text(0, 0, '', {
+                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
+                fontSize: '8px',
+                color: cfg.HINT_COLOR
+            })
+            .setOrigin(1, 1)
+            .setScrollFactor(0)
+            .setDepth(DEPTH.OVERLAY + 103);
+
+        // Skipping has to be reachable without reading every line first — a
+        // returning player should not have to sit through the introduction.
+        // It sits just above the dialogue box, where the player is already
+        // looking; in the far top corner at eight grey pixels it was, in
+        // practice, invisible.
+        this.skipText = scene.add
+            .text(0, 0, 'SKIP ▸', {
+                fontFamily: "'Press Start 2P', monospace",
+                fontSize: cfg.SKIP_SIZE,
+                color: cfg.SKIP_COLOR,
+                backgroundColor: 'rgba(11,13,19,0.92)',
+                padding: { x: 11, y: 8 }
+            })
+            .setOrigin(1, 1)
+            .setScrollFactor(0)
+            .setDepth(DEPTH.OVERLAY + 104)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.requestSkip());
+
+        this.setVisible(false);
+    }
+
+    /** True once the player has asked to stop being talked to. */
+    get wasSkipped(): boolean {
+        return this.skipped;
+    }
+
+    /**
+     * Abandons the rest of the sequence.
+     *
+     * Resolves whatever beat is waiting so the caller's `await` chain unwinds;
+     * each beat then checks `wasSkipped` and returns early.
+     */
+    requestSkip(): void {
+        this.skipped = true;
+        this.acknowledge();
+    }
+
+    get isWaiting(): boolean {
+        return this.waitingForInput;
+    }
+
+    private setVisible(visible: boolean): void {
+        this.shade.setVisible(visible);
+        this.pointer.setVisible(visible);
+        this.box.setVisible(visible);
+        this.speakerText.setVisible(visible);
+        this.bodyText.setVisible(visible);
+        this.hintText.setVisible(visible);
+        this.skipText.setVisible(visible);
+    }
+
+    /**
+     * Plays one beat and resolves when the player has acknowledged it.
+     *
+     * The caller decides what to do next, so a sequence is just an `await` list.
+     */
+    async play(text: string, options: BeatOptions = {}): Promise<void> {
+        if (this.skipped) return;
+
+        this.scene.narrativeActive = true;
+        this.activeSpotlight = options.spotlight ?? null;
+
+        // Cleared before the box is shown. Leaving the previous line in place
+        // meant the enemy's entrance opened on the last thing the tutorial had
+        // said, for as long as the camera took to get there.
+        this.speakerText.setText(options.speaker ?? '');
+        this.bodyText.setText('');
+        this.hintText.setText('');
+
+        this.setVisible(true);
+        this.lift(options.subject ?? null);
+
+        if (options.lookAt) {
+            await this.panTo(options.lookAt.x, options.lookAt.y);
+        }
+
+        await this.typeOut(text);
+
+        if (options.autoAdvanceMs) {
+            await this.wait(options.autoAdvanceMs);
+        } else {
+            await this.waitForAcknowledgement();
+        }
+    }
+
+    /** Raises the subject clear of anything that would hide it, then restores it. */
+    private lift(subject: Phaser.GameObjects.Sprite | null): void {
+        this.drop();
+        if (!subject || !subject.active) return;
+
+        this.liftedSubject = subject;
+        this.liftedDepth = subject.depth;
+        subject.setDepth(DEPTH.OVERLAY + 90);
+    }
+
+    private drop(): void {
+        if (!this.liftedSubject) return;
+        if (this.liftedSubject.active) this.liftedSubject.setDepth(this.liftedDepth);
+        this.liftedSubject = null;
+    }
+
+    /** Ends the sequence and hands the world back. */
+    finish(): void {
+        this.drop();
+        this.skipped = false;
+        this.stopTyping();
+        this.waitingForInput = false;
+        this.resolveWait = null;
+        this.activeSpotlight = null;
+        this.setVisible(false);
+        this.scene.narrativeActive = false;
+    }
+
+    private wait(ms: number): Promise<void> {
+        return new Promise((resolve) => this.scene.time.delayedCall(ms, resolve));
+    }
+
+    private panTo(x: number, y: number): Promise<void> {
+        return new Promise((resolve) => {
+            const camera = this.scene.cameras.main;
+            const duration = GameConfig.NARRATIVE.PAN_MS;
+
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                resolve();
+            };
+
+            this.scene.cameraDirector?.setEnabled(false);
+            camera.stopFollow();
+
+            // force = true. Phaser drops a pan requested while another is still
+            // running and never calls its callback, and the opening fly-over is
+            // still technically in flight when it announces that it finished —
+            // which left the tutorial waiting on a promise nothing would resolve.
+            camera.pan(x, y, duration, 'Sine.easeInOut', true, (_cam, progress) => {
+                if (progress === 1) finish();
+            });
+
+            // A soft-locked tutorial on an unattended kiosk is unrecoverable, so
+            // the sequence never depends on a camera effect to move it along.
+            this.scene.time.delayedCall(duration + 250, finish);
+        });
+    }
+
+    /** Returns the camera to the player and re-enables the follow director. */
+    returnToPlayer(): Promise<void> {
+        const player = this.scene.player;
+        if (!player) return Promise.resolve();
+
+        return new Promise((resolve) => {
+            const camera = this.scene.cameras.main;
+            const duration = GameConfig.NARRATIVE.PAN_MS;
+            let settled = false;
+            const finish = () => {
+                if (settled) return;
+                settled = true;
+                camera.startFollow(player, true);
+                this.scene.cameraDirector?.setEnabled(true);
+                resolve();
+            };
+
+            camera.pan(player.x, player.y, duration, 'Sine.easeInOut', true, (_c, progress) => {
+                if (progress === 1) finish();
+            });
+            this.scene.time.delayedCall(duration + 250, finish);
+        });
+    }
+
+    private stopTyping(): void {
+        this.typingEvent?.remove();
+        this.typingEvent = null;
+    }
+
+    /** One character at a time, so the line arrives rather than appears. */
+    private typeOut(text: string): Promise<void> {
+        this.stopTyping();
+        this.bodyText.setText('');
+
+        return new Promise((resolve) => {
+            let index = 0;
+            this.typingEvent = this.scene.time.addEvent({
+                delay: GameConfig.NARRATIVE.TYPE_MS,
+                repeat: text.length - 1,
+                callback: () => {
+                    index++;
+                    this.bodyText.setText(text.slice(0, index));
+                    if (index >= text.length) {
+                        this.typingEvent = null;
+                        resolve();
+                    }
+                }
+            });
+        });
+    }
+
+    private waitForAcknowledgement(): Promise<void> {
+        return new Promise((resolve) => {
+            this.waitingForInput = true;
+            this.resolveWait = resolve;
+        });
+    }
+
+    /** Called by the scene when the player presses or clicks. */
+    acknowledge(): void {
+        if (!this.waitingForInput) return;
+        this.waitingForInput = false;
+        const resolve = this.resolveWait;
+        this.resolveWait = null;
+        resolve?.();
+    }
+
+    /**
+     * Redraws in screen space every frame.
+     *
+     * The spotlight is given in world coordinates and converted here, so it keeps
+     * tracking its subject while the camera moves.
+     */
+    update(time: number): void {
+        if (!this.scene.narrativeActive) return;
+
+        const camera = this.scene.cameras.main;
+        const cfg = GameConfig.NARRATIVE;
+
+        // Pinned every frame: the camera zoom moves under the overlay during a
+        // jump, and a dimming layer that does not cover the screen is worse
+        // than no dimming at all.
+        const viewport = viewportOf(camera);
+        [this.shade, this.pointer, this.box, this.speakerText, this.bodyText, this.hintText, this.skipText].forEach(
+            (layer) => pinToScreen(layer, viewport)
+        );
+
+        const width = viewport.width;
+        const height = viewport.height;
+
+        this.drawShade(camera, width, height, time);
+        this.drawBox(width, height, cfg);
+    }
+
+    /** Four rectangles around the hole, rather than a mask — cheap and exact. */
+    private drawShade(
+        camera: Phaser.Cameras.Scene2D.Camera,
+        width: number,
+        height: number,
+        time: number
+    ): void {
+        const cfg = GameConfig.NARRATIVE;
+        this.shade.clear();
+        this.pointer.clear();
+        this.shade.fillStyle(cfg.SHADE_COLOR, cfg.SHADE_ALPHA);
+
+        const spot = this.activeSpotlight;
+        if (!spot) {
+            this.shade.fillRect(0, 0, width, height);
+            return;
+        }
+
+        const zoom = camera.zoom;
+        const cx = (spot.x - camera.worldView.x) * zoom;
+        const cy = (spot.y - camera.worldView.y) * zoom;
+        const halfW = (spot.width / 2) * zoom + cfg.SPOTLIGHT_PADDING;
+        const halfH = (spot.height / 2) * zoom + cfg.SPOTLIGHT_PADDING;
+
+        const left = cx - halfW;
+        const right = cx + halfW;
+        const top = cy - halfH;
+        const bottom = cy + halfH;
+
+        this.shade.fillRect(0, 0, width, Math.max(0, top));
+        this.shade.fillRect(0, Math.min(height, bottom), width, height);
+        this.shade.fillRect(0, Math.max(0, top), Math.max(0, left), Math.max(0, bottom - top));
+        this.shade.fillRect(Math.min(width, right), Math.max(0, top), width, Math.max(0, bottom - top));
+
+        // Pulsing frame, so the eye lands on the hole rather than the darkness.
+        const pulse = 0.65 + 0.35 * Math.sin((time / cfg.PULSE_MS) * Math.PI * 2);
+        this.pointer.lineStyle(2, cfg.HIGHLIGHT_COLOR, pulse);
+        this.pointer.strokeRect(left, top, right - left, bottom - top);
+
+        this.drawCorners(left, top, right, bottom, cfg.HIGHLIGHT_COLOR);
+        this.pointer.lineStyle(1, cfg.HIGHLIGHT_COLOR, 0.5 * pulse);
+        this.pointer.lineBetween(cx, bottom, cx, height - GameConfig.NARRATIVE.BOX_HEIGHT - 24);
+    }
+
+    /** Corner ticks read as a viewfinder rather than a plain box. */
+    private drawCorners(left: number, top: number, right: number, bottom: number, color: number): void {
+        const arm = 10;
+        this.pointer.lineStyle(3, color, 1);
+        this.pointer.lineBetween(left, top, left + arm, top);
+        this.pointer.lineBetween(left, top, left, top + arm);
+        this.pointer.lineBetween(right, top, right - arm, top);
+        this.pointer.lineBetween(right, top, right, top + arm);
+        this.pointer.lineBetween(left, bottom, left + arm, bottom);
+        this.pointer.lineBetween(left, bottom, left, bottom - arm);
+        this.pointer.lineBetween(right, bottom, right - arm, bottom);
+        this.pointer.lineBetween(right, bottom, right, bottom - arm);
+    }
+
+    private drawBox(width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
+        const margin = cfg.BOX_MARGIN;
+        const boxWidth = width - margin * 2;
+        const boxHeight = cfg.BOX_HEIGHT;
+        const left = margin;
+        const top = height - boxHeight - margin;
+
+        this.box.clear();
+        this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
+        this.box.fillRect(left, top, boxWidth, boxHeight);
+        this.box.lineStyle(2, cfg.HIGHLIGHT_COLOR, 0.9);
+        this.box.strokeRect(left, top, boxWidth, boxHeight);
+
+        this.speakerText.setPosition(left + 14, top + 12);
+        this.bodyText.setPosition(left + 14, top + (this.speakerText.text ? 32 : 18));
+        this.bodyText.setWordWrapWidth(boxWidth - 28);
+
+        this.hintText.setPosition(left + boxWidth - 12, top + boxHeight - 10);
+        this.hintText.setText(this.waitingForInput ? '▸ ENTER / CLICK' : '');
+
+        this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP);
+    }
+
+    destroy(): void {
+        this.stopTyping();
+        this.shade.destroy();
+        this.pointer.destroy();
+        this.box.destroy();
+        this.speakerText.destroy();
+        this.bodyText.destroy();
+        this.hintText.destroy();
+        this.skipText.destroy();
+    }
+}

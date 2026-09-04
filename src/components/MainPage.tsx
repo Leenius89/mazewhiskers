@@ -11,13 +11,34 @@ const MotionClickable = motion.div as any;
 const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
     const [showButton, setShowButton] = useState(false);
     const [showTitle, setShowTitle] = useState(false);
-    const [_cameraPosition, setCameraPosition] = useState(0);
     const [showStartScreen, setShowStartScreen] = useState(true);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    /**
+     * Guards the opening against running twice.
+     *
+     * Both a click and a keypress can reach `startExperience`, and each call
+     * used to build a fresh Audio and overwrite the reference to the previous
+     * one — which kept playing with nothing left able to stop it. That is the
+     * doubled soundtrack: two copies of the same track, one of them orphaned.
+     */
+    const startedRef = useRef(false);
+
+    const stopMusic = useCallback(() => {
+        const audio = audioRef.current;
+        if (!audio) return;
+        audio.pause();
+        audio.currentTime = 0;
+        audio.src = '';
+        audioRef.current = null;
+    }, []);
 
     const startExperience = useCallback(async () => {
+        if (startedRef.current) return;
+        startedRef.current = true;
+
         try {
+            stopMusic();
             audioRef.current = new Audio('sources/main.mp3');
             audioRef.current.loop = true;
             audioRef.current.volume = 0.5;
@@ -26,7 +47,6 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
             setShowStartScreen(false);
 
             setTimeout(() => {
-                setCameraPosition(1);
                 setTimeout(() => {
                     setShowTitle(true);
                     setTimeout(() => {
@@ -37,14 +57,14 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
         } catch (error) {
             console.error('Failed to play music:', error);
         }
-    }, []);
+    }, [stopMusic]);
 
     const handleStartGame = useCallback(() => {
-        if (audioRef.current) {
-            audioRef.current.pause();
-        }
+        // The game brings its own copy of this track, so this one has to be
+        // released rather than merely paused.
+        stopMusic();
         onStartGame();
-    }, [onStartGame]);
+    }, [onStartGame, stopMusic]);
 
     // 시작 화면에서 엔터키/스페이스바로 시작 가능하도록 키보드 이벤트 리스너
     useEffect(() => {
@@ -65,14 +85,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [showStartScreen, showButton, startExperience, handleStartGame]);
 
-    useEffect(() => {
-        return () => {
-            if (audioRef.current) {
-                audioRef.current.pause();
-                audioRef.current.currentTime = 0;
-            }
-        };
-    }, []);
+    useEffect(() => stopMusic, [stopMusic]);
 
     // 첫 시작 화면: 게임 안내 + "PRESS ENTER" (한/영 병기)
     if (showStartScreen) {

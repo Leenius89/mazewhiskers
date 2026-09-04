@@ -1,23 +1,20 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
+import { setCircleBody } from './core/bodies';
+import { sortDepth } from './core/depth';
+import type { GameScene } from './scenes/GameScene';
+import type { Player } from './objects/Player';
 
-interface CustomScene extends Phaser.Scene {
-    maze?: number[][];
-    gameOverStarted?: boolean;
-    soundManager?: any; // Will be typed properly when SoundManager is converted
-}
-
-interface CustomPlayer extends Phaser.Physics.Arcade.Sprite {
-    jumpCount: number;
-}
-
-export const createMilkItems = (scene: CustomScene, walls: Phaser.Physics.Arcade.StaticGroup, player: CustomPlayer): Phaser.Physics.Arcade.Group => {
+export const createMilkItems = (
+    scene: GameScene,
+    walls: Phaser.Physics.Arcade.StaticGroup,
+    player: Player,
+    rng: Phaser.Math.RandomDataGenerator
+): Phaser.Physics.Arcade.Group => {
     const milks = scene.physics.add.group();
-    const mazeSize = GameConfig.MAZE_SIZE;
-    const tileSize = GameConfig.TILE_SIZE;
-    const spacing = GameConfig.SPACING;
+    const { MAZE_SIZE: mazeSize, TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
+    const tileUnit = tileSize * spacing;
 
-    // Milk animation
     if (!scene.anims.exists('milkFloat')) {
         scene.anims.create({
             key: 'milkFloat',
@@ -27,58 +24,52 @@ export const createMilkItems = (scene: CustomScene, walls: Phaser.Physics.Arcade
         });
     }
 
-    // Use maze grid for fast wall check instead of iterating all wall sprites
-    const tileUnit = tileSize * spacing;
-
     for (let y = 0; y < mazeSize; y++) {
         for (let x = 0; x < mazeSize; x++) {
             const posX = x * tileUnit;
             const posY = y * tileUnit;
 
-            // Check maze grid (O(1)) instead of iterating walls (O(N))
-            let hasWall = false;
-            if (scene.maze) {
-                hasWall = scene.maze[y] && scene.maze[y][x] === 1;
-            } else {
-                hasWall = walls.getChildren().some((wall: any) =>
-                    Math.abs(wall.x - posX) < tileSize && Math.abs(wall.y - posY) < tileSize
-                );
-            }
+            // The maze grid answers this in O(1); walking every wall sprite was O(N).
+            const hasWall = scene.maze
+                ? scene.maze[y]?.[x] === 1
+                : walls.getChildren().some((wall) => {
+                      const sprite = wall as Phaser.Physics.Arcade.Sprite;
+                      return Math.abs(sprite.x - posX) < tileSize && Math.abs(sprite.y - posY) < tileSize;
+                  });
 
-            if (!hasWall && Math.random() < GameConfig.MILK.PROBABILITY && !(x === 1 && y === 1)) {
-                const milk = milks.create(posX, posY, 'milk') as Phaser.Physics.Arcade.Sprite;
-                milk.setScale(GameConfig.MILK.SCALE);
-                milk.setDepth(y);
+            const isStartTile = x === GameConfig.PLAYER.START_TILE.X && y === GameConfig.PLAYER.START_TILE.Y;
+            if (hasWall || isStartTile || rng.frac() >= GameConfig.MILK.PROBABILITY) continue;
 
-                scene.tweens.add({
-                    targets: milk,
-                    y: milk.y - 10,
-                    duration: GameConfig.MILK.ANIM_DURATION,
-                    ease: 'Sine.easeInOut',
-                    yoyo: true,
-                    repeat: -1
-                });
-            }
+            const milk = milks.create(posX, posY, 'milk') as Phaser.Physics.Arcade.Sprite;
+            milk.setScale(GameConfig.MILK.SCALE);
+            milk.setDepth(sortDepth(posY + milk.displayHeight / 2));
+            setCircleBody(milk, GameConfig.HITBOX.PICKUP_RADIUS);
+
+            scene.tweens.add({
+                targets: milk,
+                y: milk.y - GameConfig.MILK.FLOAT_DISTANCE,
+                duration: GameConfig.MILK.ANIM_DURATION,
+                ease: 'Sine.easeInOut',
+                yoyo: true,
+                repeat: -1
+            });
         }
     }
 
-    // Milk collision: +1 jump per milk
-    scene.physics.add.overlap(player, milks, (p, m) => {
+    scene.physics.add.overlap(player, milks, (_p, m) => {
+        if (scene.state.hasEnded()) return;
+
+        // At the cap the bottle is left where it is rather than wasted, so a
+        // full player can come back for it. Jumps still cannot be hoarded.
+        if (player.jumpCount >= GameConfig.PLAYER.JUMP.MAX_STOCK) return;
+
         const milk = m as Phaser.Physics.Arcade.Sprite;
 
-        if (scene.gameOverStarted) return;
+        // Milk shares the fish pickup sound by design.
+        scene.soundManager?.playFishSound();
 
-        // Sound
-        if (scene.soundManager) {
-            // 우유를 획득할 때 생선과 동일한 효과음이 재생되도록 수정
-            scene.soundManager.playFishSound();
-        }
-
-        // +1 jump
         player.jumpCount++;
-
-        // Emit events to update React UI
-        scene.game.events.emit('updateJumpCount', player.jumpCount);
+        scene.bus.emit('jumpCountChanged', player.jumpCount);
         scene.events.emit('collectMilk');
 
         milk.destroy();

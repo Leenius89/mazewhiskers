@@ -1,92 +1,101 @@
 import React from 'react';
+import { RotateCcw } from 'lucide-react';
+import { theme } from './theme';
 
 interface HeaderProps {
     restartGame: () => void;
-    health: number;
-    jumpCount: number;
     milkCount: number;
-    orientation: string;
+    fishCount: number;
     gameSize: { width: number | string; height: number | string };
 }
 
-const Header: React.FC<HeaderProps> = ({ restartGame, health, jumpCount, milkCount, orientation, gameSize }) => {
-    const headerHeight = orientation === 'portrait' ? '50px' : '40px';
-    const fontSize = orientation === 'portrait' ? '1rem' : '0.8rem';
+/**
+ * A thin run bar, not a dashboard.
+ *
+ * Health and jumps used to live here, a screen's width away from the cat they
+ * describe — nobody looks up here mid-chase. They now float over the player's
+ * head, so this keeps only what is genuinely about the run as a whole: what has
+ * been collected, and the way out.
+ */
+const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, gameSize }) => {
+    const width = typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width;
 
     return (
-        <div style={{
-            width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,
-            height: headerHeight,
-            backgroundColor: '#F5E5DC',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '0 10px',
-            boxSizing: 'border-box',
-            position: 'relative',
-            zIndex: 1000,
-            margin: '0 auto',
-        }}>
-            <h1
-                style={{
-                    cursor: 'pointer',
-                    margin: 0,
-                    fontSize: fontSize,
-                    whiteSpace: 'nowrap'
-                }}
-                onClick={restartGame}
-            >
-                Maze Whiskers
-            </h1>
-
-            <div style={{
+        <div
+            style={{
+                width,
+                maxWidth: '100%',
+                height: '40px',
+                background: theme.surface,
+                borderBottom: `1px solid ${theme.rule}`,
+                borderRadius: '6px 6px 0 0',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '10px'
-            }}>
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: fontSize
-                }}>
-                    <span style={{ marginRight: '5px' }}>HP</span>
-                    <div style={{
-                        width: '60px',
-                        height: '15px',
-                        backgroundColor: '#ddd',
-                        borderRadius: '10px',
-                        overflow: 'hidden'
-                    }}>
-                        <div style={{
-                            width: `${health}%`,
-                            height: '100%',
-                            backgroundColor: 'red',
-                            borderRadius: '10px',
-                            transition: 'width 0.5s'
-                        }}></div>
-                    </div>
-                </div>
+                justifyContent: 'space-between',
+                padding: '0 12px',
+                boxSizing: 'border-box',
+                margin: '0 auto',
+                position: 'relative',
+                zIndex: 1000
+            }}
+        >
+            <span
+                style={{
+                    fontFamily: theme.display,
+                    fontSize: '0.6rem',
+                    letterSpacing: '0.08em',
+                    color: theme.inkMuted,
+                    whiteSpace: 'nowrap'
+                }}
+            >
+                MAZE WHISKERS
+            </span>
 
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: fontSize
-                }}>
-                    <span style={{ marginRight: '5px' }}>Jump</span>
-                    <span>{jumpCount}</span>
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <Tally icon="🐟" value={fishCount} />
+                <Tally icon="🥛" value={milkCount} />
 
-                <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    fontSize: fontSize
-                }}>
-                    <span style={{ marginRight: '5px' }}>Milk</span>
-                    <span>{milkCount}</span>
-                </div>
+                <button
+                    onClick={restartGame}
+                    title="다시 시작 / Restart"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '5px 9px',
+                        background: 'transparent',
+                        border: `1px solid ${theme.rule}`,
+                        borderRadius: '4px',
+                        color: theme.inkFaint,
+                        fontFamily: theme.display,
+                        fontSize: '0.5rem',
+                        letterSpacing: '0.06em',
+                        cursor: 'pointer'
+                    }}
+                >
+                    <RotateCcw size={11} />
+                    RESTART
+                </button>
             </div>
         </div>
     );
 };
+
+const Tally: React.FC<{ icon: string; value: number }> = ({ icon, value }) => (
+    <span
+        style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            fontFamily: theme.display,
+            fontSize: '0.6rem',
+            color: theme.ink,
+            fontVariantNumeric: 'tabular-nums'
+        }}
+    >
+        <span style={{ fontSize: '0.8rem' }}>{icon}</span>
+        {value}
+    </span>
+);
 
 export default Header;

@@ -1,185 +1,143 @@
 import Phaser from 'phaser';
-// @ts-ignore
-import { VictoryScene } from './victory/victoryUtils';
+import { GameConfig } from './constants/GameConfig';
+import { setCircleBody } from './core/bodies';
+import { DEPTH, sortDepth } from './core/depth';
+import type { GameScene } from './scenes/GameScene';
 
-interface CustomScene extends Phaser.Scene {
-    apartmentSystem?: any;
-    enemy?: any;
-    soundManager?: any;
-    walls?: Phaser.Physics.Arcade.StaticGroup;
-    gameOverStarted?: boolean;
-}
-
-const create8BitTransition = (scene: Phaser.Scene, player: Phaser.GameObjects.Sprite): Promise<void> => {
+/**
+ * Pixelated wipe to black, spreading outward from the centre of the screen.
+ * Resolves once the screen is fully covered.
+ */
+const create8BitTransition = (scene: Phaser.Scene): Promise<void> => {
     return new Promise((resolve) => {
         const { width, height } = scene.cameras.main;
-        const graphics = scene.add.graphics();
-        graphics.setScrollFactor(0);  // Fix to camera
-        graphics.setDepth(9999);
+        const { PIXEL_SIZE: pixelSize, STEPS: steps, STEP_DELAY: stepDelay } = GameConfig.GOAL.TRANSITION;
 
-        // Calculate center of screen
+        const graphics = scene.add.graphics();
+        graphics.setScrollFactor(0);
+        graphics.setDepth(DEPTH.OVERLAY + 1);
+
         const centerX = width / 2;
         const centerY = height / 2;
-
-        // Create 8x8 pixel grid
-        const pixelSize = 32;
         const cols = Math.ceil(width / pixelSize);
         const rows = Math.ceil(height / pixelSize);
 
-        // Calculate distance from center for each pixel
         const pixels: { x: number; y: number; distance: number }[] = [];
         for (let y = 0; y < rows; y++) {
             for (let x = 0; x < cols; x++) {
-                const distance = Math.sqrt(
-                    Math.pow(x * pixelSize - centerX, 2) +
-                    Math.pow(y * pixelSize - centerY, 2)
-                );
-                pixels.push({ x, y, distance });
+                pixels.push({
+                    x,
+                    y,
+                    distance: Math.hypot(x * pixelSize - centerX, y * pixelSize - centerY)
+                });
             }
         }
-
-        // Sort by distance (closest first)
         pixels.sort((a, b) => a.distance - b.distance);
 
-        const darkSteps = 8;
+        const pixelsPerStep = Math.ceil(pixels.length / steps);
         let currentStep = 0;
 
-        const updateDarkness = () => {
-            if (currentStep >= darkSteps) {
+        const drawStep = () => {
+            if (currentStep >= steps) {
                 resolve();
                 return;
             }
 
-            graphics.clear();  // Clear previous graphics
-            const pixelsThisStep = Math.ceil(pixels.length / darkSteps);
-            const endIdx = Math.min((currentStep + 1) * pixelsThisStep, pixels.length);
+            graphics.clear();
+            graphics.fillStyle(0x000000, 1);
 
+            const endIdx = Math.min((currentStep + 1) * pixelsPerStep, pixels.length);
             for (let i = 0; i < endIdx; i++) {
-                const pixel = pixels[i];
-                graphics.fillStyle(0x000000, 1);
-                graphics.fillRect(
-                    pixel.x * pixelSize,
-                    pixel.y * pixelSize,
-                    pixelSize,
-                    pixelSize
-                );
+                graphics.fillRect(pixels[i].x * pixelSize, pixels[i].y * pixelSize, pixelSize, pixelSize);
             }
 
             currentStep++;
-            scene.time.delayedCall(200, updateDarkness);
+            scene.time.delayedCall(stepDelay, drawStep);
         };
 
-        updateDarkness();
+        drawStep();
     });
 };
 
-export const createGoal = (scene: CustomScene, player: Phaser.Physics.Arcade.Sprite, centerX: number, centerY: number): Phaser.Physics.Arcade.Sprite => {
+/**
+ * Hands control straight over.
+ *
+ * There used to be a fly-over here that held on the player, flew to the goal
+ * and came back. The tutorial's second beat does exactly that and then
+ * explains what the player is looking at, so the fly-over was the same trip
+ * twice — the first one silent and unexplained.
+ */
+const beginPlayImmediately = (scene: GameScene, player: Phaser.Physics.Arcade.Sprite) => {
+    scene.cameras.main.startFollow(player);
+    scene.time.delayedCall(GameConfig.GOAL.INTRO.START_DELAY, () => scene.events.emit('introComplete'));
+};
+
+export const createGoal = (
+    scene: GameScene,
+    player: Phaser.Physics.Arcade.Sprite,
+    centerX: number,
+    centerY: number
+): Phaser.Physics.Arcade.Sprite => {
     const goal = scene.physics.add.sprite(centerX, centerY, 'goal');
-    goal.setScale(0.1);
+    goal.setScale(GameConfig.GOAL.SCALE);
+    goal.setDepth(sortDepth(centerY + goal.displayHeight / 2));
 
-    const hitboxScale = 1.5;
-    const hitboxSize = goal.width * goal.scale * hitboxScale;
-    if (goal.body) {
-        goal.body.setCircle(hitboxSize / 2);
-        goal.body.setOffset(goal.width / 2 - hitboxSize / 2, goal.height / 2 - hitboxSize / 2);
-    }
+    // Generous on purpose — arriving home must never feel like a pixel hunt.
+    setCircleBody(goal, GameConfig.HITBOX.GOAL_RADIUS);
 
-    // Start Intro Camera Sequence
-    scene.cameras.main.startFollow(player); // Follow player initially
-
-    // Move to goal after 2 seconds
-    scene.time.delayedCall(2000, () => {
-        scene.cameras.main.stopFollow();
-        scene.cameras.main.pan(
-            centerX,
-            centerY,
-            800, // Pan to goal 0.8s
-            'Power1', // Smoother easing
-            false,
-            (_camera, _progress) => {  // Callback signature might differ based on Phaser version, usage usually (camera, progress) or just () depending on 3.60+
-                if (_progress === 1) { // checking completion manually if callback is onUpdate, but usually this is onComplete? pan(x,y,duration,ease,force,callback)
-                    // Check Phaser docs: pan(x, y, [duration], [ease], [force], [callback], [context])
-                    // The callback is onComplete.
-
-                    // Wait 1 second at goal
-                    scene.time.delayedCall(1000, () => {
-                        scene.cameras.main.pan(
-                            player.x,
-                            player.y,
-                            600, // Return trip 0.6s (very fast)
-                            'Power1',
-                            false,
-                            (_cam, _prog) => {
-                                if (_prog === 1) {
-                                    scene.cameras.main.startFollow(player);
-                                    scene.events.emit('introComplete');
-                                }
-                            }
-                        );
-                    });
-                }
-            }
-        );
-    });
-
-    let isVictoryHandled = false;
+    beginPlayImmediately(scene, player);
 
     scene.physics.add.overlap(player, goal, async () => {
-        if (isVictoryHandled) return;
-        isVictoryHandled = true;
+        // Reaching home means different things depending on where you are in
+        // the run. The state machine rejects a second transition either way,
+        // which is what replaces the ad-hoc flag this used to carry.
+        const finishing = scene.isFinalDistrict;
+        if (!scene.state.transitionTo(finishing ? 'victory' : 'clearing')) return;
 
-        // Stop all systems immediately
         scene.physics.pause();
         player.setVelocity(0, 0);
 
-        // Cleanup Apartment System
-        if (scene.apartmentSystem) {
-            scene.apartmentSystem.destroy(); // destroy call
-        }
+        scene.apartmentSystem?.destroy();
 
-        // Stop and cleanup Enemy
         if (scene.enemy) {
             scene.enemy.setVelocity(0, 0);
-            if (scene.enemy.enemySound && scene.soundManager) {
-                scene.soundManager.stopEnemySound(scene.enemy.enemySound);
+            if (scene.enemy.enemySound) {
+                scene.soundManager?.stopEnemySound(scene.enemy.enemySound);
             }
         }
 
-        // Clear all scene timers
         scene.time.removeAllEvents();
 
         try {
             if (scene.soundManager) {
-                // Stop all sounds immediately
                 scene.soundManager.stopAllSounds();
                 scene.sound.removeAllListeners();
             }
 
-            // Screen Transition Effect
-            await create8BitTransition(scene, player);
+            await create8BitTransition(scene);
 
-            // Restart specific BGM
-            // Restart specific BGM
-            if (scene.soundManager) {
-                scene.soundManager.playMainBGM();
+            // Another district to go: keep the totals and rebuild the city.
+            if (!finishing) {
+                scene.advanceDistrict();
+                return;
             }
 
-            // Emit Victory Event with Time
-            scene.time.delayedCall(500, () => {
-                const endTime = Date.now();
-                const startTime = (scene as any).startTime || 0;
-                const timeTaken = endTime - startTime;
+            // Every enemy track is stopped first, so the win lands on the main
+            // theme rather than on top of the chase music.
+            scene.enemies.forEach((enemy) => {
+                if (enemy.enemySound) scene.soundManager?.stopEnemySound(enemy.enemySound);
+            });
+            scene.soundManager?.playMainBGM();
 
-                // Launch Phaser VictoryScene first for the sequence
+            scene.time.delayedCall(GameConfig.GOAL.VICTORY_DELAY, () => {
+                const carried = scene.registry.get('carriedMs') || 0;
                 scene.scene.launch('VictoryScene', {
-                    timeMs: timeTaken,
+                    timeMs: carried + (Date.now() - scene.startTime),
                     milkCount: scene.registry.get('milkCount') || 0,
                     fishCount: scene.registry.get('fishCount') || 0
                 });
-
                 scene.scene.pause();
             });
-
         } catch (error) {
             console.error('Transition failed:', error);
         }

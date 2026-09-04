@@ -1,27 +1,54 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, Home, Trophy } from 'lucide-react';
+import { Film, Home, RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import {
+    button,
+    buttonRow,
+    eyebrow,
+    hazardEdge,
+    headline,
+    hint,
+    overlayBackdrop,
+    panel,
+    statCell,
+    statGrid,
+    statHero,
+    statHeroValue,
+    statLabel,
+    statValue,
+    textInput,
+    theme
+} from './theme';
 
 interface VictoryProps {
     onRetry: () => void;
     onMainMenu: () => void;
     onShowLeaderboard: () => void;
+    onShowCredits: () => void;
     timeMs: number;
     milkCount: number;
     fishCount: number;
 }
 
-const MotionClickable = motion.div as any;
-
 const formatTime = (ms: number) => {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
-    const milliseconds = Math.floor((ms % 1000) / 10); // Display 2 digits
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    const hundredths = Math.floor((ms % 1000) / 10);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
 };
 
-const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboard, timeMs, milkCount, fishCount }) => {
+const MotionButton = motion.div as React.ElementType;
+
+const Victory: React.FC<VictoryProps> = ({
+    onRetry,
+    onMainMenu,
+    onShowLeaderboard,
+    onShowCredits,
+    timeMs,
+    milkCount,
+    fishCount
+}) => {
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -38,216 +65,106 @@ const Victory: React.FC<VictoryProps> = ({ onRetry, onMainMenu, onShowLeaderboar
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting time:', error);
-            alert('Failed to submit time. Please try again.');
+            alert('기록을 저장하지 못했습니다. 다시 시도해 주세요.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const canSubmit = !isSubmitting && username.trim().length > 0;
+
     return (
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.4)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                justifyContent: 'center',
-                zIndex: 1000,
-                paddingTop: '15vh' // Position 15% from the top
-            }}
-        >
+        <div style={overlayBackdrop}>
             <motion.div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '1.5rem',
-                    backgroundColor: 'rgba(0, 0, 0, 0.7)', // Slightly more transparent
-                    padding: '2rem',
-                    borderRadius: '1rem',
-                    width: '90%',
-                    maxWidth: '500px',
-                    border: '4px solid #48bb78',
-                    // transform removed
-                }}
-                initial={{ scale: 0.8, opacity: 0, y: -50 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                transition={{ type: 'spring', damping: 15 }}
+                style={panel}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-                {/* Victory Text */}
-                <motion.h1
-                    style={{
-                        fontSize: '2rem', // 한글 병기를 위해 폰트 사이즈를 조금 줄임
-                        fontWeight: 'bold',
-                        color: '#48bb78',
-                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.5)',
-                        marginBottom: '0',
-                        textAlign: 'center',
-                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                    }}
-                    animate={{ scale: [1, 1.05, 1] }}
-                    transition={{ repeat: Infinity, duration: 2 }}
-                >
-                    성공! VICTORY!
-                </motion.h1>
+                <div style={hazardEdge} />
 
-                {/* Time Display */}
-                <motion.div
-                    style={{
-                        color: '#fbbf24',
-                        fontSize: '1.2rem',
-                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                        textAlign: 'center',
-                        lineHeight: '1.5'
-                    }}
-                >
-                    <div style={{ fontSize: '0.7em', marginBottom: '5px' }}>클리어 시간 / CLEAR TIME</div>
-                    <div style={{ fontSize: '2rem', color: '#fff' }}>{formatTime(timeMs)}</div>
-                </motion.div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={eyebrow}>ARRIVED</p>
+                    <h2 style={headline(theme.good)}>집에 닿았다</h2>
+                    <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.65, color: theme.inkMuted }}>
+                        도시가 먼저 도착하지 못했습니다. 이번에는.
+                    </p>
+                </div>
 
-                {/* Items Stats */}
-                <div style={{
-                    display: 'flex',
-                    gap: '2rem',
-                    justifyContent: 'center',
-                    width: '100%',
-                    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                    color: 'white',
-                    fontSize: '1rem'
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src="sources/milk.png" alt="milk" style={{ width: '32px', height: '32px', imageRendering: 'pixelated' }} />
-                        <span>× {milkCount}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={statHero}>
+                        <span style={statLabel}>CLEAR TIME</span>
+                        <span style={{ ...statHeroValue, color: theme.good }}>{formatTime(timeMs)}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <img src="sources/fish1.png" alt="fish" style={{ width: '32px', height: '32px', imageRendering: 'pixelated' }} />
-                        <span>× {fishCount}</span>
+                    <div style={statGrid}>
+                        <div style={statCell}>
+                            <span style={statLabel}>🐟 FISH</span>
+                            <span style={statValue}>{fishCount}</span>
+                        </div>
+                        <div style={statCell}>
+                            <span style={statLabel}>🥛 MILK</span>
+                            <span style={statValue}>{milkCount}</span>
+                        </div>
                     </div>
                 </div>
 
-                {/* Score Submission Form */}
-                {!submitted ? (
-                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                {submitted ? (
+                    <p style={{ ...hint, color: theme.good }}>기록 등록 완료 / SUBMITTED</p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input
                             type="text"
-                            placeholder="이름 입력 / YOUR NAME"
+                            placeholder="이름 / YOUR NAME"
                             maxLength={10}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={{
-                                padding: '15px',
-                                fontSize: '0.9rem',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                textAlign: 'center',
-                                width: '80%',
-                                textTransform: 'uppercase',
-                                backgroundColor: '#2d3748',
-                                color: 'white',
-                                border: '2px solid #4a5568'
-                            }}
+                            style={textInput}
                         />
                         <button
                             onClick={handleSubmitScore}
-                            disabled={isSubmitting || !username.trim()}
-                            style={{
-                                padding: '15px 20px',
-                                fontSize: '0.9rem',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                cursor: isSubmitting || !username.trim() ? 'not-allowed' : 'pointer',
-                                backgroundColor: isSubmitting || !username.trim() ? '#718096' : '#48bb78',
-                                color: 'white',
-                                border: 'none',
-                                width: '80%'
-                            }}
+                            disabled={!canSubmit}
+                            style={button('quiet', !canSubmit)}
                         >
-                            {isSubmitting ? '전송 중 / SUBMITTING...' : '기록 등록 / SUBMIT TIME'}
+                            {isSubmitting ? '전송 중…' : '기록 등록 / SUBMIT TIME'}
                         </button>
-                    </div>
-                ) : (
-                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', 'Pretendard', sans-serif", padding: '10px', textAlign: 'center', fontSize: '0.9rem' }}>
-                        등록 완료! / TIME SUBMITTED!
-                        <div style={{ fontSize: '0.7rem', marginTop: '10px', color: '#a0aec0' }}>랭킹 확인 / CHECK LEADERBOARD</div>
                     </div>
                 )}
 
-                {/* Buttons */}
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '0', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
-                    <MotionClickable
-                        style={{
-                            backgroundColor: '#ecc94b',
-                            color: 'black',
-                            padding: '1rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                        }}
+                <div style={buttonRow}>
+                    <MotionButton style={button('primary')} onClick={onRetry} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
+                        <RotateCcw size={13} />
+                        다시 / RETRY
+                    </MotionButton>
+                    <MotionButton
+                        style={button('quiet')}
                         onClick={onShowLeaderboard}
-                        whileHover={{ y: -2 }}
+                        whileHover={{ y: -1 }}
                         whileTap={{ y: 0 }}
                     >
-                        <Trophy size={16} />
-                        랭킹 / RANKING
-                    </MotionClickable>
+                        <Trophy size={13} />
+                        랭킹
+                    </MotionButton>
+                </div>
 
-                    <MotionClickable
-                        style={{
-                            backgroundColor: '#4299e1',
-                            color: 'white',
-                            padding: '1rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                        }}
-                        onClick={onRetry}
-                        whileHover={{ y: -2 }}
+                <div style={buttonRow}>
+                    <MotionButton
+                        style={button('quiet')}
+                        onClick={onShowCredits}
+                        whileHover={{ y: -1 }}
                         whileTap={{ y: 0 }}
                     >
-                        <RotateCcw size={16} />
-                        재시도 / RETRY
-                    </MotionClickable>
-
-                    <MotionClickable
-                        style={{
-                            backgroundColor: '#e53e3e',
-                            color: 'white',
-                            padding: '1rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '0.75rem',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 0px rgba(0, 0, 0, 0.2)',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                        }}
+                        <Film size={13} />
+                        크레딧
+                    </MotionButton>
+                    <MotionButton
+                        style={button('quiet')}
                         onClick={onMainMenu}
-                        whileHover={{ y: -2 }}
+                        whileHover={{ y: -1 }}
                         whileTap={{ y: 0 }}
                     >
-                        <Home size={16} />
-                        메뉴 / MENU
-                    </MotionClickable>
+                        <Home size={13} />
+                        메뉴
+                    </MotionButton>
                 </div>
             </motion.div>
         </div>

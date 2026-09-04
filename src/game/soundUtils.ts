@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GameConfig } from './constants/GameConfig';
 
 interface SoundMap {
     mainBGM?: Phaser.Sound.BaseSound;
@@ -13,6 +14,15 @@ export class SoundManager {
     private scene: Phaser.Scene;
     private sounds: SoundMap;
     private soundsLoaded: boolean;
+    private deferredRequested = false;
+    /**
+     * The enemy arrived before its 4.7MB track had finished downloading.
+     *
+     * On a cold cache the spawn regularly wins that race, and the swap used to
+     * be dropped on the floor — the chase would play out over the main theme.
+     * The request is held here and honoured the moment the file lands.
+     */
+    private enemySwapPending = false;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -20,33 +30,78 @@ export class SoundManager {
         this.soundsLoaded = false;
     }
 
+    /**
+     * Blocking load: only what the first seconds of play actually need.
+     *
+     * The audio for this game is 9MB, and 5.4MB of that is two files that are
+     * silent for the first fifteen seconds. Loading everything up front made a
+     * kiosk or a phone stare at a black screen for no reason. Nothing is
+     * re-encoded here — the files are untouched, they just arrive later.
+     */
     preloadSounds() {
         try {
-            // Relative paths
             this.scene.load.audio('mainBGM', 'sources/main.mp3');
-            this.scene.load.audio('enemySound', 'sources/enemy.mp3');
             this.scene.load.audio('fishSound', 'sources/fish.mp3');
             this.scene.load.audio('dyingSound', 'sources/dying.mp3');
-            this.scene.load.audio('construct1', 'sources/construct1.mp3');
+            this.scene.load.audio('jumpSound', 'sources/jump.mp3');
             this.scene.load.audio('construct2', 'sources/construct2.mp3');
             this.scene.load.audio('construct3', 'sources/construct3.mp3');
-            this.scene.load.audio('jumpSound', 'sources/jump.mp3');
 
-            // Setup complete event
-            this.scene.load.on('complete', this.initializeSounds.bind(this));
+            // `once`, not `on`. A persistent listener fired again when the
+            // deferred audio finished downloading, which rebuilt every sound
+            // object and dropped the reference to the BGM that was already
+            // playing — so nothing could stop it, and the enemy's track ended
+            // up layered on top of it instead of replacing it.
+            this.scene.load.once('complete', () => this.initializeSounds());
         } catch (error) {
             console.error('Error loading audio files:', error);
         }
     }
 
+    /**
+     * Fetches the heavy files in the background once the world is up.
+     *
+     * `enemy.mp3` is 4.7MB and cannot be heard until the enemy appears;
+     * `construct1.mp3` is 0.7MB and waits for the first demolition.
+     */
+    loadDeferredSounds() {
+        if (this.deferredRequested) return;
+        this.deferredRequested = true;
+
+        const loader = this.scene.load;
+        if (!this.scene.cache.audio.exists('enemySound')) {
+            loader.audio('enemySound', 'sources/enemy.mp3');
+        }
+        if (!this.scene.cache.audio.exists('construct1')) {
+            loader.audio('construct1', 'sources/construct1.mp3');
+        }
+
+        loader.once('complete', () => {
+            if (!this.sounds.enemySound && this.scene.cache.audio.exists('enemySound')) {
+                this.sounds.enemySound = this.scene.sound.add('enemySound', { loop: true, volume: 0 });
+            }
+            if (this.enemySwapPending) {
+                this.enemySwapPending = false;
+                this.playEnemySound();
+            }
+        });
+        loader.start();
+    }
+
     initializeSounds() {
+        if (this.soundsLoaded) return;
+
         try {
             this.sounds = {
                 mainBGM: this.scene.sound.add('mainBGM', { loop: true, volume: 0.5 }),
                 fishSound: this.scene.sound.add('fishSound', { loop: false, volume: 0.5 }),
-                dyingSound: this.scene.sound.add('dyingSound', { loop: false, volume: 0.5 }),
-                enemySound: this.scene.sound.add('enemySound', { loop: true, volume: 0 }),
+                dyingSound: this.scene.sound.add('dyingSound', { loop: false, volume: 0.5 })
             };
+
+            // Added later by loadDeferredSounds, if it has arrived by then.
+            if (this.scene.cache.audio.exists('enemySound')) {
+                this.sounds.enemySound = this.scene.sound.add('enemySound', { loop: true, volume: 0 });
+            }
             this.sounds.jumpSound = this.scene.sound.add('jumpSound', { loop: false, volume: 0.3 });
             this.soundsLoaded = true;
         } catch (error) {
@@ -65,16 +120,20 @@ export class SoundManager {
         }
     }
 
+    /** Returns to the main theme, silencing anything else looping. */
     playMainBGM() {
+        // A swap still waiting on its download must not fire after the win.
+        this.enemySwapPending = false;
+
         if (this.soundsLoaded) {
             try {
-                // Ignore if already playing
                 if (this.sounds.mainBGM && this.sounds.mainBGM.isPlaying) return;
 
-                // Stop Enemy BGM if playing
-                if (this.sounds.enemySound && this.sounds.enemySound.isPlaying) {
-                    this.sounds.enemySound.stop();
-                }
+                // Every copy, not just the one this manager is holding — the
+                // same reason playEnemySound sweeps the main theme.
+                this.scene.sound.getAllPlaying().forEach((sound) => {
+                    if (sound.key === 'enemySound') sound.stop();
+                });
 
                 // Recreate if destroyed or missing
                 // Type assertion for scene check as BaseSound might not expose it directly in all versions, but generally it does.
@@ -119,13 +178,19 @@ export class SoundManager {
         }
     }
 
+    /**
+     * Swaps the soundtrack for the enemy's.
+     *
+     * Stops every copy of the main theme rather than only the one this manager
+     * is holding — the swap has to be audible even if something else started a
+     * second copy.
+     */
     playEnemySound(): Phaser.Sound.BaseSound | null {
         if (this.soundsLoaded && this.sounds.enemySound) {
             try {
-                // Stop Main BGM
-                if (this.sounds.mainBGM && this.sounds.mainBGM.isPlaying) {
-                    this.sounds.mainBGM.stop();
-                }
+                this.scene.sound.getAllPlaying().forEach((sound) => {
+                    if (sound.key === 'mainBGM') sound.stop();
+                });
 
                 const enemySound = this.sounds.enemySound;
                 enemySound.play();
@@ -141,8 +206,33 @@ export class SoundManager {
             } catch (error) {
                 console.error('Error playing enemySound:', error);
             }
+            return null;
         }
+
+        // Not downloaded yet. Remember the request rather than losing it.
+        this.enemySwapPending = true;
+        this.loadDeferredSounds();
         return null;
+    }
+
+    /**
+     * Alert sting when the machine locks on.
+     *
+     * Placeholder: a construction hit, pitched up, standing in for a horn
+     * until a dedicated alert asset exists.
+     */
+    playEnemyAlert() {
+        if (!this.soundsLoaded) return;
+
+        try {
+            if (!this.scene.cache.audio.exists('construct2')) return;
+            const alert = this.scene.sound.add('construct2', { volume: 0.45, loop: false });
+            (alert as Phaser.Sound.WebAudioSound).detune = 600;
+            alert.play();
+            alert.once('complete', () => alert.destroy());
+        } catch (error) {
+            console.error('Error playing enemy alert:', error);
+        }
     }
 
     playDyingSound() {
@@ -196,17 +286,21 @@ export class SoundManager {
         }
 
         try {
-            const numSounds = Phaser.Math.Between(1, 3);
-            const availableSounds = [1, 2, 3];
-            const selectedSounds = Phaser.Utils.Array.Shuffle(availableSounds).slice(0, numSounds);
+            // Only what has actually finished downloading; construct1 is deferred.
+            const available = [1, 2, 3].filter((num) => this.scene.cache.audio.exists(`construct${num}`));
+            if (available.length === 0) return;
 
-            selectedSounds.forEach(num => {
-                const constructSound = this.scene.sound.add(`construct${num}`, {
-                    volume: 0.1,
-                    loop: false
+            const count = Phaser.Math.Between(1, available.length);
+            Phaser.Utils.Array.Shuffle(available)
+                .slice(0, count)
+                .forEach((num) => {
+                    const constructSound = this.scene.sound.add(`construct${num}`, {
+                        volume: GameConfig.AUDIO.CONSTRUCT_VOLUME,
+                        loop: false
+                    });
+                    constructSound.play();
+                    constructSound.once('complete', () => constructSound.destroy());
                 });
-                constructSound.play();
-            });
         } catch (error) {
             console.error('Error playing construct sound:', error);
         }

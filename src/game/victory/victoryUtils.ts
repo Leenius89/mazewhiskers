@@ -1,15 +1,13 @@
 import Phaser from 'phaser';
 import { showEndingMessages } from './endingMessages';
 import { showCredits } from './creditsSystem';
-
-interface VictorySceneData {
-    milkCount?: number;
-    fishCount?: number;
-}
+import { GameEventBus } from '../core/GameEvents';
 
 export class VictoryScene extends Phaser.Scene {
     private buttonsContainer: HTMLDivElement | null;
+    /** Guards against a second credits roll while one is already on screen. */
     private isShowingCredits: boolean;
+    private bus!: GameEventBus;
     private timeMs: number = 0;
     private milkCount: number = 0;
     private fishCount: number = 0;
@@ -48,6 +46,10 @@ export class VictoryScene extends Phaser.Scene {
         const width = this.cameras.main.width;
         const height = this.cameras.main.height;
 
+        this.bus = new GameEventBus(this.game.events);
+        this.bus.on('showCredits', this.rollCredits, this);
+        this.events.once('shutdown', () => this.bus.off('showCredits', this.rollCredits, this));
+
         // Black overlay setup
         this.blackOverlay = this.add.graphics();
         this.blackOverlay.setDepth(1);
@@ -80,7 +82,7 @@ export class VictoryScene extends Phaser.Scene {
                             this.startCatfishAnimation(width, height);
 
                             // Emit Victory Event for React UI after background is visible
-                            this.game.events.emit('victory', {
+                            this.bus.emit('victory', {
                                 timeMs: this.timeMs,
                                 milkCount: this.milkCount,
                                 fishCount: this.fishCount
@@ -90,6 +92,29 @@ export class VictoryScene extends Phaser.Scene {
                 }
             }
         });
+    }
+
+    /**
+     * Rolls the end credits over the canvas.
+     *
+     * React hides its results panel first, otherwise the fixed-position overlay
+     * would sit on top of the canvas and the credits would never be seen.
+     */
+    private rollCredits() {
+        if (this.isShowingCredits) return;
+
+        showCredits(
+            this,
+            this.cameras.main.width,
+            this.cameras.main.height,
+            () => {
+                this.isShowingCredits = true;
+            },
+            () => {
+                this.isShowingCredits = false;
+                this.bus.emit('creditsClosed');
+            }
+        );
     }
 
     startCatfishAnimation(width: number, height: number) {

@@ -1,45 +1,108 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import type { GameOverPayload } from '../game/core/GameEvents';
+import {
+    button,
+    buttonRow,
+    eyebrow,
+    hazardEdge,
+    headline,
+    hint,
+    overlayBackdrop,
+    panel,
+    statCell,
+    statGrid,
+    statHero,
+    statHeroValue,
+    statLabel,
+    statValue,
+    textInput,
+    theme
+} from './theme';
 
 interface GameOverProps {
     onRetry: () => void;
     onShowLeaderboard: () => void;
+    reason: GameOverPayload['reason'];
     milkCount?: number;
     fishCount?: number;
     score: number;
 }
 
-const MotionClickable = motion.div as any;
+/**
+ * What each ending actually means.
+ *
+ * A player who reads "GAME OVER" learns nothing; the whole point of the
+ * redevelopment system is that the ways you lose are different in kind. Naming
+ * the cause is the last chance the game has to say what it was about.
+ */
+const ENDINGS: Record<GameOverPayload['reason'], { title: string; line: string; color: string }> = {
+    health: {
+        title: '버티지 못했다',
+        line: '월세와 생활비가 남은 것을 다 가져갔습니다. 생선은 모아 둘 수 없습니다.',
+        color: theme.bad
+    },
+    enemy: {
+        title: '붙잡혔다',
+        line: '한 번은 버틸 수 있었습니다. 두 번은 아니었습니다.',
+        color: theme.bad
+    },
+    'apartment:player': {
+        title: '밀려날 곳이 없었다',
+        line: '짓눌린 것이 아닙니다. 밀려나고 또 밀려나다, 물러설 자리가 사라졌을 뿐입니다.',
+        color: theme.accent
+    },
+    'apartment:goal': {
+        title: '집이 먼저 사라졌다',
+        line: '도착하기 전에 그 자리에 아파트가 들어섰습니다.',
+        color: theme.accent
+    },
+    trapped: {
+        title: '갈 곳이 없었다',
+        line: '사방이 막혔습니다. 체력이 남아 있어도 나갈 길이 없으면 끝난 것입니다.',
+        color: theme.accent
+    }
+};
 
-const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCount = 0, fishCount = 0, score }) => {
+const MotionButton = motion.div as React.ElementType;
+
+const GameOver: React.FC<GameOverProps> = ({
+    onRetry,
+    onShowLeaderboard,
+    reason,
+    milkCount = 0,
+    fishCount = 0,
+    score
+}) => {
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
-    // 게임 오버 상태에서 스페이스바를 누르면 retry(재시작)가 작동하도록 키 바인딩 추가
+    const ending = ENDINGS[reason] ?? ENDINGS.health;
+
+    // Space restarts, unless the player is typing their name into the form.
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
-            // 이름 입력란(input) 등에 포커스가 있을 때는 스페이스바 재시작 방지
-            const activeElement = document.activeElement;
+            const active = document.activeElement;
             if (
-                activeElement &&
-                (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA' || activeElement.getAttribute('contenteditable') === 'true')
+                active &&
+                (active.tagName === 'INPUT' ||
+                    active.tagName === 'TEXTAREA' ||
+                    active.getAttribute('contenteditable') === 'true')
             ) {
                 return;
             }
 
             if (e.key === ' ' || e.code === 'Space') {
-                e.preventDefault(); // 스페이스바로 인한 브라우저 스크롤 등의 기본 동작 방지
+                e.preventDefault();
                 onRetry();
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
+        return () => window.removeEventListener('keydown', handleKeyDown);
     }, [onRetry]);
 
     const handleSubmitScore = async () => {
@@ -48,215 +111,106 @@ const GameOver: React.FC<GameOverProps> = ({ onRetry, onShowLeaderboard, milkCou
         try {
             const { error } = await supabase
                 .from('scores')
-                .insert([{ username: username.toUpperCase(), score: score }]);
+                .insert([{ username: username.toUpperCase(), score }]);
 
             if (error) throw error;
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting score:', error);
-            alert('Failed to submit score. Please try again.');
+            alert('기록을 저장하지 못했습니다. 다시 시도해 주세요.');
         } finally {
             setIsSubmitting(false);
         }
     };
 
+    const canSubmit = !isSubmitting && username.trim().length > 0;
+
     return (
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-            }}
-        >
+        <div style={overlayBackdrop}>
             <motion.div
-                style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '2rem',
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: '2rem',
-                    borderRadius: '1rem',
-                    width: '90%',
-                    maxWidth: '500px'
-                }}
-                initial={{ y: '100vh' }}
-                animate={{ y: 0 }}
-                transition={{
-                    type: 'spring',
-                    damping: 20,
-                    stiffness: 100,
-                    duration: 0.8
-                }}
+                style={panel}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-                {/* Game Over Text */}
-                <motion.h1
-                    style={{
-                        fontSize: '3rem',
-                        fontWeight: 'bold',
-                        color: '#ff0000',
-                        textShadow: '2px 2px 4px rgba(0, 0, 0, 0.3)',
-                        marginBottom: '0.5rem',
-                        textAlign: 'center',
-                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                    }}
-                    initial={{ scale: 0.5, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                >
-                    GAME OVER
-                </motion.h1>
+                <div style={hazardEdge} />
 
-                {/* Score Display */}
-                <motion.div
-                    style={{
-                        color: '#fbbf24',
-                        fontSize: '1.2rem',
-                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                        marginBottom: '1rem'
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.4 }}
-                >
-                    SCORE: {score}
-                </motion.div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <p style={eyebrow}>RUN ENDED</p>
+                    <h2 style={headline(ending.color)}>{ending.title}</h2>
+                    <p
+                        style={{
+                            margin: 0,
+                            fontSize: '0.9rem',
+                            lineHeight: 1.65,
+                            color: theme.inkMuted
+                        }}
+                    >
+                        {ending.line}
+                    </p>
+                </div>
 
-                {/* Items Collected */}
-                <motion.div
-                    style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        gap: '2rem',
-                        color: 'white',
-                        fontSize: '1.2rem',
-                        marginBottom: '1rem',
-                        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <img src="sources/milk.png" alt="milk" style={{ width: '32px', height: '32px' }} />
-                        <span>× {milkCount}</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={statHero}>
+                        <span style={statLabel}>SCORE</span>
+                        <span style={{ ...statHeroValue, color: theme.accent }}>{score.toLocaleString()}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <img src="sources/fish1.png" alt="fish" style={{ width: '32px', height: '32px' }} />
-                        <span>× {fishCount}</span>
+                    <div style={statGrid}>
+                        <div style={statCell}>
+                            <span style={statLabel}>🐟 FISH</span>
+                            <span style={statValue}>{fishCount}</span>
+                        </div>
+                        <div style={statCell}>
+                            <span style={statLabel}>🥛 MILK</span>
+                            <span style={statValue}>{milkCount}</span>
+                        </div>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Score Submission Form */}
-                {!submitted ? (
-                    <div style={{ display: 'flex', gap: '10px', flexDirection: 'column', alignItems: 'center', width: '100%' }}>
+                {submitted ? (
+                    <p style={{ ...hint, color: theme.good }}>기록 등록 완료 / SUBMITTED</p>
+                ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input
                             type="text"
-                            placeholder="YOUR NAME"
-                            maxLength={8}
+                            placeholder="이름 / YOUR NAME"
+                            maxLength={10}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
-                            style={{
-                                padding: '10px',
-                                fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                textAlign: 'center',
-                                width: '80%',
-                                textTransform: 'uppercase'
-                            }}
+                            style={textInput}
                         />
                         <button
                             onClick={handleSubmitScore}
-                            disabled={isSubmitting || !username.trim()}
-                            style={{
-                                padding: '10px 20px',
-                                fontSize: '1rem',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                cursor: isSubmitting || !username.trim() ? 'not-allowed' : 'pointer',
-                                backgroundColor: isSubmitting || !username.trim() ? '#718096' : '#48bb78',
-                                color: 'white',
-                                border: 'none',
-                                width: '80%'
-                            }}
+                            disabled={!canSubmit}
+                            style={button('quiet', !canSubmit)}
                         >
-                            {isSubmitting ? 'SUBMITTING...' : 'SUBMIT SCORE'}
+                            {isSubmitting ? '전송 중…' : '기록 등록 / SUBMIT'}
                         </button>
-                    </div>
-                ) : (
-                    <div style={{ color: '#48bb78', fontFamily: "'Press Start 2P', 'Pretendard', sans-serif", padding: '10px' }}>
-                        SCORE SUBMITTED!
                     </div>
                 )}
 
-                {/* Buttons */}
-                <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                    <MotionClickable
-                        style={{
-                            backgroundColor: '#ff0000',
-                            color: 'white',
-                            padding: '1rem 1.5rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                        }}
+                <div style={buttonRow}>
+                    <MotionButton
+                        style={button('primary')}
                         onClick={onRetry}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        whileHover={{
-                            scale: 1.05,
-                            backgroundColor: '#cc0000'
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
+                        whileHover={{ y: -1 }}
+                        whileTap={{ y: 0 }}
                     >
-                        <RotateCcw size={20} />
-                        RETRY
-                    </MotionClickable>
-
-                    <MotionClickable
-                        style={{
-                            backgroundColor: '#ecc94b',
-                            color: 'black',
-                            padding: '1rem 1.5rem',
-                            borderRadius: '0.5rem',
-                            fontSize: '1rem',
-                            fontWeight: 'bold',
-                            border: 'none',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.5rem',
-                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                        }}
+                        <RotateCcw size={13} />
+                        다시 / RETRY
+                    </MotionButton>
+                    <MotionButton
+                        style={button('quiet')}
                         onClick={onShowLeaderboard}
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        whileHover={{
-                            scale: 1.05,
-                            backgroundColor: '#d69e2e'
-                        }}
-                        whileTap={{ scale: 0.95 }}
-                        transition={{ duration: 0.2 }}
+                        whileHover={{ y: -1 }}
+                        whileTap={{ y: 0 }}
                     >
-                        RANKING
-                    </MotionClickable>
+                        <Trophy size={13} />
+                        랭킹
+                    </MotionButton>
                 </div>
+
+                <p style={hint}>SPACE 로도 다시 시작합니다</p>
             </motion.div>
         </div>
     );

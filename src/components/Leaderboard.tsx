@@ -1,6 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient';
+import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
+import { X } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
+import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
 
 interface Score {
     id: number;
@@ -18,123 +20,146 @@ interface LeaderboardProps {
 const formatTime = (ms: number) => {
     const minutes = Math.floor(ms / 60000);
     const seconds = Math.floor((ms % 60000) / 1000);
-    const milliseconds = Math.floor((ms % 1000) / 10);
-    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}.${milliseconds.toString().padStart(2, '0')}`;
+    const hundredths = Math.floor((ms % 1000) / 10);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
 };
+
+const MotionButton = motion.div as React.ElementType;
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) => {
     const [scores, setScores] = useState<Score[]>([]);
     const [loading, setLoading] = useState(true);
+    const [failed, setFailed] = useState(false);
 
-    useEffect(() => {
-        fetchScores();
-    }, [mode]);
-
-    const fetchScores = async () => {
+    const fetchScores = useCallback(async () => {
         setLoading(true);
+        setFailed(false);
         try {
-            let query;
-            if (mode === 'time') {
-                query = supabase
-                    .from('speedrun_leaderboard')
-                    .select('*')
-                    .order('time_ms', { ascending: true }) // Faster is better for time
-                    .limit(6);
-            } else {
-                query = supabase
-                    .from('scores')
-                    .select('*')
-                    .order('score', { ascending: false }) // Higher is better for score
-                    .limit(6);
-            }
+            const query =
+                mode === 'time'
+                    ? supabase
+                          .from('speedrun_leaderboard')
+                          .select('*')
+                          .order('time_ms', { ascending: true })
+                          .limit(8)
+                    : supabase.from('scores').select('*').order('score', { ascending: false }).limit(8);
 
             const { data, error } = await query;
-
             if (error) throw error;
             setScores(data || []);
         } catch (error) {
             console.error('Error fetching leaderboard:', error);
+            setFailed(true);
         } finally {
             setLoading(false);
         }
-    };
+    }, [mode]);
+
+    useEffect(() => {
+        fetchScores();
+    }, [fetchScores]);
+
+    const isTime = mode === 'time';
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 2000,
-            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-        }}>
+        <div style={overlayBackdrop}>
             <motion.div
-                style={{
-                    width: '90%',
-                    maxWidth: '500px',
-                    backgroundColor: '#2d3748',
-                    border: '4px solid #4a5568',
-                    padding: '20px',
-                    color: 'white',
-                    position: 'relative'
-                }}
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                style={panel}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-                <h2 style={{ textAlign: 'center', color: mode === 'time' ? '#48bb78' : '#fbbf24', marginBottom: '20px' }}>
-                    {mode === 'time' ? 'SPEEDRUN RANKING' : 'HIGH SCORE RANKING'}
-                </h2>
+                <div style={hazardEdge} />
 
-                {loading ? (
-                    <div style={{ textAlign: 'center', padding: '20px' }}>Loading...</div>
-                ) : (
-                    <div style={{ marginBottom: '20px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '2px solid #4a5568', color: '#a0aec0', fontSize: '0.8em' }}>
-                            <span style={{ width: '20%' }}>RANK</span>
-                            <span style={{ width: '40%' }}>NAME</span>
-                            <span style={{ width: '40%', textAlign: 'right' }}>{mode === 'time' ? 'TIME' : 'SCORE'}</span>
-                        </div>
-                        {scores.map((score, index) => (
-                            <div key={score.id} style={{
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                padding: '10px 0',
-                                borderBottom: '1px solid #4a5568',
-                                color: index < 3 ? (mode === 'time' ? '#48bb78' : '#fbbf24') : 'white'
-                            }}>
-                                <span style={{ width: '20%' }}>#{index + 1}</span>
-                                <span style={{ width: '40%' }}>{score.username}</span>
-                                <span style={{ width: '40%', textAlign: 'right' }}>
-                                    {mode === 'time'
-                                        ? (score.time_ms ? formatTime(score.time_ms) : 'N/A')
-                                        : score.score}
-                                </span>
-                            </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <p style={eyebrow}>{isTime ? 'FASTEST HOME' : 'HIGH SCORES'}</p>
+                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>
+                        {isTime ? '가장 빨리 집에 닿은 사람' : '가장 멀리 버틴 사람'}
+                    </h2>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minHeight: '180px' }}>
+                    {loading && <p style={hint}>불러오는 중…</p>}
+
+                    {!loading && failed && (
+                        <p style={{ ...hint, color: theme.bad }}>기록을 불러오지 못했습니다.</p>
+                    )}
+
+                    {!loading && !failed && scores.length === 0 && (
+                        <p style={hint}>아직 기록이 없습니다. 첫 번째가 되어 보세요.</p>
+                    )}
+
+                    {!loading &&
+                        !failed &&
+                        scores.map((entry, index) => (
+                            <Row
+                                key={entry.id}
+                                rank={index + 1}
+                                name={entry.username}
+                                value={isTime ? formatTime(entry.time_ms ?? 0) : (entry.score ?? 0).toLocaleString()}
+                            />
                         ))}
-                    </div>
-                )}
+                </div>
 
-                <button
-                    onClick={onClose}
-                    style={{
-                        width: '100%',
-                        padding: '10px',
-                        backgroundColor: '#f56565',
-                        color: 'white',
-                        border: 'none',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        marginTop: '10px'
-                    }}
-                >
-                    CLOSE
-                </button>
+                <MotionButton style={button('primary')} onClick={onClose} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
+                    <X size={13} />
+                    닫기 / CLOSE
+                </MotionButton>
             </motion.div>
+        </div>
+    );
+};
+
+/** Top three are marked; the rest are a quiet list, so the podium reads first. */
+const Row: React.FC<{ rank: number; name: string; value: string }> = ({ rank, name, value }) => {
+    const podium = rank <= 3;
+
+    return (
+        <div
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '9px 12px',
+                borderRadius: '5px',
+                background: podium ? theme.surfaceRaised : 'transparent',
+                borderLeft: `2px solid ${podium ? theme.accent : 'transparent'}`
+            }}
+        >
+            <span
+                style={{
+                    fontFamily: theme.display,
+                    fontSize: '0.6rem',
+                    color: podium ? theme.accent : theme.inkFaint,
+                    width: '18px',
+                    fontVariantNumeric: 'tabular-nums'
+                }}
+            >
+                {rank}
+            </span>
+            <span
+                style={{
+                    flex: 1,
+                    fontFamily: theme.display,
+                    fontSize: '0.62rem',
+                    color: theme.ink,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                }}
+            >
+                {name}
+            </span>
+            <span
+                style={{
+                    fontFamily: theme.display,
+                    fontSize: '0.68rem',
+                    color: podium ? theme.ink : theme.inkMuted,
+                    fontVariantNumeric: 'tabular-nums'
+                }}
+            >
+                {value}
+            </span>
         </div>
     );
 };

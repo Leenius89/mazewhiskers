@@ -12,12 +12,25 @@ import Victory from './components/Victory';
 import Leaderboard from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
+import { GameConfig } from './game/constants/GameConfig';
+import { createGameEventBus, GameEventBus } from './game/core/GameEvents';
+import type { GameOverPayload } from './game/core/GameEvents';
+import { isDebugEnabled } from './game/core/debug';
+import { resolveMode } from './game/core/modes';
 
 function App() {
     const gameRef = useRef<HTMLDivElement>(null);
     const game = useRef<Phaser.Game | null>(null);
     const [gameSize, setGameSize] = useState({ width: window.innerWidth, height: window.innerHeight });
-    const [health, setHealth] = useState(100);
+    /**
+     * Latest size, read by createGame without becoming one of its dependencies.
+     *
+     * Depending on `gameSize` directly meant every resize gave `createGame` a
+     * new identity, which re-ran the effect and rebuilt the whole Phaser game.
+     * Phaser tears down asynchronously, so the outgoing game was still playing
+     * its BGM when the incoming one started its own — two soundtracks at once.
+     */
+    const gameSizeRef = useRef(gameSize);
     const [showGame, setShowGame] = useState(false);
     const [isGameOver, setIsGameOver] = useState(false);
     const [isVictory, setIsVictory] = useState(false);
@@ -25,48 +38,19 @@ function App() {
     const [jumpCount, setJumpCount] = useState(0);
     const [fishCount, setFishCount] = useState(0);
     const [milkCount, setMilkCount] = useState(0);
-    const [showTutorial, setShowTutorial] = useState(false);
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [leaderboardMode, setLeaderboardMode] = useState<'score' | 'time'>('score');
+    const [isShowingCredits, setIsShowingCredits] = useState(false);
+    const [endReason, setEndReason] = useState<GameOverPayload['reason']>('health');
 
-    // Track health in a ref so Phaser callbacks can read latest value
-    const healthRef = useRef(100);
+    // Exhibition or arcade, fixed for the page load. A kiosk pins it in the URL.
+    const mode = useRef(resolveMode()).current;
 
-    useEffect(() => {
-        if (game.current) {
-            const pauseHandler = () => {
-                if (showTutorial) {
-                    game.current?.events.emit('pauseGame');
-                }
-            };
+    // Typed view onto the game's event emitter. The scene owns game state;
+    // React only subscribes to it.
+    const bus = useRef<GameEventBus | null>(null);
 
-            game.current.events.on('gameReady', pauseHandler);
 
-            return () => {
-                if (game.current) {
-                    game.current.events.off('gameReady', pauseHandler);
-                }
-            };
-        }
-    }, [showTutorial]);
-
-    // 튜토리얼 오버레이에서 엔터키/스페이스바로 닫기
-    useEffect(() => {
-        if (!showTutorial) return;
-
-        const handleTutorialKey = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setShowTutorial(false);
-                if (game.current) {
-                    game.current.events.emit('resumeGame');
-                }
-            }
-        };
-
-        window.addEventListener('keydown', handleTutorialKey);
-        return () => window.removeEventListener('keydown', handleTutorialKey);
-    }, [showTutorial]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -99,119 +83,75 @@ function App() {
         };
     }, []);
 
-    const handleHealthChange = useCallback((amount: number) => {
-        setHealth(prevHealth => {
-            const newHealth = Math.max(0, Math.min(prevHealth + amount, 100));
-            // console.log(`Health Update: ${prevHealth} -> ${newHealth} (Amount: ${amount})`); // debug
-            healthRef.current = newHealth;
-            return newHealth;
-        });
-    }, []);
-
     const destroyGame = useCallback(() => {
-        if (game.current) {
-            // Remove all event listeners before destroying
-            game.current.events.off('gameOver');
-            game.current.events.off('victory');
-            game.current.events.off('updateJumpCount');
-            game.current.events.off('changeHealth');
-            game.current.events.off('collectMilk');
-            game.current.events.off('collectFish');
-            game.current.events.off('pauseGame');
-            game.current.events.off('resumeGame');
-            game.current.events.off('gameReady');
+        if (!game.current) return;
 
-            // Explicitly stop sound manager if accessible (though scene shutdown does it)
-            // Ideally we just want to ensure we don't try to resume a closed context later.
-            // Phaser 3.60+ handles this well usually, but safety check:
-            if (game.current.sound) {
-                game.current.sound.removeAllListeners();
-                // Try to stop all sounds
-                game.current.sound.stopAll();
+        bus.current?.removeAll();
+        bus.current = null;
 
-                // Experimental: Attempt to detach context if possible, 
-                // or at least ensure we don't hold references that try to resume it.
-                // The error "Cannot resume a context that has been closed" comes from AudioContext.resume().
-                // This often happens if user interaction triggers a resume on a destroyed game's sound manager.
-            }
-
-            game.current.destroy(true);
-            game.current = null;
+        // Stop audio before teardown so a later user gesture cannot try to
+        // resume an AudioContext that has already been closed.
+        if (game.current.sound) {
+            game.current.sound.removeAllListeners();
+            game.current.sound.stopAll();
         }
+
+        game.current.destroy(true);
+        game.current = null;
     }, []);
 
     const createGame = useCallback(() => {
-        // Always destroy previous game first
-        destroyGame();
+        // One game at a time. A second instance would bring its own audio
+        // context and its own soundtrack.
+        if (game.current) return;
+
+        const size = gameSizeRef.current;
 
         const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
-            width: gameSize.width,
-            height: gameSize.height,
+            width: size.width,
+            height: size.height,
             parent: 'game-container',
             backgroundColor: '#808080',
             physics: {
                 default: 'arcade',
-                arcade: { gravity: { y: 0, x: 0 }, debug: false }
+                // `?debug=1` draws Arcade body outlines; DebugOverlay adds the numbers.
+                arcade: { gravity: { y: 0, x: 0 }, debug: isDebugEnabled() }
             },
             scale: {
                 mode: Phaser.Scale.RESIZE,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
-                width: gameSize.width,
-                height: gameSize.height,
+                width: size.width,
+                height: size.height
             },
             scene: [GameScene, VictoryScene]
         };
 
         game.current = new Phaser.Game(config);
+        bus.current = createGameEventBus(game.current);
 
-        // Game Over event
-        game.current.events.on('gameOver', (data: { milkCount?: number; fishCount?: number }) => {
+        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason }) => {
+            setMilkCount(milk);
+            setFishCount(fish);
+            setEndReason(reason);
             setIsGameOver(true);
-            if (data) {
-                setMilkCount(data.milkCount || 0);
-                setFishCount(data.fishCount || 0);
-            }
         });
 
-        // Victory event
-        game.current.events.on('victory', (data: { timeMs: number; milkCount?: number; fishCount?: number }) => {
-            setVictoryTime(data.timeMs);
+        bus.current.on('victory', ({ timeMs }) => {
+            setVictoryTime(timeMs);
             setIsVictory(true);
-            // Don't hide game immediately, maybe overlay?
-            // Actually design asks for Victory screen.
-            // Let's keep game visible in background or hide it.
-            // Existing GameOver hides nothing effectively but overlays.
-            // But we pause scene.
         });
 
-        // Jump count update
-        game.current.events.on('updateJumpCount', (count: number) => {
-            setJumpCount(count);
-        });
+        bus.current.on('jumpCountChanged', setJumpCount);
 
-        // Health changes (HP drain + Fish heal)
-        game.current.events.on('changeHealth', (amount: number) => {
-            handleHealthChange(amount);
+        // Health is not mirrored here any more: the scene owns it and draws it
+        // over the cat's head, so a second copy in React had nothing to render.
 
-            // Check HP=0 game over after a tick so state updates
-            setTimeout(() => {
-                if (healthRef.current <= 0) {
-                    // Trigger game over in Phaser scene
-                    // Need to cast to GameScene or access safely
-                    const scene = game.current?.scene?.getScene('GameScene') as GameScene;
-                    if (scene && !scene.gameOverStarted) {
-                        scene.gameOverAnimation();
-                    }
-                }
-            }, 50);
-        });
+        bus.current.on('milkCollected', setMilkCount);
+        bus.current.on('fishCollected', setFishCount);
 
-        // Milk & Fish counters
-        game.current.events.on('collectMilk', (count: number) => setMilkCount(count));
-        game.current.events.on('collectFish', (count: number) => setFishCount(count));
-
-    }, [gameSize, handleHealthChange, destroyGame]);
+        bus.current.on('creditsClosed', () => setIsShowingCredits(false));
+    }, []);
 
     useEffect(() => {
         if (showGame && !isGameOver && !isVictory) {
@@ -228,6 +168,16 @@ function App() {
         };
     }, [showGame, isGameOver, isVictory, createGame, destroyGame]);
 
+    /**
+     * Resizing reshapes the running game instead of replacing it.
+     *
+     * The scale mode is RESIZE, so Phaser handles the new viewport itself.
+     */
+    useEffect(() => {
+        gameSizeRef.current = gameSize;
+        game.current?.scale.resize(gameSize.width, gameSize.height);
+    }, [gameSize]);
+
     const restartGame = useCallback(() => {
         // 1. Destroy and cleanup
         destroyGame();
@@ -235,9 +185,8 @@ function App() {
         // 2. Reset local state
         setIsGameOver(false);
         setIsVictory(false);
+        setIsShowingCredits(false);
         setVictoryTime(0);
-        setHealth(100);
-        healthRef.current = 100;
         setMilkCount(0);
         setFishCount(0);
         setJumpCount(0);
@@ -248,6 +197,44 @@ function App() {
             setShowGame(true);
         }, 100);
     }, [destroyGame]);
+
+    /**
+     * Kiosk idle return.
+     *
+     * An unattended exhibition machine is left on a results screen by whoever
+     * walked away, and the next visitor should find the attract screen rather
+     * than someone else's game over. Only runs in exhibition mode, and only
+     * while a results screen is up — never mid-play.
+     */
+    useEffect(() => {
+        const timeout = mode.idleReturnMs;
+        if (!timeout) return;
+        if (!isGameOver && !isVictory) return;
+        if (isShowingCredits || showLeaderboard) return;
+
+        let timer = window.setTimeout(() => {
+            setIsGameOver(false);
+            setIsVictory(false);
+            setShowGame(false);
+        }, timeout);
+
+        const postpone = () => {
+            window.clearTimeout(timer);
+            timer = window.setTimeout(() => {
+                setIsGameOver(false);
+                setIsVictory(false);
+                setShowGame(false);
+            }, timeout);
+        };
+
+        const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
+        events.forEach((event) => window.addEventListener(event, postpone));
+
+        return () => {
+            window.clearTimeout(timer);
+            events.forEach((event) => window.removeEventListener(event, postpone));
+        };
+    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showLeaderboard]);
 
     // Global Event handlers (if any)
     useEffect(() => {
@@ -271,11 +258,9 @@ function App() {
 
     const startGame = () => {
         setShowGame(true);
-        setShowTutorial(true);
-        setHealth(100);
-        healthRef.current = 100;
         setIsGameOver(false);
         setIsVictory(false);
+        setIsShowingCredits(false);
         setMilkCount(0);
         setFishCount(0);
         setJumpCount(0);
@@ -302,11 +287,9 @@ function App() {
                 <>
                     <Header
                         restartGame={restartGame}
-                        health={health}
-                        jumpCount={jumpCount}
                         milkCount={milkCount}
+                        fishCount={fishCount}
                         gameSize={gameSize}
-                        orientation={gameSize.width > gameSize.height ? 'landscape' : 'portrait'}
                     />
                     <div
                         id="game-container"
@@ -324,83 +307,6 @@ function App() {
                         }}
                     />
 
-                    {/* Tutorial Overlay */}
-                    {showTutorial && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            width: '90%',
-                            maxWidth: '600px',
-                            backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                            border: '4px solid #ffffff',
-                            padding: '20px',
-                            color: 'white',
-                            fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                            zIndex: 2000,
-                            fontSize: /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? '0.8rem' : '1rem',
-                            lineHeight: '1.5',
-                            textAlign: 'center'
-                        }}>
-                            <h2 style={{ color: '#ffff00', marginBottom: '20px', marginTop: 0 }}>
-                                HOW TO PLAY
-                            </h2>
-
-                            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>조작법 / CONTROLS</h3>
-                                {/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ? (
-                                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>🕹️ 조이스틱: 이동 / Move</li>
-                                        <li>🔴 버튼: 점프 / Jump</li>
-                                    </ul>
-                                ) : (
-                                    <ul style={{ listStyle: 'none', padding: 0 }}>
-                                        <li>⬆️⬇️⬅️➡️ 방향키: 이동 / Move</li>
-                                        <li>SPACE 스페이스바: 점프 / Jump</li>
-                                    </ul>
-                                )}
-                            </div>
-
-                            <div style={{ marginBottom: '20px', textAlign: 'left' }}>
-                                <h3 style={{ color: '#00ff00', fontSize: '0.9em' }}>규칙 / RULES</h3>
-                                <ul style={{ listStyle: 'none', padding: 0 }}>
-                                    <li style={{ marginBottom: '10px' }}>❤️ 체력이 서서히 줄어듭니다! / HP drops!</li>
-                                    <li style={{ marginBottom: '10px' }}>🐟 생선 → 체력 회복 / Fish → Heal (+20)</li>
-                                    <li style={{ marginBottom: '10px' }}>🥛 우유 → 점프 증가 / Milk → Jump (+1)</li>
-                                </ul>
-                            </div>
-
-                            <button
-                                style={{
-                                    backgroundColor: '#00ff00',
-                                    color: 'black',
-                                    border: '4px solid #004d00',
-                                    padding: '10px 30px',
-                                    fontSize: '1.2rem',
-                                    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                    cursor: 'pointer',
-                                    marginTop: '10px'
-                                }}
-                                onClick={() => {
-                                    setShowTutorial(false);
-                                    if (game.current) {
-                                        game.current.events.emit('resumeGame');
-                                    }
-                                }}
-                            >
-                                GO!
-                            </button>
-                            <div style={{
-                                color: '#a0a0a0',
-                                fontSize: '0.6rem',
-                                marginTop: '10px',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif"
-                            }}>
-                                PRESS ENTER
-                            </div>
-                        </div>
-                    )}
                 </>
             ) : (
                 <MainPage
@@ -415,11 +321,18 @@ function App() {
                     onShowLeaderboard={() => handleShowLeaderboard('score')}
                     milkCount={milkCount}
                     fishCount={fishCount}
-                    score={(milkCount * 50) + (fishCount * 100) + (jumpCount * 10)}
+                    reason={endReason}
+                    score={
+                        milkCount * GameConfig.SCORE.PER_MILK +
+                        fishCount * GameConfig.SCORE.PER_FISH +
+                        jumpCount * GameConfig.SCORE.PER_JUMP
+                    }
                 />
             )}
 
-            {isVictory && (
+            {/* Hidden while the credits roll: this overlay is position:fixed over
+                the whole viewport, so it would cover the canvas they render on. */}
+            {isVictory && !isShowingCredits && (
                 <Victory
                     onRetry={restartGame}
                     onMainMenu={() => {
@@ -427,6 +340,10 @@ function App() {
                         setShowGame(false);
                     }}
                     onShowLeaderboard={() => handleShowLeaderboard('time')}
+                    onShowCredits={() => {
+                        setIsShowingCredits(true);
+                        bus.current?.emit('showCredits');
+                    }}
                     timeMs={victoryTime}
                     milkCount={milkCount}
                     fishCount={fishCount}
