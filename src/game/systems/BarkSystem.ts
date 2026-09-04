@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
-import { barkWrapWidth, fontPx } from '../core/uiScale';
+import { barkWrapWidth, fontPx, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /** Anything that can hold a bubble over its head. */
@@ -46,6 +46,8 @@ class Bubble {
 
     /** Priority of the line currently showing; 0 when the bubble is idle. */
     private priority = 0;
+    /** Interface scale the type was last sized for. */
+    private appliedScale = 0;
 
     constructor(private readonly scene: GameScene, colour: string) {
         const cfg = GameConfig.BARKS;
@@ -77,6 +79,16 @@ class Bubble {
 
     say(speaker: Speaker, text: string, priority: number): void {
         const cfg = GameConfig.BARKS;
+        const camera = this.scene.cameras.main;
+
+        // Re-sized per line rather than once at construction, so a rotated phone
+        // does not keep type meant for the screen it used to be.
+        const scale = uiScale(camera);
+        if (scale !== this.appliedScale) {
+            this.appliedScale = scale;
+            this.label.setFontSize(fontPx(cfg.FONT_SIZE, camera));
+            this.label.setWordWrapWidth(barkWrapWidth(camera));
+        }
 
         this.speaker = speaker;
         this.priority = priority;

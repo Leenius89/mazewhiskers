@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
-import { fontPx, minimapCell } from '../core/uiScale';
+import { fontPx, minimapCell, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -31,6 +31,7 @@ export class HudOverlay {
     private lastOpenCount = -1;
     private origin = { x: 0, y: 0 };
     private readoutOffset = { x: 0, y: 0 };
+    private appliedScale = 0;
 
     /**
      * Screen rectangle the HUD occupies in the top-right corner.
@@ -92,6 +93,12 @@ export class HudOverlay {
         pinToScreen(this.rentBar, viewport);
         pinToScreen(this.readout, viewport);
         pinToScreen(this.flash, viewport);
+
+        const scale = uiScale(camera);
+        if (scale !== this.appliedScale) {
+            this.appliedScale = scale;
+            this.readout.setFontSize(fontPx(9, camera));
+        }
 
         const cell = minimapCell(camera);
         const size = GameConfig.MAZE_SIZE * cell;

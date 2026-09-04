@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
-import { fontPx } from '../core/uiScale';
+import { fontPx, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 export interface SpotlightTarget {
@@ -76,6 +76,8 @@ export class NarrativeOverlay {
     private measuredHeight = 0;
     /** Top edge of the box as last drawn; the pointer aims at it. */
     private boxTop = 0;
+    /** Interface scale the type was last sized for. See `resizeText`. */
+    private appliedScale = 0;
     private resolveWait: (() => void) | null = null;
     private typingEvent: Phaser.Time.TimerEvent | null = null;
 
@@ -450,7 +452,33 @@ export class NarrativeOverlay {
         return this.measuredHeight;
     }
 
+    /**
+     * Re-sizes the type when the screen the game is on changes.
+     *
+     * Fonts were chosen once, in the constructor, against whatever the camera
+     * happened to be then — so a phone rotated into landscape, or a canvas that
+     * had not settled at construction time, kept type sized for a screen it is
+     * no longer on.
+     */
+    private resizeText(): void {
+        const scale = uiScale(this.scene.cameras.main);
+        if (scale === this.appliedScale) return;
+        this.appliedScale = scale;
+
+        const camera = this.scene.cameras.main;
+        this.speakerText.setFontSize(fontPx(10, camera));
+        this.bodyText.setFontSize(fontPx(15, camera));
+        this.measure.setFontSize(fontPx(15, camera));
+        this.hintText.setFontSize(fontPx(8, camera));
+        this.skipText.setFontSize(fontPx(parseInt(GameConfig.NARRATIVE.SKIP_SIZE, 10), camera));
+
+        // The cached measurement was taken at the old size.
+        this.measureKey = '';
+    }
+
     private drawBox(width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
+        this.resizeText();
+
         const margin = cfg.BOX_MARGIN;
         const boxWidth = width - margin * 2;
         const left = margin;

@@ -196,7 +196,7 @@ export const GameConfig = {
     BARKS: {
         MAX_WIDTH: 190,
         /** And never wider than this share of a narrow screen. */
-        MAX_WIDTH_FRACTION: 0.52,
+        MAX_WIDTH_FRACTION: 0.66,
         PADDING: { X: 10, Y: 6 },
         FONT_SIZE: 13,
         BOX_COLOR: 0x05070c,
@@ -292,7 +292,8 @@ export const GameConfig = {
         /** Below this share of max health the bar turns. */
         HURT_AT: 0.55,
         CRITICAL_AT: 0.25,
-        PIP: { RADIUS: 2.4, GAP: 7, FILLED: 0xffe27a, EMPTY: 0x3d424b, OFFSET_Y: 7 }
+        /** Jump stock. The dots were 2.4px across — too small to count at a glance. */
+        PIP: { RADIUS: 3.4, GAP: 10, FILLED: 0xffe27a, EMPTY: 0x3d424b, OFFSET_Y: 8 }
     },
 
     /** Contact shadows, drawn procedurally until the shadow asset lands. */

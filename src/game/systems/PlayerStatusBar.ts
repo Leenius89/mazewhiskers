@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
+import { ui } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -46,35 +47,45 @@ export class PlayerStatusBar {
         if (!player || !player.active || this.scene.narrativeActive) return;
 
         const cfg = GameConfig.STATUS_BAR;
+        const camera = this.scene.cameras.main;
         const ratio = Phaser.Math.Clamp(this.scene.health / GameConfig.HEALTH.MAX, 0, 1);
+
+        // Drawn against the screen it is on. A 46x5 bar and a 2.4-pixel jump dot
+        // were already small on a monitor; on a phone they were unreadable.
+        const width = ui(cfg.WIDTH, camera);
+        const barHeight = ui(cfg.HEIGHT, camera);
+        const edge = ui(1, camera);
 
         // Origin is the cat's feet, so its head is a sprite-height above.
         const headY = player.y - player.displayHeight;
-        const left = player.x - cfg.WIDTH / 2;
-        const top = headY - cfg.OFFSET_Y;
+        const left = player.x - width / 2;
+        const top = headY - ui(cfg.OFFSET_Y, camera);
 
         this.graphics.fillStyle(cfg.BACKGROUND, 0.82);
-        this.graphics.fillRect(left - 1, top - 1, cfg.WIDTH + 2, cfg.HEIGHT + 2);
+        this.graphics.fillRect(left - edge, top - edge, width + edge * 2, barHeight + edge * 2);
 
         this.graphics.fillStyle(this.barColor(ratio), 1);
-        this.graphics.fillRect(left, top, cfg.WIDTH * ratio, cfg.HEIGHT);
+        this.graphics.fillRect(left, top, width * ratio, barHeight);
 
-        this.graphics.lineStyle(1, cfg.BORDER, 0.55);
-        this.graphics.strokeRect(left - 1, top - 1, cfg.WIDTH + 2, cfg.HEIGHT + 2);
+        this.graphics.lineStyle(edge, cfg.BORDER, 0.55);
+        this.graphics.strokeRect(left - edge, top - edge, width + edge * 2, barHeight + edge * 2);
 
-        this.drawJumpPips(player.x, top + cfg.HEIGHT + cfg.PIP.OFFSET_Y, player.jumpCount);
+        this.drawJumpPips(player.x, top + barHeight + ui(cfg.PIP.OFFSET_Y, camera), player.jumpCount);
     }
 
     /** One pip per jump the player could hold, filled for the ones they have. */
     private drawJumpPips(centerX: number, y: number, held: number): void {
         const pip = GameConfig.STATUS_BAR.PIP;
+        const camera = this.scene.cameras.main;
         const slots = GameConfig.PLAYER.JUMP.MAX_STOCK;
-        const span = (slots - 1) * pip.GAP;
+        const gap = ui(pip.GAP, camera);
+        const radius = ui(pip.RADIUS, camera);
+        const span = (slots - 1) * gap;
 
         for (let i = 0; i < slots; i++) {
             const filled = i < held;
             this.graphics.fillStyle(filled ? pip.FILLED : pip.EMPTY, filled ? 1 : 0.55);
-            this.graphics.fillCircle(centerX - span / 2 + i * pip.GAP, y, pip.RADIUS);
+            this.graphics.fillCircle(centerX - span / 2 + i * gap, y, radius);
         }
     }
 
