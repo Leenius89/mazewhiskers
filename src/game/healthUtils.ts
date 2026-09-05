@@ -64,6 +64,12 @@ const scheduleRent = (scene: GameScene) => {
         loop: true,
         callback: () => {
             if (scene.state.hasEnded()) return;
+
+            // The same rule the steady drain follows, which this had never been
+            // given: no control, no cost. Rent day used to land in the middle of
+            // the tutorial, where the player cannot do a thing about it.
+            if (!scene.state.is('playing') || scene.narrativeActive) return;
+
             scene.chargeRent();
         }
     });

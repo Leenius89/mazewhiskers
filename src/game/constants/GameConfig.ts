@@ -175,6 +175,15 @@ export const GameConfig = {
          */
         BOX_MIN_HEIGHT: 104,
         BOX_MARGIN: 18,
+        /**
+         * A reading width, not the window's width.
+         *
+         * The box used to span whatever the canvas was, which on a desktop that
+         * now fills the browser meant a single line of dialogue stretched across
+         * two feet of monitor. On a phone the canvas is narrower than this, so
+         * the box stays full width there and nothing changes.
+         */
+        BOX_MAX_WIDTH: 720,
         /** Inner gaps the box is measured from. */
         PADDING_X: 14,
         BODY_TOP: 18,
@@ -553,7 +562,8 @@ export const GameConfig = {
         /** Room under the minimap for the readout and rent bar. */
         RESERVED_TAIL: 18,
         MINIMAP: {
-            CELL: 3,
+            /** Ceiling, not a fixed size — MAX_WIDTH_FRACTION shrinks it on a phone. */
+            CELL: 4.5,
             /** Never more than this share of the canvas width. */
             MAX_WIDTH_FRACTION: 0.26,
             BACKGROUND: 0x11131a,

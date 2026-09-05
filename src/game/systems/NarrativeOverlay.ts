@@ -524,8 +524,9 @@ export class NarrativeOverlay {
         const k = uiScale(this.scene.cameras.main);
         const margin = cfg.BOX_MARGIN * k;
         const padding = cfg.PADDING_X * k;
-        const boxWidth = width - margin * 2;
-        const left = margin;
+        const boxWidth = Math.min(width - margin * 2, cfg.BOX_MAX_WIDTH * k);
+        // Centred once it stops filling the width.
+        const left = (width - boxWidth) / 2;
 
         // Wrapped first: the box is measured from the text, so the text has to
         // know how wide it may be before anything can be sized.

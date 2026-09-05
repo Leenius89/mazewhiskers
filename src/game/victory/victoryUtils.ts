@@ -54,7 +54,10 @@ export class VictoryScene extends Phaser.Scene {
         this.blackOverlay = this.add.graphics();
         this.blackOverlay.setDepth(1);
         this.blackOverlay.fillStyle(0x000000, 1);
-        this.blackOverlay.fillRect(0, 0, width, height);
+        // Drawn well past the viewport on every side. Sized exactly to the
+        // camera it left a sliver of the game showing along the top edge, and a
+        // black fill costs nothing to over-draw.
+        this.blackOverlay.fillRect(-width, -height, width * 3, height * 3);
 
         // Background image
         this.background = this.add.image(0, 0, 'goalBackground');

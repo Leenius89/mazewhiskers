@@ -24,7 +24,9 @@ export const showCredits = (
 
     const creditsBg = scene.add.graphics();
     creditsBg.fillStyle(0x000000, 1);
-    creditsBg.fillRect(0, 0, width, height);
+    // Over-drawn on every side, like the victory overlay: sized exactly to
+    // the camera it left a sliver of the game showing along the top edge.
+    creditsBg.fillRect(-width, -height, width * 3, height * 3);
     creditsBg.setDepth(1000);
     creditsBg.setAlpha(0);
 
@@ -86,7 +88,7 @@ export const showCredits = (
     skipPrompt.setAlpha(0);
 
     // Full screen clickable area
-    const clickableArea = scene.add.rectangle(width / 2, height / 2, width, height);
+    const clickableArea = scene.add.rectangle(width / 2, height / 2, width * 2, height * 2);
     clickableArea.setOrigin(0.5, 0.5);
     clickableArea.setDepth(1002);
 
