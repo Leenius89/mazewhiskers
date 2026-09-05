@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
-import { fontPx, uiScale } from '../core/uiScale';
+import { TEXT, fontPx, uiScale } from '../core/uiScale';
 import { t } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -98,7 +98,7 @@ export class NarrativeOverlay {
         this.speakerText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                fontSize: fontPx(10, camera),
+                fontSize: fontPx(10, camera, TEXT.DIALOGUE),
                 color: cfg.SPEAKER_COLOR
             })
             .setScrollFactor(0)
@@ -107,7 +107,7 @@ export class NarrativeOverlay {
         this.bodyText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: fontPx(15, camera),
+                fontSize: fontPx(15, camera, TEXT.DIALOGUE),
                 color: cfg.TEXT_COLOR,
                 lineSpacing: 7,
                 wordWrap: { width: 100 }
@@ -120,7 +120,7 @@ export class NarrativeOverlay {
         this.measure = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: fontPx(15, camera),
+                fontSize: fontPx(15, camera, TEXT.DIALOGUE),
                 color: cfg.TEXT_COLOR,
                 lineSpacing: 7,
                 wordWrap: { width: 100 }
@@ -131,7 +131,7 @@ export class NarrativeOverlay {
         this.hintText = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                fontSize: fontPx(8, camera),
+                fontSize: fontPx(8, camera, TEXT.DIALOGUE),
                 color: cfg.HINT_COLOR
             })
             .setOrigin(1, 1)
@@ -146,7 +146,7 @@ export class NarrativeOverlay {
         this.skipText = scene.add
             .text(0, 0, t('tut.skip'), {
                 fontFamily: "'Press Start 2P', monospace",
-                fontSize: fontPx(parseInt(cfg.SKIP_SIZE, 10), camera),
+                fontSize: fontPx(parseInt(cfg.SKIP_SIZE, 10), camera, TEXT.PROMPT),
                 color: cfg.SKIP_COLOR,
                 backgroundColor: 'rgba(11,13,19,0.92)',
                 padding: { x: 11, y: 8 }
@@ -507,11 +507,11 @@ export class NarrativeOverlay {
         this.appliedScale = scale;
 
         const camera = this.scene.cameras.main;
-        this.speakerText.setFontSize(fontPx(10, camera));
-        this.bodyText.setFontSize(fontPx(15, camera));
-        this.measure.setFontSize(fontPx(15, camera));
-        this.hintText.setFontSize(fontPx(8, camera));
-        this.skipText.setFontSize(fontPx(parseInt(GameConfig.NARRATIVE.SKIP_SIZE, 10), camera));
+        this.speakerText.setFontSize(fontPx(10, camera, TEXT.DIALOGUE));
+        this.bodyText.setFontSize(fontPx(15, camera, TEXT.DIALOGUE));
+        this.measure.setFontSize(fontPx(15, camera, TEXT.DIALOGUE));
+        this.hintText.setFontSize(fontPx(8, camera, TEXT.DIALOGUE));
+        this.skipText.setFontSize(fontPx(parseInt(GameConfig.NARRATIVE.SKIP_SIZE, 10), camera, TEXT.PROMPT));
 
         // The cached measurement was taken at the old size.
         this.measureKey = '';

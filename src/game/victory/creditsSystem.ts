@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { fontPx, ui } from '../core/uiScale';
+import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
 
 /** How long the roll holds the screen before it can be dismissed. */
@@ -58,10 +58,10 @@ export const showCredits = (
     // Place text in center
     const creditsText = scene.add.text(width / 2, height / 2, credits.join('\n'), {
         fontFamily: 'Arial',
-        fontSize: '20px',
+        fontSize: fontPx(18, camera, TEXT.PROSE),
         color: '#ffffff',
         align: 'center',
-        lineSpacing: 10
+        lineSpacing: ui(10, camera)
     } as Phaser.Types.GameObjects.Text.TextStyle); // Explicit cast for stricter typing if needed
     creditsText.setOrigin(0.5, 0.5);
     creditsText.setDepth(1001);
@@ -78,7 +78,7 @@ export const showCredits = (
      */
     const skipPrompt = scene.add.text(width / 2, height - ui(56, camera), t('credits.return'), {
         fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-        fontSize: fontPx(13, camera),
+        fontSize: fontPx(13, camera, TEXT.PROMPT),
         color: '#ffffff',
         align: 'center',
         backgroundColor: 'rgba(20,22,28,0.92)',

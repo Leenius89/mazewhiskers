@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
-import { barkWrapWidth, worldFontPx, worldUi, worldUiScale } from '../core/uiScale';
+import { TEXT, barkWrapWidth, worldFontPx, worldUi, worldUiScale } from '../core/uiScale';
 import { t, tList } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -57,7 +57,7 @@ class Bubble {
         this.label = scene.add
             .text(0, -cfg.TAIL - cfg.PADDING.Y, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: worldFontPx(cfg.FONT_SIZE, scene.cameras.main),
+                fontSize: worldFontPx(cfg.FONT_SIZE, scene.cameras.main, TEXT.BARK),
                 color: colour,
                 align: 'center',
                 wordWrap: { width: barkWrapWidth(scene.cameras.main) }
@@ -87,7 +87,7 @@ class Bubble {
         const scale = worldUiScale(camera);
         if (scale !== this.appliedScale) {
             this.appliedScale = scale;
-            this.label.setFontSize(worldFontPx(cfg.FONT_SIZE, camera));
+            this.label.setFontSize(worldFontPx(cfg.FONT_SIZE, camera, TEXT.BARK));
             this.label.setWordWrapWidth(barkWrapWidth(camera));
         }
 

@@ -212,7 +212,7 @@ export const GameConfig = {
     BARKS: {
         MAX_WIDTH: 190,
         /** And never wider than this share of a narrow screen. */
-        MAX_WIDTH_FRACTION: 0.66,
+        MAX_WIDTH_FRACTION: 0.58,
         PADDING: { X: 10, Y: 6 },
         FONT_SIZE: 13,
         BOX_COLOR: 0x05070c,

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { fontPx, ui } from '../core/uiScale';
+import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
 
 /** How long the ending holds the screen before it can be skipped. */
@@ -16,21 +16,38 @@ export const showEndingMessages = async (
 
     const textStyle: Phaser.Types.GameObjects.Text.TextStyle = {
         fontFamily: "'Pretendard', sans-serif",
-        fontSize: fontPx(18, camera),
+        fontSize: fontPx(16, camera, TEXT.PROSE),
         color: '#ffffff',
         align: 'center',
         fixedWidth: width * 0.8,
         wordWrap: { width: width * 0.8 }
     };
 
-    const lineSpacing = ui(85, camera);
-    const startY = height / 2 - ((messages.length - 1) * lineSpacing) / 2;
-
-    const texts = messages.map((_, i) => {
-        const text = scene.add.text(width / 2, startY + i * lineSpacing, '', textStyle);
-        text.setOrigin(0.5);
+    /**
+     * Stacked by measured height, not by a fixed interval.
+     *
+     * The stanzas used to sit 85px apart regardless of how tall they were. On a
+     * wide screen each one is two lines and that is fine; on a phone the same
+     * stanza wraps to five or six, and the next one was drawn straight over
+     * the bottom of it. Each text is given its full line to measure, then
+     * cleared for the typewriter, so the layout knows the finished shape
+     * before a character has appeared.
+     */
+    const gap = ui(18, camera);
+    const texts = messages.map((message) => {
+        const text = scene.add.text(0, 0, message, textStyle);
+        text.setOrigin(0.5, 0);
         text.setDepth(2);
         return text;
+    });
+
+    const heights = texts.map((text) => text.height);
+    const total = heights.reduce((sum, h) => sum + h, 0) + gap * (messages.length - 1);
+    let cursor = height / 2 - total / 2;
+    texts.forEach((text, i) => {
+        text.setPosition(width / 2, cursor);
+        cursor += heights[i] + gap;
+        text.setText('');
     });
 
     /**
@@ -51,7 +68,7 @@ export const showEndingMessages = async (
     const skipPrompt = scene.add
         .text(width / 2, height - ui(56, camera), t('ending.skip'), {
             fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-            fontSize: fontPx(13, camera),
+            fontSize: fontPx(13, camera, TEXT.PROMPT),
             color: '#ffffff',
             align: 'center',
             backgroundColor: 'rgba(20,22,28,0.92)',

@@ -69,13 +69,47 @@ export const ui = (base: number, camera: Phaser.Cameras.Scene2D.Camera): number 
 export const worldUi = (base: number, camera: Phaser.Cameras.Scene2D.Camera): number =>
     base * worldUiScale(camera);
 
+/**
+ * How much of the layout correction a piece of text takes.
+ *
+ * Panels and margins grow with the full correction, because they are laying
+ * out a screen. Type does not need to: on a phone the same 15px that is small
+ * on a monitor is nearly the right size already, because the phone is held
+ * closer. Applying the full 1.55x to every word made the ending unreadable —
+ * lines wrapping into each other — and turned the cat's asides into placards.
+ *
+ * `damping` is the share of the correction a text gets: 1 means the whole of
+ * it, 0 means none. What is right depends on what the text is for. The
+ * dialogue box is read with attention and can be large; a speech bubble is
+ * glanced at and should stay out of the way; the ending is a page of prose.
+ */
+const textScale = (camera: Phaser.Cameras.Scene2D.Camera, damping: number): number =>
+    1 + (layoutScale(camera) - 1) * damping;
+
 /** Font size for a screen-pinned element. */
-export const fontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera): string =>
-    `${Math.round(base * uiScale(camera))}px`;
+export const fontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera, damping = 1): string =>
+    camera ? `${Math.round(base * RENDER_SCALE * textScale(camera, damping))}px` : `${base}px`;
 
 /** Font size for an element that lives in the world. */
-export const worldFontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera): string =>
-    `${Math.round(base * worldUiScale(camera))}px`;
+export const worldFontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera, damping = 1): string =>
+    camera ? `${Math.round((base * textScale(camera, damping)) / baseZoom())}px` : `${base}px`;
+
+/**
+ * How much of the correction each kind of text takes. Named so the call sites
+ * say what the text is rather than quoting a number.
+ */
+export const TEXT = {
+    /** The dialogue box: read with attention, may be large. */
+    DIALOGUE: 0.65,
+    /** HUD readouts: small labels that should stay small. */
+    HUD: 0.65,
+    /** Speech bubbles: glanced at in motion, should not dominate the frame. */
+    BARK: 0.4,
+    /** The ending and credits: a page of prose read line by line. */
+    PROSE: 0.2,
+    /** Skip prompts and the like. */
+    PROMPT: 0.5
+} as const;
 
 /**
  * How wide one minimap cell may be drawn.

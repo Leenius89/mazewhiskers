@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
-import { fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
+import { TEXT, fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -51,7 +51,7 @@ export class HudOverlay {
         this.readout = scene.add
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', monospace",
-                fontSize: fontPx(9, scene.cameras.main),
+                fontSize: fontPx(9, scene.cameras.main, TEXT.HUD),
                 color: GameConfig.HUD.TEXT_COLOR,
                 align: 'right'
             })
@@ -97,7 +97,7 @@ export class HudOverlay {
         const scale = uiScale(camera);
         if (scale !== this.appliedScale) {
             this.appliedScale = scale;
-            this.readout.setFontSize(fontPx(9, camera));
+            this.readout.setFontSize(fontPx(9, camera, TEXT.HUD));
         }
 
         const cell = minimapCell(camera);
