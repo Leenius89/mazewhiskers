@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
-import { barkWrapWidth, fontPx, uiScale } from '../core/uiScale';
+import { barkWrapWidth, worldFontPx, worldUi, worldUiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /** Anything that can hold a bubble over its head. */
@@ -56,7 +56,7 @@ class Bubble {
         this.label = scene.add
             .text(0, -cfg.TAIL - cfg.PADDING.Y, '', {
                 fontFamily: "'Pretendard', sans-serif",
-                fontSize: fontPx(cfg.FONT_SIZE, scene.cameras.main),
+                fontSize: worldFontPx(cfg.FONT_SIZE, scene.cameras.main),
                 color: colour,
                 align: 'center',
                 wordWrap: { width: barkWrapWidth(scene.cameras.main) }
@@ -83,10 +83,10 @@ class Bubble {
 
         // Re-sized per line rather than once at construction, so a rotated phone
         // does not keep type meant for the screen it used to be.
-        const scale = uiScale(camera);
+        const scale = worldUiScale(camera);
         if (scale !== this.appliedScale) {
             this.appliedScale = scale;
-            this.label.setFontSize(fontPx(cfg.FONT_SIZE, camera));
+            this.label.setFontSize(worldFontPx(cfg.FONT_SIZE, camera));
             this.label.setWordWrapWidth(barkWrapWidth(camera));
         }
 
@@ -159,15 +159,16 @@ class Bubble {
 
         const cfg = GameConfig.BARKS;
         const camera = this.scene.cameras.main;
-        const above = speaker.y - speaker.displayHeight - cfg.OFFSET_Y;
-        const flipped = above - cfg.TAIL - this.boxHeight < camera.scrollY + cfg.EDGE_MARGIN;
+        const above = speaker.y - speaker.displayHeight - worldUi(cfg.OFFSET_Y, camera);
+        const flipped =
+            above - worldUi(cfg.TAIL, camera) - this.boxHeight < camera.scrollY + worldUi(cfg.EDGE_MARGIN, camera);
 
         if (flipped !== this.flipped) {
             this.flipped = flipped;
             this.draw();
         }
 
-        const y = flipped ? speaker.y + cfg.OFFSET_Y_BELOW : above;
+        const y = flipped ? speaker.y + worldUi(cfg.OFFSET_Y_BELOW, camera) : above;
         this.container.setPosition(this.fitOnScreen(speaker.x, y, camera), y);
     }
 
@@ -181,7 +182,7 @@ class Bubble {
      */
     private fitOnScreen(x: number, y: number, camera: Phaser.Cameras.Scene2D.Camera): number {
         const view = camera.worldView;
-        const margin = GameConfig.BARKS.EDGE_MARGIN / (camera.zoom || 1);
+        const margin = worldUi(GameConfig.BARKS.EDGE_MARGIN, camera) / (camera.zoom || 1);
         const half = this.boxWidth / 2;
 
         const dodged = this.dodgeHud(x, y, camera);
@@ -211,48 +212,44 @@ class Bubble {
         const bottom = view.y + reserved.bottom / zoom;
         const top = view.y + reserved.top / zoom;
 
-        const boxTop = this.flipped ? y : y - GameConfig.BARKS.TAIL - this.boxHeight;
-        const boxBottom = this.flipped ? y + GameConfig.BARKS.TAIL + this.boxHeight : y;
+        const barkTail = worldUi(GameConfig.BARKS.TAIL, camera);
+        const boxTop = this.flipped ? y : y - barkTail - this.boxHeight;
+        const boxBottom = this.flipped ? y + barkTail + this.boxHeight : y;
 
         // Only a bubble that actually shares rows with the HUD needs to move.
         if (boxBottom < top || boxTop > bottom) return x;
 
         const halfWidth = this.boxWidth / 2;
-        const rightmost = left - GameConfig.BARKS.EDGE_MARGIN / zoom - halfWidth;
+        const rightmost = left - worldUi(GameConfig.BARKS.EDGE_MARGIN, camera) / zoom - halfWidth;
 
         return Math.min(x, rightmost);
     }
 
     private draw(): void {
         const cfg = GameConfig.BARKS;
-        const width = this.label.width + cfg.PADDING.X * 2;
-        const height = this.label.height + cfg.PADDING.Y * 2;
+        const camera = this.scene.cameras.main;
+        const tail = worldUi(cfg.TAIL, camera);
+        const width = this.label.width + worldUi(cfg.PADDING.X, camera) * 2;
+        const height = this.label.height + worldUi(cfg.PADDING.Y, camera) * 2;
         // Positive is downward, so flipping is a sign change on everything.
         const direction = this.flipped ? -1 : 1;
 
         this.boxWidth = width;
         this.boxHeight = height;
-        this.label.setY(direction * -(cfg.TAIL + cfg.PADDING.Y) + (this.flipped ? height : 0));
+        this.label.setY(direction * -(tail + worldUi(cfg.PADDING.Y, camera)) + (this.flipped ? height : 0));
 
         this.box.clear();
         this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
         this.box.fillRoundedRect(
             -width / 2,
-            this.flipped ? cfg.TAIL : -cfg.TAIL - height,
+            this.flipped ? tail : -tail - height,
             width,
             height,
-            cfg.CORNER
+            worldUi(cfg.CORNER, camera)
         );
 
         // Tail: a small wedge from the bubble back to the head.
-        this.box.fillTriangle(
-            -cfg.TAIL,
-            direction * -cfg.TAIL,
-            cfg.TAIL,
-            direction * -cfg.TAIL,
-            0,
-            0
-        );
+        this.box.fillTriangle(-tail, direction * -tail, tail, direction * -tail, 0, 0);
     }
 
     destroy(): void {

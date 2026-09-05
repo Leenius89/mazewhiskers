@@ -25,6 +25,7 @@ import { CullingSystem } from '../systems/CullingSystem';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
 import { cellOf, openNeighbours } from '../core/grid';
 import { sortDepth } from '../core/depth';
+import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
 import { playEnemyEntrance, runTutorial } from '../systems/TutorialSequence';
@@ -224,7 +225,11 @@ export class GameScene extends Phaser.Scene {
         this.cameras.main.startFollow(player, true);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
 
-        const baseZoom = isMobileDevice() ? GameConfig.CAMERA.MOBILE.ZOOM : GameConfig.CAMERA.DESKTOP.ZOOM;
+        // Multiplied by the render scale so the framing is unchanged and the
+        // extra canvas resolution goes into detail rather than into showing more
+        // of the map. See core/renderScale.
+        const baseZoom =
+            (isMobileDevice() ? GameConfig.CAMERA.MOBILE.ZOOM : GameConfig.CAMERA.DESKTOP.ZOOM) * RENDER_SCALE;
         this.cameras.main.setZoom(baseZoom);
         if (isMobileDevice()) {
             this.cameras.main.setLerp(GameConfig.CAMERA.MOBILE.LERP, GameConfig.CAMERA.MOBILE.LERP);
@@ -508,7 +513,10 @@ export class GameScene extends Phaser.Scene {
         camera.stopFollow();
         camera.setFollowOffset(0, 0);
         camera.pan(enemy.x, enemy.y, intro.PAN_DURATION, 'Power2');
-        camera.zoomTo(intro.ZOOM, intro.PAN_DURATION);
+        // Relative to wherever the camera already is. As an absolute value this
+        // was a lurch on any screen whose base zoom was not 1 — which is every
+        // phone, and now every screen at all.
+        camera.zoomTo(originalZoom * intro.ZOOM, intro.PAN_DURATION);
 
         this.time.delayedCall(intro.HOLD, () => {
             if (this.state.hasEnded() || !this.player) return;

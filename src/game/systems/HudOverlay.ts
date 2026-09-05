@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
-import { fontPx, minimapCell, uiScale } from '../core/uiScale';
+import { fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -102,17 +102,17 @@ export class HudOverlay {
 
         const cell = minimapCell(camera);
         const size = GameConfig.MAZE_SIZE * cell;
-        const margin = GameConfig.HUD.MARGIN;
+        const margin = ui(GameConfig.HUD.MARGIN, camera);
 
         this.origin = { x: viewport.width - margin - size, y: margin };
-        this.readoutOffset = { x: viewport.width - margin, y: margin + size + 6 };
+        this.readoutOffset = { x: viewport.width - margin, y: margin + size + ui(6, camera) };
 
         // The map, plus the readout and rent bar stacked under it.
         this.reserved.setTo(
             this.origin.x - margin,
             0,
             viewport.width - this.origin.x + margin,
-            margin + size + 6 + this.readout.height + GameConfig.HUD.RESERVED_TAIL
+            margin + size + ui(6, camera) + this.readout.height + ui(GameConfig.HUD.RESERVED_TAIL, camera)
         );
         this.flash.setSize(viewport.width, viewport.height);
         this.mapDirty = true;
@@ -187,7 +187,7 @@ export class HudOverlay {
     private drawRentBar(): void {
         const cell = minimapCell(this.scene.cameras.main);
         const width = GameConfig.MAZE_SIZE * cell;
-        const y = this.readoutOffset.y + this.readout.height + 6;
+        const y = this.readoutOffset.y + this.readout.height + ui(6, this.scene.cameras.main);
         const rent = GameConfig.HEALTH.RENT;
 
         const remaining = this.scene.msUntilRent();

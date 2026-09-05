@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
+import { worldUi } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
 /** Honours a system-level request for less motion. */
@@ -38,7 +39,7 @@ export class SweatDrops {
         for (let i = 0; i < cfg.POOL; i++) {
             this.pool.push(
                 scene.add
-                    .rectangle(0, 0, cfg.SIZE, cfg.SIZE, cfg.COLOR, 1)
+                    .rectangle(0, 0, worldUi(cfg.SIZE, scene.cameras.main), worldUi(cfg.SIZE, scene.cameras.main), cfg.COLOR, 1)
                     .setDepth(DEPTH.OVERLAY - 20)
                     .setVisible(false)
                     .setActive(false)
@@ -90,21 +91,22 @@ export class SweatDrops {
         const cfg = GameConfig.SWEAT;
         // Off the side of the head, whichever way the cat is facing.
         const side = Math.random() < 0.5 ? -1 : 1;
-        const startX = player.x + side * cfg.HEAD_OFFSET_X;
-        const startY = player.y - player.displayHeight + cfg.HEAD_OFFSET_Y;
+        const camera = this.scene.cameras.main;
+        const startX = player.x + side * worldUi(cfg.HEAD_OFFSET_X, camera);
+        const startY = player.y - player.displayHeight + worldUi(cfg.HEAD_OFFSET_Y, camera);
 
         drop.setPosition(startX, startY).setScale(1).setAlpha(1).setVisible(true).setActive(true);
 
         this.scene.tweens.add({
             targets: drop,
-            x: startX + side * Phaser.Math.Between(cfg.DRIFT * 0.4, cfg.DRIFT),
-            y: startY - cfg.RISE,
+            x: startX + side * Phaser.Math.Between(worldUi(cfg.DRIFT, camera) * 0.4, worldUi(cfg.DRIFT, camera)),
+            y: startY - worldUi(cfg.RISE, camera),
             duration: cfg.DURATION * 0.4,
             ease: 'Sine.easeOut',
             onComplete: () => {
                 this.scene.tweens.add({
                     targets: drop,
-                    y: startY - cfg.RISE + cfg.FALL,
+                    y: startY - worldUi(cfg.RISE, camera) + worldUi(cfg.FALL, camera),
                     alpha: 0,
                     duration: cfg.DURATION * 0.6,
                     ease: 'Sine.easeIn',

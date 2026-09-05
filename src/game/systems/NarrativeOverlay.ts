@@ -456,8 +456,9 @@ export class NarrativeOverlay {
 
     /** Corner ticks read as a viewfinder rather than a plain box. */
     private drawCorners(left: number, top: number, right: number, bottom: number, color: number): void {
-        const arm = 10;
-        this.pointer.lineStyle(3, color, 1);
+        const k = uiScale(this.scene.cameras.main);
+        const arm = 10 * k;
+        this.pointer.lineStyle(3 * k, color, 1);
         this.pointer.lineBetween(left, top, left + arm, top);
         this.pointer.lineBetween(left, top, left, top + arm);
         this.pointer.lineBetween(right, top, right - arm, top);
@@ -514,19 +515,23 @@ export class NarrativeOverlay {
     private drawBox(width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
         this.resizeText();
 
-        const margin = cfg.BOX_MARGIN;
+        // Every length here is a device pixel, so all of them ride the interface
+        // scale rather than only the type inside them.
+        const k = uiScale(this.scene.cameras.main);
+        const margin = cfg.BOX_MARGIN * k;
+        const padding = cfg.PADDING_X * k;
         const boxWidth = width - margin * 2;
         const left = margin;
 
         // Wrapped first: the box is measured from the text, so the text has to
         // know how wide it may be before anything can be sized.
-        const wrapWidth = boxWidth - cfg.PADDING_X * 2;
+        const wrapWidth = boxWidth - padding * 2;
         this.bodyText.setWordWrapWidth(wrapWidth);
 
-        const bodyTop = this.speakerText.text ? cfg.BODY_TOP_WITH_SPEAKER : cfg.BODY_TOP;
+        const bodyTop = (this.speakerText.text ? cfg.BODY_TOP_WITH_SPEAKER : cfg.BODY_TOP) * k;
         const boxHeight = Math.max(
-            cfg.BOX_MIN_HEIGHT,
-            bodyTop + this.bodyHeightFor(wrapWidth) + cfg.HINT_ROOM
+            cfg.BOX_MIN_HEIGHT * k,
+            bodyTop + this.bodyHeightFor(wrapWidth) + cfg.HINT_ROOM * k
         );
         const top = height - boxHeight - margin;
         this.boxTop = top;
@@ -534,16 +539,16 @@ export class NarrativeOverlay {
         this.box.clear();
         this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
         this.box.fillRect(left, top, boxWidth, boxHeight);
-        this.box.lineStyle(2, cfg.HIGHLIGHT_COLOR, 0.9);
+        this.box.lineStyle(2 * k, cfg.HIGHLIGHT_COLOR, 0.9);
         this.box.strokeRect(left, top, boxWidth, boxHeight);
 
-        this.speakerText.setPosition(left + cfg.PADDING_X, top + 12);
-        this.bodyText.setPosition(left + cfg.PADDING_X, top + bodyTop);
+        this.speakerText.setPosition(left + padding, top + 12 * k);
+        this.bodyText.setPosition(left + padding, top + bodyTop);
 
-        this.hintText.setPosition(left + boxWidth - 12, top + boxHeight - 8);
+        this.hintText.setPosition(left + boxWidth - 12 * k, top + boxHeight - 8 * k);
         this.hintText.setText(this.waitingForInput ? '▸ ENTER / CLICK' : '');
 
-        this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP);
+        this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP * k);
     }
 
     destroy(): void {

@@ -17,6 +17,7 @@ import { GameConfig } from './game/constants/GameConfig';
 import { createGameEventBus, GameEventBus } from './game/core/GameEvents';
 import type { GameOverPayload } from './game/core/GameEvents';
 import { isDebugEnabled } from './game/core/debug';
+import { RENDER_SCALE } from './game/core/renderScale';
 import { resolveMode } from './game/core/modes';
 
 function App() {
@@ -122,10 +123,12 @@ function App() {
 
         const size = gameSizeRef.current;
 
+        // The canvas is built at the screen's real resolution and shrunk back to
+        // the requested size with CSS. See core/renderScale.
         const config: Phaser.Types.Core.GameConfig = {
             type: Phaser.AUTO,
-            width: size.width,
-            height: size.height,
+            width: size.width * RENDER_SCALE,
+            height: size.height * RENDER_SCALE,
             parent: 'game-container',
             backgroundColor: '#808080',
             physics: {
@@ -134,10 +137,15 @@ function App() {
                 arcade: { gravity: { y: 0, x: 0 }, debug: isDebugEnabled() }
             },
             scale: {
-                mode: Phaser.Scale.RESIZE,
+                // FIT, not RESIZE. RESIZE makes the game size follow the parent
+                // element, which would immediately throw away the higher
+                // resolution asked for below; FIT keeps the internal size and
+                // scales the canvas with CSS to fit. The requested size is the
+                // parent's exact aspect ratio, so nothing is letterboxed.
+                mode: Phaser.Scale.FIT,
                 autoCenter: Phaser.Scale.CENTER_BOTH,
-                width: size.width,
-                height: size.height
+                width: size.width * RENDER_SCALE,
+                height: size.height * RENDER_SCALE
             },
             scene: [GameScene, VictoryScene]
         };
@@ -191,7 +199,7 @@ function App() {
      */
     useEffect(() => {
         gameSizeRef.current = gameSize;
-        game.current?.scale.resize(gameSize.width, gameSize.height);
+        game.current?.scale.resize(gameSize.width * RENDER_SCALE, gameSize.height * RENDER_SCALE);
     }, [gameSize]);
 
     const restartGame = useCallback(() => {
