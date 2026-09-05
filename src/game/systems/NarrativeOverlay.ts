@@ -3,6 +3,7 @@ import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
 import { fontPx, uiScale } from '../core/uiScale';
+import { t } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
 
 export interface SpotlightTarget {
@@ -143,7 +144,7 @@ export class NarrativeOverlay {
         // looking; in the far top corner at eight grey pixels it was, in
         // practice, invisible.
         this.skipText = scene.add
-            .text(0, 0, 'SKIP ▸', {
+            .text(0, 0, t('tut.skip'), {
                 fontFamily: "'Press Start 2P', monospace",
                 fontSize: fontPx(parseInt(cfg.SKIP_SIZE, 10), camera),
                 color: cfg.SKIP_COLOR,
@@ -551,7 +552,7 @@ export class NarrativeOverlay {
         this.bodyText.setPosition(left + padding, top + bodyTop);
 
         this.hintText.setPosition(left + boxWidth - 12 * k, top + boxHeight - 8 * k);
-        this.hintText.setText(this.waitingForInput ? '▸ ENTER / CLICK' : '');
+        this.hintText.setText(this.waitingForInput ? t('tut.hint') : '');
 
         this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP * k);
     }

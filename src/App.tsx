@@ -48,6 +48,7 @@ function App() {
     const [victoryTime, setVictoryTime] = useState(0);
     const [jumpCount, setJumpCount] = useState(0);
     const [survivedMs, setSurvivedMs] = useState(0);
+    const [healthLeft, setHealthLeft] = useState(0);
 
     const [fishCount, setFishCount] = useState(0);
     const [milkCount, setMilkCount] = useState(0);
@@ -166,16 +167,18 @@ function App() {
         game.current = new Phaser.Game(config);
         bus.current = createGameEventBus(game.current);
 
-        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs }) => {
+        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs, healthLeft: left }) => {
             setMilkCount(milk);
             setFishCount(fish);
+            setHealthLeft(left ?? 0);
             setEndReason(reason);
             setSurvivedMs(survivedMs);
             setIsGameOver(true);
         });
 
-        bus.current.on('victory', ({ timeMs }) => {
+        bus.current.on('victory', ({ timeMs, healthLeft: left }) => {
             setVictoryTime(timeMs);
+            setHealthLeft(left ?? 0);
             setIsVictory(true);
         });
 
@@ -382,6 +385,7 @@ function App() {
                     reason={endReason}
                     score={score}
                     survivedMs={survivedMs}
+                    healthLeft={healthLeft}
                 />
             )}
 
@@ -403,6 +407,7 @@ function App() {
                     milkCount={milkCount}
                     fishCount={fishCount}
                     score={score}
+                    healthLeft={healthLeft}
                 />
             )}
 

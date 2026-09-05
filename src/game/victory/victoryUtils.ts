@@ -11,6 +11,8 @@ export class VictoryScene extends Phaser.Scene {
     private timeMs: number = 0;
     private milkCount: number = 0;
     private fishCount: number = 0;
+    /** Health the run finished on; the closest-call board ranks by it. */
+    private healthLeft: number = 0;
     private blackOverlay: Phaser.GameObjects.Graphics | undefined;
     private background: Phaser.GameObjects.Image | undefined;
 
@@ -20,6 +22,7 @@ export class VictoryScene extends Phaser.Scene {
         this.isShowingCredits = false;
         this.milkCount = 0;
         this.fishCount = 0;
+        this.healthLeft = 0;
         this.timeMs = 0;
     }
 
@@ -36,9 +39,10 @@ export class VictoryScene extends Phaser.Scene {
         }
     }
 
-    init(data: { milkCount?: number; fishCount?: number; timeMs: number }) {
+    init(data: { milkCount?: number; fishCount?: number; healthLeft?: number; timeMs: number }) {
         this.milkCount = data.milkCount || 0;
         this.fishCount = data.fishCount || 0;
+        this.healthLeft = data.healthLeft || 0;
         this.timeMs = data.timeMs || 0;
     }
 
@@ -88,7 +92,8 @@ export class VictoryScene extends Phaser.Scene {
                             this.bus.emit('victory', {
                                 timeMs: this.timeMs,
                                 milkCount: this.milkCount,
-                                fishCount: this.fishCount
+                                fishCount: this.fishCount,
+                                healthLeft: this.healthLeft
                             });
                         }
                     });

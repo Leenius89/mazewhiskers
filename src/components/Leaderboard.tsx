@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { difficultyOf, weighted } from '../game/core/difficulty';
+import { useTranslation } from '../i18n';
 import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
 
 interface Score {
@@ -11,10 +13,12 @@ interface Score {
     time_ms?: number;
     survived_ms?: number;
     fish_count?: number;
+    health_left?: number;
+    difficulty?: string;
     created_at: string;
 }
 
-export type BoardKey = 'fastest' | 'survived' | 'fed';
+export type BoardKey = 'fastest' | 'survived' | 'fed' | 'closest';
 
 /**
  * Three ways to be good at this, each with its own board.
@@ -30,9 +34,8 @@ interface Board {
     /** Table it reads, and the column it ranks by. */
     table: string;
     column: string;
+    /** True when a smaller number is the better result. */
     ascending: boolean;
-    eyebrow: string;
-    title: string;
     format: (row: Score) => string;
 }
 
@@ -42,8 +45,6 @@ const BOARDS: Board[] = [
         table: 'speedrun_leaderboard',
         column: 'time_ms',
         ascending: true,
-        eyebrow: 'FASTEST HOME',
-        title: '빨리 도달한 냥',
         format: (row) => formatTime(row.time_ms ?? 0)
     },
     {
@@ -51,8 +52,6 @@ const BOARDS: Board[] = [
         table: 'scores',
         column: 'survived_ms',
         ascending: false,
-        eyebrow: 'LONGEST ON THE STREET',
-        title: '가장 오래 돌아다닌 냥',
         format: (row) => formatTime(row.survived_ms ?? 0)
     },
     {
@@ -60,9 +59,21 @@ const BOARDS: Board[] = [
         table: 'scores',
         column: 'fish_count',
         ascending: false,
-        eyebrow: 'BEST FED',
-        title: '가장 많이 먹은 냥',
         format: (row) => `🐟 ${row.fish_count ?? 0}`
+    },
+    {
+        /**
+         * Cleared, but only just.
+         *
+         * The other three all reward the same kind of good — more, faster,
+         * longer — so one player tends to take all of them. This one is a
+         * different story: it is the run that should not have made it.
+         */
+        key: 'closest',
+        table: 'scores',
+        column: 'health_left',
+        ascending: true,
+        format: (row) => `❤ ${row.health_left ?? 0}`
     }
 ];
 
@@ -82,6 +93,7 @@ const MotionButton = motion.div as React.ElementType;
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' }) => {
     const [active, setActive] = useState<BoardKey>(mode);
+    const t = useTranslation();
     const board = BOARDS.find((b) => b.key === active) ?? BOARDS[0];
     const [scores, setScores] = useState<Score[]>([]);
     const [loading, setLoading] = useState(true);
@@ -91,6 +103,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
         setLoading(true);
         setFailed(false);
         try {
+            /**
+             * Fetched wide, then ranked here.
+             *
+             * The difficulty weight has to be applied to the value before the
+             * ordering means anything, and the database has no column holding
+             * the weighted number. So a generous slice comes back sorted by the
+             * raw value and the weighting decides the eight that are shown —
+             * which is why a slower run on HARD can still take first.
+             */
             const { data, error } = await supabase
                 .from(board.table)
                 .select('*')
@@ -98,10 +119,24 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                 // rather than shown as an empty first place.
                 .not(board.column, 'is', null)
                 .order(board.column, { ascending: board.ascending })
-                .limit(8);
+                .limit(120);
 
             if (error) throw error;
-            setScores(data || []);
+
+            const ranked = [...(data ?? [])]
+                .map((row) => ({
+                    row,
+                    value: weighted(
+                        Number((row as Record<string, unknown>)[board.column] ?? 0),
+                        row.difficulty,
+                        !board.ascending
+                    )
+                }))
+                .sort((a, b) => (board.ascending ? a.value - b.value : b.value - a.value))
+                .slice(0, 8)
+                .map((entry) => entry.row);
+
+            setScores(ranked);
         } catch (error) {
             console.error('Error fetching leaderboard:', error);
             setFailed(true);
@@ -125,8 +160,10 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                 <div style={hazardEdge} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={eyebrow}>{board.eyebrow}</p>
-                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>{board.title}</h2>
+                    <p style={eyebrow}>{t(`board.${board.key}.eyebrow`)}</p>
+                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>
+                        {t(`board.${board.key}`)}
+                    </h2>
                 </div>
 
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -151,21 +188,21 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                                     color: on ? theme.accent : theme.inkFaint
                                 }}
                             >
-                                {option.title}
+                                {t(`board.${option.key}`)}
                             </MotionButton>
                         );
                     })}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minHeight: '180px' }}>
-                    {loading && <p style={hint}>불러오는 중…</p>}
+                    {loading && <p style={hint}>{t('board.loading')}</p>}
 
                     {!loading && failed && (
-                        <p style={{ ...hint, color: theme.bad }}>기록을 불러오지 못했습니다.</p>
+                        <p style={{ ...hint, color: theme.bad }}>{t('board.failed')}</p>
                     )}
 
                     {!loading && !failed && scores.length === 0 && (
-                        <p style={hint}>아직 기록이 없습니다. 첫 번째가 되어 보세요.</p>
+                        <p style={hint}>{t('board.empty')}</p>
                     )}
 
                     {!loading &&
@@ -176,13 +213,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                                 rank={index + 1}
                                 name={entry.username}
                                 value={board.format(entry)}
+                                difficulty={entry.difficulty}
                             />
                         ))}
                 </div>
 
                 <MotionButton style={button('primary')} onClick={onClose} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
                     <X size={13} />
-                    닫기 / CLOSE
+                    {t('board.close')}
                 </MotionButton>
             </motion.div>
         </div>
@@ -190,8 +228,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
 };
 
 /** Top three are marked; the rest are a quiet list, so the podium reads first. */
-const Row: React.FC<{ rank: number; name: string; value: string }> = ({ rank, name, value }) => {
+const Row: React.FC<{ rank: number; name: string; value: string; difficulty?: string }> = ({
+    rank,
+    name,
+    value,
+    difficulty
+}) => {
     const podium = rank <= 3;
+    const level = difficultyOf(difficulty);
 
     return (
         <div
@@ -229,6 +273,24 @@ const Row: React.FC<{ rank: number; name: string; value: string }> = ({ rank, na
             >
                 {name}
             </span>
+
+            {/* Which setting the run was made on. The colour carries it. */}
+            <span
+                style={{
+                    fontFamily: theme.display,
+                    fontSize: '0.44rem',
+                    letterSpacing: '0.06em',
+                    padding: '3px 6px',
+                    borderRadius: '3px',
+                    color: level.color,
+                    border: `1px solid ${level.color}66`,
+                    background: `${level.color}18`,
+                    whiteSpace: 'nowrap'
+                }}
+            >
+                {level.label}
+            </span>
+
             <span
                 style={{
                     fontFamily: theme.display,

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GameConfig } from '../constants/GameConfig';
+import { t } from '../../i18n';
 import { TILE_UNIT, hasLineOfSight } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -73,7 +73,7 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         height: TILE_UNIT * cells
     });
 
-    await narrative.play('당신은 길고양이입니다. 방향키로 골목을 걸어 다닐 수 있습니다.', {
+    await narrative.play(t('tut.move'), {
         speaker: '· 고양이',
         lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 1.8),
@@ -81,8 +81,8 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     });
 
     if (scene.goal) {
-        await narrative.play('저기 도시 한가운데가 당신의 집입니다. 노란 화살표가 늘 그쪽을 가리킵니다.', {
-            speaker: '· 집',
+        await narrative.play(t('tut.goal'), {
+            speaker: t('tut.goal.speaker'),
             lookAt: { x: scene.goal.x, y: scene.goal.y },
             spotlight: spotOn(scene.goal, 1.6),
             subject: scene.goal
@@ -91,8 +91,8 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
 
     const fish = nearestVisible(scene.fishes, scene.maze, player.x, player.y);
     if (fish) {
-        await narrative.play('생선은 체력을 채워 줍니다. 모아 둘 수는 없고, 계속 구해야 합니다.', {
-            speaker: '· 생선',
+        await narrative.play(t('tut.fish'), {
+            speaker: t('tut.fish.speaker'),
             lookAt: { x: fish.x, y: fish.y },
             spotlight: spotOn(fish, 3),
             subject: fish
@@ -102,9 +102,9 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     const milk = nearestVisible(scene.milks, scene.maze, player.x, player.y);
     if (milk) {
         await narrative.play(
-            '우유를 마시면 방향대로 점프할 수 있습니다.',
+            t('tut.milk'),
             {
-                speaker: '· 우유',
+                speaker: t('tut.milk.speaker'),
                 lookAt: { x: milk.x, y: milk.y },
                 spotlight: spotOn(milk, 3),
                 subject: milk
@@ -115,9 +115,9 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     // The one thing that has not happened yet, so it is described on the grid
     // it will happen to rather than on an object.
     await narrative.play(
-        '노란 줄은 아파트가 들어서는 자리입니다. 피하세요.',
+        t('tut.apartment'),
         {
-            speaker: '· 재개발',
+            speaker: t('tut.apartment.speaker'),
             lookAt: { x: player.x, y: player.y },
             spotlight: cell(player.x, player.y, 2.4)
         }
@@ -126,8 +126,8 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     // Explicitly toured to. Every other beat points at something out in the
     // city, but this one points at the cat itself — and the cat starts in the
     // corner of the map, where a bounded camera cannot put it on screen centre.
-    await narrative.play('체력은 가만히 있어도 줄어듭니다. 머리 위 막대가 당신에게 남은 시간입니다.', {
-        speaker: '· 체력',
+    await narrative.play(t('tut.health'), {
+        speaker: t('tut.health.speaker'),
         lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 2.2),
         subject: player,
@@ -138,8 +138,8 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
 
     // Lit, not shaded. A null spotlight darkens the whole screen, so the last
     // thing the tutorial did was send the player off while hiding the cat.
-    await narrative.play('자, 이제 집까지 가세요!', {
-        speaker: '· 시작',
+    await narrative.play(t('tut.start'), {
+        speaker: t('tut.start.speaker'),
         spotlight: spotOn(player, 2.6),
         subject: player,
         showStatusBar: true
@@ -162,7 +162,7 @@ export const playEnemyEntrance = async (
     const narrative = scene.narrative;
     if (!narrative) return;
 
-    await narrative.play(GameConfig.NARRATIVE.ENEMY_LINE, {
+    await narrative.play(t('tut.enemy'), {
         speaker: '· ???',
         lookAt: { x: enemy.x, y: enemy.y },
         spotlight: {

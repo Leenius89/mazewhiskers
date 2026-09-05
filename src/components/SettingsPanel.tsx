@@ -3,7 +3,9 @@ import { motion } from 'framer-motion';
 import { Volume2, VolumeX, X } from 'lucide-react';
 import { useSettings } from '../settings';
 import type { Language } from '../settings';
-import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
+import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
+import { useTranslation } from '../i18n';
+import { button, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
 
 interface SettingsPanelProps {
     onClose: () => void;
@@ -20,6 +22,7 @@ const MotionButton = motion.div as React.ElementType;
  */
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
     const [settings, update] = useSettings();
+    const t = useTranslation();
 
     return (
         <div style={overlayBackdrop}>
@@ -32,20 +35,20 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                 <div style={hazardEdge} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={eyebrow}>SETTINGS</p>
-                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>설정</h2>
+                    <p style={eyebrow}>{t('settings.eyebrow')}</p>
+                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>{t('settings.title')}</h2>
                 </div>
 
-                <Row label="소리 / SOUND">
+                <Row label={t('settings.sound')}>
                     <Choice on={!settings.muted} onClick={() => update({ muted: false })}>
-                        <Volume2 size={14} /> 켬 / ON
+                        <Volume2 size={14} /> {t('settings.on')}
                     </Choice>
                     <Choice on={settings.muted} onClick={() => update({ muted: true })}>
-                        <VolumeX size={14} /> 끔 / OFF
+                        <VolumeX size={14} /> {t('settings.off')}
                     </Choice>
                 </Row>
 
-                <Row label="언어 / LANGUAGE">
+                <Row label={t('settings.language')}>
                     {(['ko', 'en'] as Language[]).map((code) => (
                         <Choice
                             key={code}
@@ -57,13 +60,40 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                     ))}
                 </Row>
 
-                <p style={hint}>
-                    언어는 메뉴와 결과 화면에 적용됩니다. 게임 중 대사는 아직 한국어입니다.
-                </p>
+                <Row label={t('settings.difficulty')}>
+                    {DIFFICULTY_ORDER.map((key) => {
+                        const level = DIFFICULTIES[key];
+                        const on = settings.difficulty === key;
+
+                        return (
+                            <MotionButton
+                                key={key}
+                                onClick={() => update({ difficulty: key })}
+                                whileTap={{ y: 1 }}
+                                style={{
+                                    flex: '1 1 0',
+                                    padding: '9px 8px',
+                                    borderRadius: '5px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    fontFamily: theme.display,
+                                    fontSize: '0.56rem',
+                                    letterSpacing: '0.06em',
+                                    // The colour is the explanation.
+                                    background: on ? `${level.color}22` : 'transparent',
+                                    border: `1px solid ${on ? level.color : theme.rule}`,
+                                    color: on ? level.color : theme.inkFaint
+                                }}
+                            >
+                                {level.label}
+                            </MotionButton>
+                        );
+                    })}
+                </Row>
 
                 <MotionButton style={button('primary')} onClick={onClose} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
                     <X size={13} />
-                    닫기 / CLOSE
+                    {t('settings.close')}
                 </MotionButton>
             </motion.div>
         </div>

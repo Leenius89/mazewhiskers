@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { difficultyOf } from '../core/difficulty';
+import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
 import { cellOf, isOpen, worldOf } from '../core/grid';
@@ -297,7 +299,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.x = endX;
                 this.groundY = endY;
                 this.y = endY;
-                this.jumpReadyAt = this.scene.time.now + GameConfig.ENEMY.JUMP.COOLDOWN_MS;
+                this.jumpReadyAt =
+                    this.scene.time.now +
+                    GameConfig.ENEMY.JUMP.COOLDOWN_MS * difficultyOf(getSettings().difficulty).enemyJumpScale;
                 this.syncGroundVisuals();
                 this.play('enemyWalk', true);
             }

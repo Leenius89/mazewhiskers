@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { fontPx, ui } from '../core/uiScale';
+import { t } from '../../i18n';
 
 /** How long the ending holds the screen before it can be skipped. */
 const SKIP_AFTER_MS = 3000;
@@ -9,13 +10,7 @@ export const showEndingMessages = async (
     width: number,
     height: number
 ): Promise<{ texts: Phaser.GameObjects.Text[] }> => {
-    const messages = [
-        'Life begins without a rehearsal.\n인생은 리허설 없이 시작된다.',
-        'Using the rough waves of anxiety as our drive\n불안이라는 거친 파도를 동력 삼아',
-        'we simply plunge toward an unknown point.\n우리는 그저 미지의 점을 향해 뛰어든다.',
-        'Even if I were to open my eyes again,\n내가 다시 눈을 뜬다 해도,',
-        'my choice remains the repetition of this very life.\n나의 선택은 바로 이 삶의 반복이다.'
-    ];
+    const messages = ['ending.1', 'ending.2', 'ending.3', 'ending.4', 'ending.5'].map(t);
 
     const camera = scene.cameras.main;
 
@@ -54,7 +49,7 @@ export const showEndingMessages = async (
     });
 
     const skipPrompt = scene.add
-        .text(width / 2, height - ui(56, camera), '▸  SKIP  /  건너뛰기', {
+        .text(width / 2, height - ui(56, camera), t('ending.skip'), {
             fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
             fontSize: fontPx(13, camera),
             color: '#ffffff',

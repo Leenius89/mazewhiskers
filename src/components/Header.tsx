@@ -1,6 +1,7 @@
 import React from 'react';
 import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
 import { useSettings } from '../settings';
+import { useTranslation } from '../i18n';
 import { theme } from './theme';
 
 interface HeaderProps {
@@ -22,6 +23,7 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, score, gameSize }) => {
     const width = typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width;
     const [settings, update] = useSettings();
+    const t = useTranslation();
 
     return (
         <div
@@ -72,14 +74,14 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, scor
                         whiteSpace: 'nowrap'
                     }}
                 >
-                    SCORE
+                    {t('header.score')}
                     <strong style={{ fontSize: '0.72rem', color: theme.accent }}>{score}</strong>
                 </span>
 
                 <button
                     onClick={() => update({ muted: !settings.muted })}
-                    title={settings.muted ? '소리 켜기 / Unmute' : '소리 끄기 / Mute'}
-                    aria-label={settings.muted ? '소리 켜기' : '소리 끄기'}
+                    title={t(settings.muted ? 'header.unmute' : 'header.mute')}
+                    aria-label={t(settings.muted ? 'header.unmute' : 'header.mute')}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -97,7 +99,7 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, scor
 
                 <button
                     onClick={restartGame}
-                    title="다시 시작 / Restart"
+                    title={t('header.restart')}
                     style={{
                         display: 'flex',
                         alignItems: 'center',

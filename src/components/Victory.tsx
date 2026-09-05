@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Film, Home, RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { getSettings } from '../settings';
+import { useTranslation } from '../i18n';
 import {
     button,
     buttonRow,
@@ -30,6 +32,7 @@ interface VictoryProps {
     milkCount: number;
     fishCount: number;
     score: number;
+    healthLeft: number;
 }
 
 const formatTime = (ms: number) => {
@@ -49,8 +52,10 @@ const Victory: React.FC<VictoryProps> = ({
     timeMs,
     milkCount,
     fishCount,
-    score
+    score,
+    healthLeft
 }) => {
+    const t = useTranslation();
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
@@ -63,7 +68,7 @@ const Victory: React.FC<VictoryProps> = ({
 
             const { error } = await supabase
                 .from('speedrun_leaderboard')
-                .insert([{ username: name, time_ms: timeMs }]);
+                .insert([{ username: name, time_ms: timeMs, difficulty: getSettings().difficulty }]);
 
             if (error) throw error;
 
@@ -78,7 +83,16 @@ const Victory: React.FC<VictoryProps> = ({
              */
             const { error: runError } = await supabase
                 .from('scores')
-                .insert([{ username: name, score, survived_ms: timeMs, fish_count: fishCount }]);
+                .insert([
+                    {
+                        username: name,
+                        score,
+                        survived_ms: timeMs,
+                        fish_count: fishCount,
+                        health_left: healthLeft,
+                        difficulty: getSettings().difficulty
+                    }
+                ]);
 
             if (runError) {
                 // The run is already recorded where it matters most; the other
@@ -88,7 +102,7 @@ const Victory: React.FC<VictoryProps> = ({
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting time:', error);
-            alert('기록을 저장하지 못했습니다. 다시 시도해 주세요.');
+            alert(t('over.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -108,7 +122,7 @@ const Victory: React.FC<VictoryProps> = ({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <p style={eyebrow}>ARRIVED</p>
-                    <h2 style={headline(theme.good)}>집에 닿았다</h2>
+                    <h2 style={headline(theme.good)}>{t('win.title')}</h2>
                     <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.65, color: theme.inkMuted }}>
                         도시가 먼저 도착하지 못했습니다. 이번에는.
                     </p>
@@ -137,7 +151,7 @@ const Victory: React.FC<VictoryProps> = ({
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input
                             type="text"
-                            placeholder="이름 / YOUR NAME"
+                            placeholder={t('over.name')}
                             maxLength={10}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -148,7 +162,7 @@ const Victory: React.FC<VictoryProps> = ({
                             disabled={!canSubmit}
                             style={button('quiet', !canSubmit)}
                         >
-                            {isSubmitting ? '전송 중…' : '기록 등록 / SUBMIT TIME'}
+                            {isSubmitting ? t('over.submitting') : t('win.submit')}
                         </button>
                     </div>
                 )}

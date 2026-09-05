@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { getSettings, subscribe } from '../settings';
+import { useTranslation } from '../i18n';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
@@ -12,28 +13,46 @@ interface MainPageProps {
 
 const MotionClickable = motion.div as any;
 
-/** Quiet next to the red GAME START, so it is still obviously the main way in. */
-const secondaryButton = (isMobile: boolean): React.CSSProperties => ({
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: '8px',
-    minWidth: isMobile ? '190px' : '230px',
-    padding: isMobile ? '9px 18px' : '11px 22px',
-    background: 'rgba(12,14,19,0.82)',
-    border: '2px solid rgba(255,255,255,0.34)',
-    borderRadius: '4px',
-    color: '#f2f4f8',
-    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-    fontSize: isMobile ? '0.62rem' : '0.72rem',
-    letterSpacing: '0.04em',
-    cursor: 'pointer'
-});
+/**
+ * The one button design this screen has.
+ *
+ * The menu buttons were originally a quieter style so GAME START would still
+ * read as the way in; size does that on its own, and two visual languages on
+ * one screen read as two different screens.
+ */
+const pixelButton = (isMobile: boolean, size: 'primary' | 'menu'): React.CSSProperties => {
+    const primary = size === 'primary';
+
+    return {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: primary ? '0' : '10px',
+        backgroundColor: '#ff0000',
+        color: 'white',
+        border: `${primary ? 4 : 3}px solid #8b0000`,
+        padding: primary
+            ? isMobile
+                ? '12px 30px'
+                : '15px 40px'
+            : isMobile
+              ? '8px 18px'
+              : '10px 24px',
+        fontSize: primary ? (isMobile ? '1.5rem' : '2rem') : isMobile ? '0.7rem' : '0.9rem',
+        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
+        cursor: 'pointer',
+        imageRendering: 'pixelated',
+        boxShadow: `${primary ? 6 : 4}px ${primary ? 6 : 4}px 0px #8b0000`,
+        whiteSpace: 'nowrap',
+        maxWidth: '90%'
+    };
+};
 
 const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onShowSettings, gameSize }) => {
     const [showButton, setShowButton] = useState(false);
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    const t = useTranslation();
     const audioRef = useRef<HTMLAudioElement | null>(null);
     /**
      * Guards the opening against running twice.
@@ -270,23 +289,23 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         zIndex: 2
                     }}>
                         <MotionClickable
-                            style={secondaryButton(isMobile)}
+                            style={pixelButton(isMobile, 'menu')}
                             onClick={onShowLeaderboard}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ y: 0 }}
+                            whileHover={{ y: -2, boxShadow: '6px 6px 0px #8b0000' }}
+                            whileTap={{ y: 3, boxShadow: '1px 1px 0px #8b0000' }}
                         >
                             <Trophy size={isMobile ? 13 : 15} />
-                            랭킹 / RANKING
+                            {t('menu.ranking')}
                         </MotionClickable>
 
                         <MotionClickable
-                            style={secondaryButton(isMobile)}
+                            style={pixelButton(isMobile, 'menu')}
                             onClick={onShowSettings}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ y: 0 }}
+                            whileHover={{ y: -2, boxShadow: '6px 6px 0px #8b0000' }}
+                            whileTap={{ y: 3, boxShadow: '1px 1px 0px #8b0000' }}
                         >
                             <SettingsIcon size={isMobile ? 13 : 15} />
-                            설정 / SETTINGS
+                            {t('menu.settings')}
                         </MotionClickable>
 
                         <MotionClickable

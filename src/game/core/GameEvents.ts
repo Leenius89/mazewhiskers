@@ -20,6 +20,8 @@ export interface HealthChangedPayload {
 export interface RunSummary {
     milkCount: number;
     fishCount: number;
+    /** What was left in the bar. The closest-call board ranks by it. */
+    healthLeft: number;
 }
 
 export interface GameOverPayload extends RunSummary {

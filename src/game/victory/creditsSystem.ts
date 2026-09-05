@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { fontPx, ui } from '../core/uiScale';
+import { t } from '../../i18n';
 
 /** How long the roll holds the screen before it can be dismissed. */
 const SKIP_AFTER_MS = 3000;
@@ -75,7 +76,7 @@ export const showCredits = (
      * run tended to carry straight through and skip the ending before anyone
      * had read a line of it.
      */
-    const skipPrompt = scene.add.text(width / 2, height - ui(56, camera), '▸  SKIP  /  건너뛰기', {
+    const skipPrompt = scene.add.text(width / 2, height - ui(56, camera), t('credits.return'), {
         fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
         fontSize: fontPx(13, camera),
         color: '#ffffff',

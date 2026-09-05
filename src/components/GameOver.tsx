@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
+import { getSettings } from '../settings';
+import { useTranslation } from '../i18n';
 import type { GameOverPayload } from '../game/core/GameEvents';
 import {
     button,
@@ -30,6 +32,7 @@ interface GameOverProps {
     fishCount?: number;
     score: number;
     survivedMs: number;
+    healthLeft: number;
 }
 
 /**
@@ -39,32 +42,12 @@ interface GameOverProps {
  * redevelopment system is that the ways you lose are different in kind. Naming
  * the cause is the last chance the game has to say what it was about.
  */
-const ENDINGS: Record<GameOverPayload['reason'], { title: string; line: string; color: string }> = {
-    health: {
-        title: '버티지 못했다',
-        line: '월세와 생활비가 남은 것을 다 가져갔습니다. 생선은 모아 둘 수 없습니다.',
-        color: theme.bad
-    },
-    enemy: {
-        title: '붙잡혔다',
-        line: '한 번은 버틸 수 있었습니다. 두 번은 아니었습니다.',
-        color: theme.bad
-    },
-    'apartment:player': {
-        title: '밀려날 곳이 없었다',
-        line: '짓눌린 것이 아닙니다. 밀려나고 또 밀려나다, 물러설 자리가 사라졌을 뿐입니다.',
-        color: theme.accent
-    },
-    'apartment:goal': {
-        title: '집이 먼저 사라졌다',
-        line: '도착하기 전에 그 자리에 아파트가 들어섰습니다.',
-        color: theme.accent
-    },
-    trapped: {
-        title: '갈 곳이 없었다',
-        line: '사방이 막혔습니다. 체력이 남아 있어도 나갈 길이 없으면 끝난 것입니다.',
-        color: theme.accent
-    }
+const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
+    health: theme.bad,
+    enemy: theme.bad,
+    'apartment:player': theme.accent,
+    'apartment:goal': theme.accent,
+    trapped: theme.accent
 };
 
 const MotionButton = motion.div as React.ElementType;
@@ -76,15 +59,15 @@ const GameOver: React.FC<GameOverProps> = ({
     milkCount = 0,
     fishCount = 0,
     score,
-    survivedMs
+    survivedMs,
+    healthLeft
 }) => {
+    const t = useTranslation();
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
     /** Recorded, but without the fields the other two boards rank by. */
     const [partial, setPartial] = useState(false);
-
-    const ending = ENDINGS[reason] ?? ENDINGS.health;
 
     // Space restarts, unless the player is typing their name into the form.
     useEffect(() => {
@@ -121,7 +104,16 @@ const GameOver: React.FC<GameOverProps> = ({
             // a run should never fail to record because a board is new.
             const { error } = await supabase
                 .from('scores')
-                .insert([{ username: name, score, survived_ms: survivedMs, fish_count: fishCount ?? 0 }]);
+                .insert([
+                    {
+                        username: name,
+                        score,
+                        survived_ms: survivedMs,
+                        fish_count: fishCount ?? 0,
+                        health_left: healthLeft,
+                        difficulty: getSettings().difficulty
+                    }
+                ]);
 
             if (error) {
                 // Any failure at all, not just an unknown column: a stale insert
@@ -140,7 +132,7 @@ const GameOver: React.FC<GameOverProps> = ({
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting score:', error);
-            alert('기록을 저장하지 못했습니다. 다시 시도해 주세요.');
+            alert(t('over.saveFailed'));
         } finally {
             setIsSubmitting(false);
         }
@@ -159,8 +151,8 @@ const GameOver: React.FC<GameOverProps> = ({
                 <div style={hazardEdge} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    <p style={eyebrow}>RUN ENDED</p>
-                    <h2 style={headline(ending.color)}>{ending.title}</h2>
+                    <p style={eyebrow}>{t('over.eyebrow')}</p>
+                    <h2 style={headline(ENDING_COLORS[reason])}>{t(`over.${reason}.title`)}</h2>
                     <p
                         style={{
                             margin: 0,
@@ -169,7 +161,7 @@ const GameOver: React.FC<GameOverProps> = ({
                             color: theme.inkMuted
                         }}
                     >
-                        {ending.line}
+                        {t(`over.${reason}.body`)}
                     </p>
                 </div>
 
@@ -180,11 +172,11 @@ const GameOver: React.FC<GameOverProps> = ({
                     </div>
                     <div style={statGrid}>
                         <div style={statCell}>
-                            <span style={statLabel}>🐟 FISH</span>
+                            <span style={statLabel}>{t('over.fish')}</span>
                             <span style={statValue}>{fishCount}</span>
                         </div>
                         <div style={statCell}>
-                            <span style={statLabel}>🥛 MILK</span>
+                            <span style={statLabel}>{t('over.milk')}</span>
                             <span style={statValue}>{milkCount}</span>
                         </div>
                     </div>
@@ -193,14 +185,14 @@ const GameOver: React.FC<GameOverProps> = ({
                 {submitted ? (
                     <p style={{ ...hint, color: partial ? theme.bad : theme.good }}>
                         {partial
-                            ? '점수만 등록됨 — 생존·생선 기록은 저장되지 않았습니다'
-                            : '기록 등록 완료 / SUBMITTED'}
+                            ? t('over.partial')
+                            : t('over.submitted')}
                     </p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input
                             type="text"
-                            placeholder="이름 / YOUR NAME"
+                            placeholder={t('over.name')}
                             maxLength={10}
                             value={username}
                             onChange={(e) => setUsername(e.target.value)}
@@ -211,7 +203,7 @@ const GameOver: React.FC<GameOverProps> = ({
                             disabled={!canSubmit}
                             style={button('quiet', !canSubmit)}
                         >
-                            {isSubmitting ? '전송 중…' : '기록 등록 / SUBMIT'}
+                            {t(isSubmitting ? 'over.submitting' : 'over.submit')}
                         </button>
                     </div>
                 )}
@@ -224,7 +216,7 @@ const GameOver: React.FC<GameOverProps> = ({
                         whileTap={{ y: 0 }}
                     >
                         <RotateCcw size={13} />
-                        다시 / RETRY
+                        {t('over.retry')}
                     </MotionButton>
                     <MotionButton
                         style={button('quiet')}
@@ -233,11 +225,11 @@ const GameOver: React.FC<GameOverProps> = ({
                         whileTap={{ y: 0 }}
                     >
                         <Trophy size={13} />
-                        랭킹
+                        {t('over.ranking')}
                     </MotionButton>
                 </div>
 
-                <p style={hint}>SPACE 로도 다시 시작합니다</p>
+                <p style={hint}>{t('over.spaceHint')}</p>
             </motion.div>
         </div>
     );

@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from 'react';
+import { DIFFICULTIES } from './game/core/difficulty';
+import type { DifficultyKey } from './game/core/difficulty';
 
 export type Language = 'ko' | 'en';
 
 export interface Settings {
     muted: boolean;
     language: Language;
+    difficulty: DifficultyKey;
 }
 
 const STORAGE_KEY = 'mazewhiskers.settings';
 
 const DEFAULTS: Settings = {
     muted: false,
-    language: 'ko'
+    language: 'ko',
+    // The game as it already was.
+    difficulty: 'easy'
 };
 
 /**
@@ -37,7 +42,11 @@ function load(): Settings {
         const parsed = JSON.parse(raw) as Partial<Settings>;
         return {
             muted: typeof parsed.muted === 'boolean' ? parsed.muted : DEFAULTS.muted,
-            language: parsed.language === 'en' ? 'en' : 'ko'
+            language: parsed.language === 'en' ? 'en' : 'ko',
+            difficulty:
+                parsed.difficulty && parsed.difficulty in DIFFICULTIES
+                    ? parsed.difficulty
+                    : DEFAULTS.difficulty
         };
     } catch {
         return { ...DEFAULTS };

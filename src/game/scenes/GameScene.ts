@@ -671,6 +671,7 @@ export class GameScene extends Phaser.Scene {
             // Districts carry, so a run that lost in the third one is credited
             // with the first two as well.
             survivedMs: (this.registry.get('carriedMs') || 0) + (Date.now() - this.startTime),
+            healthLeft: Math.max(0, Math.round(this.health)),
             milkCount: this.registry.get('milkCount') || 0,
             fishCount: this.registry.get('fishCount') || 0
         });

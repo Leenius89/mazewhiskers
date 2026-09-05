@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { barkWrapWidth, worldFontPx, worldUi, worldUiScale } from '../core/uiScale';
+import { t, tList } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
 
 /** Anything that can hold a bubble over its head. */
@@ -295,20 +296,18 @@ export class BarkSystem {
 
     /** The first block landing is the one that gets the scripted line. */
     redevelopment(): void {
-        const lines = GameConfig.BARKS.LINES;
-
         if (!this.seenRedevelopment) {
             this.seenRedevelopment = true;
-            this.sayPlayer(lines.FIRST_TOWER, PRIORITY.SCRIPTED);
+            this.sayPlayer(t('bark.firstTower'), PRIORITY.SCRIPTED);
             return;
         }
 
-        this.sayPlayer(Phaser.Utils.Array.GetRandom(lines.TOWER), PRIORITY.REACTION);
+        this.sayPlayer(Phaser.Utils.Array.GetRandom(tList('bark.tower')), PRIORITY.REACTION);
     }
 
     /** Took a hit from the machine. */
     hurt(): void {
-        this.sayPlayer(Phaser.Utils.Array.GetRandom(GameConfig.BARKS.LINES.HURT), PRIORITY.REACTION);
+        this.sayPlayer(Phaser.Utils.Array.GetRandom(tList('bark.hurt')), PRIORITY.REACTION);
     }
 
     update(time: number): void {
@@ -338,7 +337,7 @@ export class BarkSystem {
         if (distance > cfg.PANIC_DISTANCE || time < this.nextPanicAt) return;
 
         this.nextPanicAt = time + cfg.PANIC_COOLDOWN_MS;
-        this.sayPlayer(Phaser.Utils.Array.GetRandom(cfg.LINES.PANIC), PRIORITY.REACTION);
+        this.sayPlayer(Phaser.Utils.Array.GetRandom(tList('bark.panic')), PRIORITY.REACTION);
     }
 
     private taunt(time: number, enemy: Speaker, distance: number): void {
@@ -346,7 +345,7 @@ export class BarkSystem {
         if (distance > cfg.TAUNT_DISTANCE || time < this.nextTauntAt) return;
 
         this.nextTauntAt = time + cfg.TAUNT_COOLDOWN_MS;
-        this.say(this.enemyBubble, enemy, Phaser.Utils.Array.GetRandom(cfg.LINES.TAUNT), PRIORITY.REACTION);
+        this.say(this.enemyBubble, enemy, Phaser.Utils.Array.GetRandom(tList('bark.taunt')), PRIORITY.REACTION);
     }
 
     /**
@@ -365,7 +364,7 @@ export class BarkSystem {
         if (threatDistance <= cfg.PANIC_DISTANCE) return;
         if (Math.random() > cfg.AMBIENT_CHANCE) return;
 
-        this.sayPlayer(Phaser.Utils.Array.GetRandom(cfg.LINES.IDLE), PRIORITY.AMBIENT);
+        this.sayPlayer(Phaser.Utils.Array.GetRandom(tList('bark.idle')), PRIORITY.AMBIENT);
     }
 
     private nearestEnemy(): { enemy: Speaker; distance: number } | null {

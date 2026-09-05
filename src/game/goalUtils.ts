@@ -134,7 +134,8 @@ export const createGoal = (
                 scene.scene.launch('VictoryScene', {
                     timeMs: carried + (Date.now() - scene.startTime),
                     milkCount: scene.registry.get('milkCount') || 0,
-                    fishCount: scene.registry.get('fishCount') || 0
+                    fishCount: scene.registry.get('fishCount') || 0,
+                    healthLeft: Math.max(0, Math.round(scene.health))
                 });
                 scene.scene.pause();
             });
