@@ -39,10 +39,36 @@ where relname in ('scores', 'speedrun_leaderboard')
 
 union all
 
-select '5. policies on ' || tablename,
-       string_agg(policyname || ' [' || cmd || ']', ', ' order by cmd, policyname)
+-- One INSERT policy per table, or the strictest one stops deciding anything:
+-- permissive policies are OR'd, so a second policy that allows everything
+-- makes the first one's bounds unreachable.
+select '5. one write rule per table',
+       case when max(n) = 1 then 'OK'
+            else 'DUPLICATE INSERT POLICIES — run 20260909' end
+from (
+    select count(*) as n
+    from pg_policies
+    where tablename in ('scores', 'speedrun_leaderboard')
+      and cmd = 'INSERT'
+    group by tablename
+) per_table
+
+union all
+
+-- Nothing should be able to change or remove a finished run.
+select '6. no update or delete rule',
+       case when count(*) = 0 then 'OK'
+            else count(*)::text || ' found — see list below' end
 from pg_policies
 where tablename in ('scores', 'speedrun_leaderboard')
-group by tablename
+  and cmd in ('UPDATE', 'DELETE', 'ALL')
 
 order by 1;
+
+-- ---------------------------------------------------------------------------
+-- The full list, one policy per row so nothing is truncated.
+
+select tablename, cmd, policyname, roles::text, coalesce(with_check, qual) as rule
+from pg_policies
+where tablename in ('scores', 'speedrun_leaderboard')
+order by tablename, cmd, policyname;
