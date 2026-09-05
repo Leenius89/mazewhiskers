@@ -40,6 +40,14 @@ interface Board {
     column: string;
     /** True when a smaller number is the better result. */
     ascending: boolean;
+    /**
+     * A value at or below this cannot be a real result on this board.
+     *
+     * Only the closest-call board needs it, and it needs it badly: the whole
+     * board is "who finished with the least left", so zero wins outright — and
+     * zero is exactly what a run that did not finish ends on.
+     */
+    floor?: number;
     format: (row: Score) => string;
 }
 
@@ -87,6 +95,10 @@ const BOARDS: Board[] = [
         table: 'speedrun_leaderboard',
         column: 'health_left',
         ascending: true,
+        // Reaching home with nothing left is not a near miss, it is a row that
+        // should not be here. Belt and braces alongside the table change: a
+        // record written by an older build, or by hand, cannot take the top.
+        floor: 0,
         format: (row) => `❤ ${row.health_left ?? 0}`
     }
 ];
@@ -142,11 +154,14 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                         // excluded rather than shown as an empty first place.
                         .not(board.column, 'is', null);
 
+                    const bounded =
+                        board.floor === undefined ? query : query.gt(board.column, board.floor);
+
                     // The last pass picks up runs recorded before difficulty
                     // was a setting. Read as easy, as they are everywhere else.
                     const scoped = level
-                        ? query.eq('difficulty', level)
-                        : query.is('difficulty', null);
+                        ? bounded.eq('difficulty', level)
+                        : bounded.is('difficulty', null);
 
                     return scoped.order(board.column, { ascending: board.ascending }).limit(ROWS);
                 })

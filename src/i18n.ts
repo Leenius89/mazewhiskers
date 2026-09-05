@@ -29,6 +29,9 @@ const ko: Dict = {
     'settings.off': '끔 / OFF',
     'settings.language': '언어 / LANGUAGE',
     'settings.difficulty': '난이도 / DIFFICULTY',
+    'settings.appearance': '화면 / APPEARANCE',
+    'settings.dark': '어둡게',
+    'settings.light': '밝게',
     'settings.close': '닫기 / CLOSE',
 
     // -------------------------------------------------------------- header
@@ -140,6 +143,9 @@ const en: Dict = {
     'settings.off': 'OFF',
     'settings.language': 'LANGUAGE',
     'settings.difficulty': 'DIFFICULTY',
+    'settings.appearance': 'APPEARANCE',
+    'settings.dark': 'DARK',
+    'settings.light': 'LIGHT',
     'settings.close': 'CLOSE',
 
     'header.score': 'SCORE',

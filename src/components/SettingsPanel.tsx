@@ -1,8 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Volume2, VolumeX, X } from 'lucide-react';
+import { Moon, Sun, Volume2, VolumeX, X } from 'lucide-react';
 import { useSettings } from '../settings';
-import type { Language } from '../settings';
+import type { Appearance, Language } from '../settings';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
 import { button, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
@@ -46,6 +46,24 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                     <Choice on={settings.muted} onClick={() => update({ muted: true })}>
                         <VolumeX size={14} /> {t('settings.off')}
                     </Choice>
+                </Row>
+
+                {/* Sits under sound because it is the other thing a room
+                    changes: a gallery under lights and a phone in the dark
+                    want opposite things from the same panel. */}
+                <Row label={t('settings.appearance')}>
+                    {([
+                        ['dark', Moon, t('settings.dark')],
+                        ['light', Sun, t('settings.light')]
+                    ] as [Appearance, typeof Moon, string][]).map(([mode, Icon, label]) => (
+                        <Choice
+                            key={mode}
+                            on={settings.appearance === mode}
+                            onClick={() => update({ appearance: mode })}
+                        >
+                            <Icon size={14} /> {label}
+                        </Choice>
+                    ))}
                 </Row>
 
                 <Row label={t('settings.language')}>

@@ -11,7 +11,8 @@ import GameOver from './components/GameOver';
 import Victory from './components/Victory';
 import Leaderboard from './components/Leaderboard';
 import SettingsPanel from './components/SettingsPanel';
-import { getSettings, subscribe } from './settings';
+import { getSettings, subscribe, useSettings } from './settings';
+import { theme } from './components/theme';
 import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
@@ -38,6 +39,11 @@ const MIN_CANVAS = { WIDTH: 320, HEIGHT: 280 };
 
 
 function App() {
+    // Subscribed so a change of light repaints the page around the canvas; the
+    // palette itself is a module-level object that the change has already
+    // updated by the time this render reads it.
+    useSettings();
+
     const gameRef = useRef<HTMLDivElement>(null);
     const game = useRef<Phaser.Game | null>(null);
     const [gameSize, setGameSize] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -383,7 +389,9 @@ function App() {
             maxWidth: '100vw',
             overflow: 'hidden',
             position: 'relative',
-            backgroundColor: '#1a1a1a',
+            // The page around the canvas. Follows the interface's light, not
+            // the game world's — the world is a night city either way.
+            backgroundColor: theme.ground,
             padding: '10px'
         }}>
             {showGame ? (

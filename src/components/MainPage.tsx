@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings as SettingsIcon, Trophy } from 'lucide-react';
-import { getSettings, subscribe } from '../settings';
+import { getSettings, subscribe, useSettings } from '../settings';
+import type { Appearance } from '../settings';
 import { useTranslation } from '../i18n';
+import { theme } from './theme';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
@@ -31,12 +33,34 @@ const SEEN_INTRO = 'mazewhiskers.seenIntro';
  * read as the way in; size does that on its own, and two visual languages on
  * one screen read as two different screens.
  */
-/** Face colour and the darker edge it is cut from. */
+/**
+ * Face colour and the darker edge it is cut from, in each light.
+ *
+ * The dark set was pure red, pure green, pure amber — three fully saturated
+ * hues at equal weight, which is a toybox rather than a menu and left the
+ * one button that matters no louder than the other two. These are the same
+ * three signals pulled back into the game's own range: the way in keeps the
+ * hazard red, the other two step down to where they read as choices rather
+ * than alarms.
+ *
+ * The light set is not the dark one lightened. On a pale ground a bright
+ * face has nothing to push against, so the faces darken and the text on them
+ * turns to paper.
+ */
 const BUTTON_COLORS = {
-    start: { face: '#ff0000', edge: '#8b0000' },
-    ranking: { face: '#22c55e', edge: '#15803d' },
-    settings: { face: '#f5b100', edge: '#9a6a00' }
+    dark: {
+        start: { face: '#D93A2B', edge: '#7C1D14', ink: '#FFF3EF' },
+        ranking: { face: '#2C7A62', edge: '#164034', ink: '#EAF7F2' },
+        settings: { face: '#C08A1E', edge: '#6B4A08', ink: '#FFF8E8' }
+    },
+    light: {
+        start: { face: '#C0392C', edge: '#7A1F16', ink: '#FFF3EF' },
+        ranking: { face: '#1B7A66', edge: '#0E4437', ink: '#EAF7F2' },
+        settings: { face: '#A96B00', edge: '#6B4200', ink: '#FFF8E8' }
+    }
 } as const;
+
+type ButtonKind = keyof (typeof BUTTON_COLORS)['dark'];
 
 /**
  * One button, three colours, one size.
@@ -45,8 +69,12 @@ const BUTTON_COLORS = {
  * the colour separates them, which is also what makes them findable at a
  * glance from across a room.
  */
-const pixelButton = (isMobile: boolean, kind: keyof typeof BUTTON_COLORS): React.CSSProperties => {
-    const { face, edge } = BUTTON_COLORS[kind];
+const pixelButton = (
+    isMobile: boolean,
+    kind: ButtonKind,
+    appearance: Appearance
+): React.CSSProperties => {
+    const { face, edge, ink } = BUTTON_COLORS[appearance][kind];
 
     return {
         display: 'flex',
@@ -56,7 +84,7 @@ const pixelButton = (isMobile: boolean, kind: keyof typeof BUTTON_COLORS): React
         width: isMobile ? '260px' : '380px',
         boxSizing: 'border-box',
         backgroundColor: face,
-        color: 'white',
+        color: ink,
         border: `4px solid ${edge}`,
         padding: isMobile ? '12px 16px' : '15px 20px',
         fontSize: isMobile ? '1.05rem' : '1.35rem',
@@ -74,6 +102,9 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
     const t = useTranslation();
+    // Re-renders the menu when the light changes, which is also what makes the
+    // palette below read the new values.
+    const [settings] = useSettings();
 
     /**
      * The picture's own proportions, learned before anything is drawn.
@@ -232,7 +263,9 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
             height: '100vh',
             display: 'flex',
             justifyContent: 'center',
-            backgroundColor: '#2d3748',
+            // The letterbox either side of the picture. Part of the room,
+            // so it follows the room's light rather than staying slate.
+            backgroundColor: theme.ground,
             overflow: 'hidden'
         }}>
             <div style={{
@@ -274,6 +307,31 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                             style={{ width: '100%', height: 'auto', display: 'block' }}
                         />
                     </motion.div>
+                )}
+
+                {/*
+                    The same street, two hours of the day.
+                  *
+                  * There is one photograph and it is not going to be repainted,
+                  * so the light comes from a veil over it rather than from a
+                  * second asset. Dark mode is the picture as shot — dusk, which
+                  * is what the game is about. Light mode lays a warm haze over
+                  * it and lifts the whole menu into the afternoon.
+                  *
+                  * Deliberately weak. Enough to change the room, not enough to
+                  * turn the city into a watercolour.
+                */}
+                {settings.appearance === 'light' && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            inset: 0,
+                            zIndex: 1,
+                            pointerEvents: 'none',
+                            background:
+                                'linear-gradient(180deg, rgba(255,250,238,0.34) 0%, rgba(255,247,232,0.22) 55%, rgba(255,244,226,0.30) 100%)'
+                        }}
+                    />
                 )}
 
                 {/* 타이틀 */}
@@ -383,7 +441,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         zIndex: 2
                     }}>
                         <MotionClickable
-                            style={pixelButton(isMobile, 'ranking')}
+                            style={pixelButton(isMobile, 'ranking', settings.appearance)}
                             onClick={onShowLeaderboard}
                             whileHover={{ y: -2 }}
                             whileTap={{ y: 3 }}
@@ -393,7 +451,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         </MotionClickable>
 
                         <MotionClickable
-                            style={pixelButton(isMobile, 'settings')}
+                            style={pixelButton(isMobile, 'settings', settings.appearance)}
                             onClick={onShowSettings}
                             whileHover={{ y: -2 }}
                             whileTap={{ y: 3 }}
@@ -403,7 +461,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         </MotionClickable>
 
                         <MotionClickable
-                            style={pixelButton(isMobile, 'start')}
+                            style={pixelButton(isMobile, 'start', settings.appearance)}
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{

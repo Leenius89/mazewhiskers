@@ -4,10 +4,20 @@ import type { DifficultyKey } from './game/core/difficulty';
 
 export type Language = 'ko' | 'en';
 
+/**
+ * Which light the interface is in.
+ *
+ * The game world is a night city and stays one; this is the chrome around it —
+ * the menu, the panels, the leaderboard. A kiosk under gallery lights and a
+ * phone in a dark room want opposite things from the same screens.
+ */
+export type Appearance = 'dark' | 'light';
+
 export interface Settings {
     muted: boolean;
     language: Language;
     difficulty: DifficultyKey;
+    appearance: Appearance;
 }
 
 const STORAGE_KEY = 'mazewhiskers.settings';
@@ -16,7 +26,8 @@ const DEFAULTS: Settings = {
     muted: false,
     language: 'ko',
     // The game as it already was.
-    difficulty: 'easy'
+    difficulty: 'easy',
+    appearance: 'dark'
 };
 
 /**
@@ -46,7 +57,8 @@ function load(): Settings {
             difficulty:
                 parsed.difficulty && parsed.difficulty in DIFFICULTIES
                     ? parsed.difficulty
-                    : DEFAULTS.difficulty
+                    : DEFAULTS.difficulty,
+            appearance: parsed.appearance === 'light' ? 'light' : 'dark'
         };
     } catch {
         return { ...DEFAULTS };
