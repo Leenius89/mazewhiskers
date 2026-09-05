@@ -18,6 +18,10 @@ interface Score {
     created_at: string;
 }
 
+/** How many places every board shows, and the height it is held at. */
+const ROWS = 10;
+const ROW_HEIGHT = 34;
+
 export type BoardKey = 'fastest' | 'survived' | 'fed' | 'closest';
 
 /**
@@ -133,7 +137,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                     )
                 }))
                 .sort((a, b) => (board.ascending ? a.value - b.value : b.value - a.value))
-                .slice(0, 8)
+                .slice(0, ROWS)
                 .map((entry) => entry.row);
 
             setScores(ranked);
@@ -152,7 +156,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
     return (
         <div style={overlayBackdrop}>
             <motion.div
-                style={panel}
+                // Wider than a results panel: four tabs have to sit on one line,
+                // and a table of ten is a different shape from a paragraph.
+                style={{ ...panel, maxWidth: '620px' }}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
@@ -166,7 +172,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                     </h2>
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
                     {BOARDS.map((option) => {
                         const on = option.key === board.key;
                         return (
@@ -175,14 +181,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                                 onClick={() => setActive(option.key)}
                                 whileTap={{ y: 1 }}
                                 style={{
-                                    flex: '1 1 auto',
-                                    padding: '8px 10px',
+                                    flex: '1 1 0',
+                                    minWidth: 0,
+                                    padding: '8px 6px',
                                     borderRadius: '5px',
                                     textAlign: 'center',
                                     cursor: 'pointer',
                                     whiteSpace: 'nowrap',
                                     fontFamily: theme.body,
-                                    fontSize: '0.78rem',
+                                    fontSize: '0.66rem',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
                                     background: on ? theme.surfaceRaised : 'transparent',
                                     border: `1px solid ${on ? theme.accent : theme.rule}`,
                                     color: on ? theme.accent : theme.inkFaint
@@ -194,7 +203,17 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                     })}
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minHeight: '180px' }}>
+                {/* Held at a fixed height so switching tabs does not make the
+                    panel jump around under the cursor. */}
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '2px',
+                        height: `${ROWS * ROW_HEIGHT}px`,
+                        overflow: 'hidden'
+                    }}
+                >
                     {loading && <p style={hint}>{t('board.loading')}</p>}
 
                     {!loading && failed && (

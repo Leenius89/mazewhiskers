@@ -20,29 +20,39 @@ const MotionClickable = motion.div as any;
  * read as the way in; size does that on its own, and two visual languages on
  * one screen read as two different screens.
  */
-const pixelButton = (isMobile: boolean, size: 'primary' | 'menu'): React.CSSProperties => {
-    const primary = size === 'primary';
+/** Face colour and the darker edge it is cut from. */
+const BUTTON_COLORS = {
+    start: { face: '#ff0000', edge: '#8b0000' },
+    ranking: { face: '#22c55e', edge: '#15803d' },
+    settings: { face: '#f5b100', edge: '#9a6a00' }
+} as const;
+
+/**
+ * One button, three colours, one size.
+ *
+ * They share every measurement so the stack reads as one control panel; only
+ * the colour separates them, which is also what makes them findable at a
+ * glance from across a room.
+ */
+const pixelButton = (isMobile: boolean, kind: keyof typeof BUTTON_COLORS): React.CSSProperties => {
+    const { face, edge } = BUTTON_COLORS[kind];
 
     return {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: primary ? '0' : '10px',
-        backgroundColor: '#ff0000',
+        gap: '10px',
+        width: isMobile ? '260px' : '380px',
+        boxSizing: 'border-box',
+        backgroundColor: face,
         color: 'white',
-        border: `${primary ? 4 : 3}px solid #8b0000`,
-        padding: primary
-            ? isMobile
-                ? '12px 30px'
-                : '15px 40px'
-            : isMobile
-              ? '8px 18px'
-              : '10px 24px',
-        fontSize: primary ? (isMobile ? '1.5rem' : '2rem') : isMobile ? '0.7rem' : '0.9rem',
+        border: `4px solid ${edge}`,
+        padding: isMobile ? '12px 16px' : '15px 20px',
+        fontSize: isMobile ? '1.05rem' : '1.35rem',
         fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
         cursor: 'pointer',
         imageRendering: 'pixelated',
-        boxShadow: `${primary ? 6 : 4}px ${primary ? 6 : 4}px 0px #8b0000`,
+        boxShadow: `6px 6px 0px ${edge}`,
         whiteSpace: 'nowrap',
         maxWidth: '90%'
     };
@@ -53,6 +63,23 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
     const t = useTranslation();
+
+    const backgroundRef = useRef<HTMLImageElement>(null);
+    /** How far there is to climb: the image's height beyond the screen's. */
+    const [panDistance, setPanDistance] = useState(0);
+
+    const measureBackground = useCallback(() => {
+        const image = backgroundRef.current;
+        if (!image) return;
+
+        setPanDistance(Math.max(0, image.offsetHeight - window.innerHeight));
+    }, []);
+
+    useEffect(() => {
+        measureBackground();
+        window.addEventListener('resize', measureBackground);
+        return () => window.removeEventListener('resize', measureBackground);
+    }, [measureBackground]);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     /**
      * Guards the opening against running twice.
@@ -172,31 +199,38 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 position: 'relative',
                 overflow: 'hidden'
             }}>
-                {/* 배경 이미지 */}
+                {/*
+                    The climb, measured rather than guessed.
+                  *
+                  * This was a box twice the height of the screen sliding half its
+                  * own height, with the image inside it cropped to fit. That
+                  * happened to land on the sky while the window was narrow; once
+                  * the canvas filled the browser the crop took the top off and the
+                  * pan stopped somewhere in the middle of the towers.
+                  *
+                  * The image now keeps its own proportions and the travel is the
+                  * difference between its height and the screen's, in pixels — so
+                  * it ends on the top edge of the picture at any window size, and
+                  * stops there.
+                */}
                 <motion.div
                     style={{
                         width: '100%',
-                        height: '200%',
                         position: 'absolute',
                         top: 0,
                         left: 0,
                         zIndex: 1
                     }}
-                    initial={{ y: "-50%" }}
-                    animate={{ y: "0%" }}
-                    transition={{
-                        duration: 4,
-                        ease: "linear"
-                    }}
+                    initial={{ y: -panDistance }}
+                    animate={{ y: 0 }}
+                    transition={{ duration: 4, ease: 'linear' }}
                 >
                     <img
+                        ref={backgroundRef}
                         src="sources/main.png"
                         alt="Background"
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover'
-                        }}
+                        onLoad={measureBackground}
+                        style={{ width: '100%', height: 'auto', display: 'block' }}
                     />
                 </motion.div>
 
@@ -289,39 +323,27 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         zIndex: 2
                     }}>
                         <MotionClickable
-                            style={pixelButton(isMobile, 'menu')}
+                            style={pixelButton(isMobile, 'ranking')}
                             onClick={onShowLeaderboard}
-                            whileHover={{ y: -2, boxShadow: '6px 6px 0px #8b0000' }}
-                            whileTap={{ y: 3, boxShadow: '1px 1px 0px #8b0000' }}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 3 }}
                         >
                             <Trophy size={isMobile ? 13 : 15} />
                             {t('menu.ranking')}
                         </MotionClickable>
 
                         <MotionClickable
-                            style={pixelButton(isMobile, 'menu')}
+                            style={pixelButton(isMobile, 'settings')}
                             onClick={onShowSettings}
-                            whileHover={{ y: -2, boxShadow: '6px 6px 0px #8b0000' }}
-                            whileTap={{ y: 3, boxShadow: '1px 1px 0px #8b0000' }}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 3 }}
                         >
                             <SettingsIcon size={isMobile ? 13 : 15} />
                             {t('menu.settings')}
                         </MotionClickable>
 
                         <MotionClickable
-                            style={{
-                                backgroundColor: '#ff0000',
-                                color: 'white',
-                                border: '4px solid #8b0000',
-                                padding: isMobile ? '12px 30px' : '15px 40px',
-                                fontSize: isMobile ? '1.5rem' : '2rem',
-                                fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
-                                cursor: 'pointer',
-                                imageRendering: 'pixelated',
-                                boxShadow: '6px 6px 0px #8b0000',
-                                whiteSpace: 'nowrap',
-                                maxWidth: '90%'
-                            }}
+                            style={pixelButton(isMobile, 'start')}
                             initial={{ scale: 0, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             transition={{
@@ -329,14 +351,9 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                                 type: "steps",
                                 steps: 5
                             }}
-                            whileHover={{
-                                y: -2,
-                                boxShadow: '8px 8px 0px #8b0000',
-                                transition: { duration: 0.1 }
-                            }}
+                            whileHover={{ y: -2, transition: { duration: 0.1 } }}
                             whileTap={{
                                 y: 4,
-                                boxShadow: '2px 2px 0px #8b0000',
                             }}
                             onClick={handleStartGame}
                         >
