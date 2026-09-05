@@ -9,12 +9,66 @@ interface Score {
     username: string;
     score?: number;
     time_ms?: number;
+    survived_ms?: number;
+    fish_count?: number;
     created_at: string;
 }
 
+export type BoardKey = 'fastest' | 'survived' | 'fed';
+
+/**
+ * Three ways to be good at this, each with its own board.
+ *
+ * There used to be two, reachable only from the screen that happened to end
+ * your run — win and you could see the fastest times, lose and you could see
+ * the scores, and neither screen admitted the other board existed. They are all
+ * reachable from all of them now, because a player who just lost still wants to
+ * know what a fast run looks like.
+ */
+interface Board {
+    key: BoardKey;
+    /** Table it reads, and the column it ranks by. */
+    table: string;
+    column: string;
+    ascending: boolean;
+    eyebrow: string;
+    title: string;
+    format: (row: Score) => string;
+}
+
+const BOARDS: Board[] = [
+    {
+        key: 'fastest',
+        table: 'speedrun_leaderboard',
+        column: 'time_ms',
+        ascending: true,
+        eyebrow: 'FASTEST HOME',
+        title: '빨리 도달한 냥',
+        format: (row) => formatTime(row.time_ms ?? 0)
+    },
+    {
+        key: 'survived',
+        table: 'scores',
+        column: 'survived_ms',
+        ascending: false,
+        eyebrow: 'LONGEST ON THE STREET',
+        title: '가장 오래 돌아다닌 냥',
+        format: (row) => formatTime(row.survived_ms ?? 0)
+    },
+    {
+        key: 'fed',
+        table: 'scores',
+        column: 'fish_count',
+        ascending: false,
+        eyebrow: 'BEST FED',
+        title: '가장 많이 먹은 냥',
+        format: (row) => `🐟 ${row.fish_count ?? 0}`
+    }
+];
+
 interface LeaderboardProps {
     onClose: () => void;
-    mode?: 'score' | 'time';
+    mode?: BoardKey;
 }
 
 const formatTime = (ms: number) => {
@@ -26,7 +80,9 @@ const formatTime = (ms: number) => {
 
 const MotionButton = motion.div as React.ElementType;
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' }) => {
+    const [active, setActive] = useState<BoardKey>(mode);
+    const board = BOARDS.find((b) => b.key === active) ?? BOARDS[0];
     const [scores, setScores] = useState<Score[]>([]);
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
@@ -35,16 +91,15 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) =>
         setLoading(true);
         setFailed(false);
         try {
-            const query =
-                mode === 'time'
-                    ? supabase
-                          .from('speedrun_leaderboard')
-                          .select('*')
-                          .order('time_ms', { ascending: true })
-                          .limit(8)
-                    : supabase.from('scores').select('*').order('score', { ascending: false }).limit(8);
+            const { data, error } = await supabase
+                .from(board.table)
+                .select('*')
+                // Rows written before the column existed sort as null; excluded
+                // rather than shown as an empty first place.
+                .not(board.column, 'is', null)
+                .order(board.column, { ascending: board.ascending })
+                .limit(8);
 
-            const { data, error } = await query;
             if (error) throw error;
             setScores(data || []);
         } catch (error) {
@@ -53,13 +108,11 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) =>
         } finally {
             setLoading(false);
         }
-    }, [mode]);
+    }, [board]);
 
     useEffect(() => {
         fetchScores();
     }, [fetchScores]);
-
-    const isTime = mode === 'time';
 
     return (
         <div style={overlayBackdrop}>
@@ -72,10 +125,36 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) =>
                 <div style={hazardEdge} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={eyebrow}>{isTime ? 'FASTEST HOME' : 'HIGH SCORES'}</p>
-                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>
-                        {isTime ? '가장 빨리 집에 닿은 사람' : '가장 멀리 버틴 사람'}
-                    </h2>
+                    <p style={eyebrow}>{board.eyebrow}</p>
+                    <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>{board.title}</h2>
+                </div>
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    {BOARDS.map((option) => {
+                        const on = option.key === board.key;
+                        return (
+                            <MotionButton
+                                key={option.key}
+                                onClick={() => setActive(option.key)}
+                                whileTap={{ y: 1 }}
+                                style={{
+                                    flex: '1 1 auto',
+                                    padding: '8px 10px',
+                                    borderRadius: '5px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
+                                    fontFamily: theme.body,
+                                    fontSize: '0.78rem',
+                                    background: on ? theme.surfaceRaised : 'transparent',
+                                    border: `1px solid ${on ? theme.accent : theme.rule}`,
+                                    color: on ? theme.accent : theme.inkFaint
+                                }}
+                            >
+                                {option.title}
+                            </MotionButton>
+                        );
+                    })}
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minHeight: '180px' }}>
@@ -96,7 +175,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'score' }) =>
                                 key={entry.id}
                                 rank={index + 1}
                                 name={entry.username}
-                                value={isTime ? formatTime(entry.time_ms ?? 0) : (entry.score ?? 0).toLocaleString()}
+                                value={board.format(entry)}
                             />
                         ))}
                 </div>

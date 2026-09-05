@@ -10,6 +10,7 @@ import MainPage from './components/MainPage';
 import GameOver from './components/GameOver';
 import Victory from './components/Victory';
 import Leaderboard from './components/Leaderboard';
+import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
 import { GameConfig } from './game/constants/GameConfig';
@@ -36,10 +37,24 @@ function App() {
     const [isVictory, setIsVictory] = useState(false);
     const [victoryTime, setVictoryTime] = useState(0);
     const [jumpCount, setJumpCount] = useState(0);
+    const [survivedMs, setSurvivedMs] = useState(0);
+
     const [fishCount, setFishCount] = useState(0);
     const [milkCount, setMilkCount] = useState(0);
+    /**
+     * The run's score, in one place.
+     *
+     * It used to be assembled inline where the game-over screen was rendered,
+     * which meant it existed only once the run was already over — there was
+     * nothing to show a player while they were still playing for it.
+     */
+    const score =
+        milkCount * GameConfig.SCORE.PER_MILK +
+        fishCount * GameConfig.SCORE.PER_FISH +
+        jumpCount * GameConfig.SCORE.PER_JUMP;
+
     const [showLeaderboard, setShowLeaderboard] = useState(false);
-    const [leaderboardMode, setLeaderboardMode] = useState<'score' | 'time'>('score');
+    const [leaderboardMode, setLeaderboardMode] = useState<BoardKey>('survived');
     const [isShowingCredits, setIsShowingCredits] = useState(false);
     const [endReason, setEndReason] = useState<GameOverPayload['reason']>('health');
 
@@ -130,10 +145,11 @@ function App() {
         game.current = new Phaser.Game(config);
         bus.current = createGameEventBus(game.current);
 
-        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason }) => {
+        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs }) => {
             setMilkCount(milk);
             setFishCount(fish);
             setEndReason(reason);
+            setSurvivedMs(survivedMs);
             setIsGameOver(true);
         });
 
@@ -266,7 +282,7 @@ function App() {
         setJumpCount(0);
     };
 
-    const handleShowLeaderboard = (mode: 'score' | 'time') => {
+    const handleShowLeaderboard = (mode: BoardKey) => {
         setLeaderboardMode(mode);
         setShowLeaderboard(true);
     };
@@ -289,6 +305,7 @@ function App() {
                         restartGame={restartGame}
                         milkCount={milkCount}
                         fishCount={fishCount}
+                        score={score}
                         gameSize={gameSize}
                     />
                     <div
@@ -318,15 +335,12 @@ function App() {
             {isGameOver && (
                 <GameOver
                     onRetry={restartGame}
-                    onShowLeaderboard={() => handleShowLeaderboard('score')}
+                    onShowLeaderboard={() => handleShowLeaderboard('survived')}
                     milkCount={milkCount}
                     fishCount={fishCount}
                     reason={endReason}
-                    score={
-                        milkCount * GameConfig.SCORE.PER_MILK +
-                        fishCount * GameConfig.SCORE.PER_FISH +
-                        jumpCount * GameConfig.SCORE.PER_JUMP
-                    }
+                    score={score}
+                    survivedMs={survivedMs}
                 />
             )}
 
@@ -339,7 +353,7 @@ function App() {
                         setIsVictory(false);
                         setShowGame(false);
                     }}
-                    onShowLeaderboard={() => handleShowLeaderboard('time')}
+                    onShowLeaderboard={() => handleShowLeaderboard('fastest')}
                     onShowCredits={() => {
                         setIsShowingCredits(true);
                         bus.current?.emit('showCredits');

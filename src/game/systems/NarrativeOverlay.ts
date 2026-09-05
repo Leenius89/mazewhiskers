@@ -78,6 +78,8 @@ export class NarrativeOverlay {
     private boxTop = 0;
     /** Interface scale the type was last sized for. See `resizeText`. */
     private appliedScale = 0;
+    /** Camera bounds set aside while a beat tours the map. See `releaseBounds`. */
+    private savedBounds: Phaser.Geom.Rectangle | null = null;
     private resolveWait: (() => void) | null = null;
     private typingEvent: Phaser.Time.TimerEvent | null = null;
 
@@ -238,6 +240,7 @@ export class NarrativeOverlay {
 
     /** Ends the sequence and hands the world back. */
     finish(): void {
+        this.restoreBounds();
         this.drop();
         this.skipped = false;
         this.stopTyping();
@@ -267,6 +270,14 @@ export class NarrativeOverlay {
             this.scene.cameraDirector?.setEnabled(false);
             camera.stopFollow();
 
+            // Bounds are dropped for the duration of the tour.
+            //
+            // The run starts in the top-left corner of the map, so a camera held
+            // inside the world could not actually centre on the cat there — the
+            // beat that explains the health bar pointed at a spotlight stuck in
+            // the corner of the screen, half of it off the edge.
+            this.releaseBounds();
+
             // force = true. Phaser drops a pan requested while another is still
             // running and never calls its callback, and the opening fly-over is
             // still technically in flight when it announces that it finished —
@@ -279,6 +290,30 @@ export class NarrativeOverlay {
             // the sequence never depends on a camera effect to move it along.
             this.scene.time.delayedCall(duration + 250, finish);
         });
+    }
+
+    /**
+     * Lets the camera leave the world for the length of a scripted beat.
+     *
+     * Remembered rather than recomputed, so `restoreBounds` puts back exactly
+     * what the scene set up.
+     */
+    private releaseBounds(): void {
+        const camera = this.scene.cameras.main;
+        if (this.savedBounds) return;
+
+        this.savedBounds = camera.getBounds();
+        camera.removeBounds();
+    }
+
+    /** Puts the camera back inside the world. */
+    restoreBounds(): void {
+        const camera = this.scene.cameras?.main;
+        if (!camera || !this.savedBounds) return;
+
+        const b = this.savedBounds;
+        this.savedBounds = null;
+        camera.setBounds(b.x, b.y, b.width, b.height);
     }
 
     /** Returns the camera to the player and re-enables the follow director. */

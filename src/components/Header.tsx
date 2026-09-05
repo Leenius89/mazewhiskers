@@ -6,6 +6,7 @@ interface HeaderProps {
     restartGame: () => void;
     milkCount: number;
     fishCount: number;
+    score: number;
     gameSize: { width: number | string; height: number | string };
 }
 
@@ -17,7 +18,7 @@ interface HeaderProps {
  * head, so this keeps only what is genuinely about the run as a whole: what has
  * been collected, and the way out.
  */
-const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, gameSize }) => {
+const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, score, gameSize }) => {
     const width = typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width;
 
     return (
@@ -54,6 +55,24 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, game
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <Tally icon="🐟" value={fishCount} />
                 <Tally icon="🥛" value={milkCount} />
+
+                {/* What the fish and milk were actually for. Both tallies were
+                    visible from the start and neither said what they bought. */}
+                <span
+                    style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: '5px',
+                        fontFamily: theme.display,
+                        fontSize: '0.5rem',
+                        letterSpacing: '0.06em',
+                        color: theme.inkFaint,
+                        whiteSpace: 'nowrap'
+                    }}
+                >
+                    SCORE
+                    <strong style={{ fontSize: '0.72rem', color: theme.accent }}>{score}</strong>
+                </span>
 
                 <button
                     onClick={restartGame}

@@ -658,6 +658,9 @@ export class GameScene extends Phaser.Scene {
         this.state.transitionTo('gameover');
         this.bus.emit('gameOver', {
             reason: this.endReason,
+            // Districts carry, so a run that lost in the third one is credited
+            // with the first two as well.
+            survivedMs: (this.registry.get('carriedMs') || 0) + (Date.now() - this.startTime),
             milkCount: this.registry.get('milkCount') || 0,
             fishCount: this.registry.get('fishCount') || 0
         });

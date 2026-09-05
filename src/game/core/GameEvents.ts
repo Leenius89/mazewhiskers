@@ -30,6 +30,13 @@ export interface GameOverPayload extends RunSummary {
      * "there was nowhere left to be pushed" tells them what the game is about.
      */
     reason: 'health' | 'enemy' | 'apartment:player' | 'apartment:goal' | 'trapped';
+    /**
+     * How long the cat lasted, districts included.
+     *
+     * A losing run had nothing to be proud of and nothing to record. Time
+     * survived is the thing it was actually measuring all along.
+     */
+    survivedMs: number;
 }
 
 export interface VictoryPayload extends RunSummary {

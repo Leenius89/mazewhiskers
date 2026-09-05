@@ -29,6 +29,7 @@ interface GameOverProps {
     milkCount?: number;
     fishCount?: number;
     score: number;
+    survivedMs: number;
 }
 
 /**
@@ -74,7 +75,8 @@ const GameOver: React.FC<GameOverProps> = ({
     reason,
     milkCount = 0,
     fishCount = 0,
-    score
+    score,
+    survivedMs
 }) => {
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -109,11 +111,23 @@ const GameOver: React.FC<GameOverProps> = ({
         if (!username.trim()) return;
         setIsSubmitting(true);
         try {
+            const name = username.toUpperCase();
+
+            // Survival time and fish are what the other two boards rank by. They
+            // are sent as their own columns, and if the database has not been
+            // migrated yet the insert falls back to the shape it always had —
+            // a run should never fail to record because a board is new.
             const { error } = await supabase
                 .from('scores')
-                .insert([{ username: username.toUpperCase(), score }]);
+                .insert([{ username: name, score, survived_ms: survivedMs, fish_count: fishCount ?? 0 }]);
 
-            if (error) throw error;
+            if (error) {
+                const missingColumn = /column .* does not exist|schema cache/i.test(error.message ?? '');
+                if (!missingColumn) throw error;
+
+                const retry = await supabase.from('scores').insert([{ username: name, score }]);
+                if (retry.error) throw retry.error;
+            }
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting score:', error);

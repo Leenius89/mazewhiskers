@@ -1,9 +1,13 @@
 import Phaser from 'phaser';
 
+/** How long the roll holds the screen before it can be dismissed. */
+const SKIP_AFTER_MS = 3000;
+
 interface CreditsObjects {
     creditsBg: Phaser.GameObjects.Graphics;
     creditsText: Phaser.GameObjects.Text;
     clickableArea: Phaser.GameObjects.Rectangle;
+    skipPrompt: Phaser.GameObjects.Text;
 }
 
 export const showCredits = (
@@ -42,7 +46,7 @@ export const showCredits = (
         "",
         "© 2024 studio 凹凸",
         "",
-        "Click anywhere to return"
+        ""
     ];
 
     // Place text in center
@@ -57,12 +61,29 @@ export const showCredits = (
     creditsText.setDepth(1001);
     creditsText.setAlpha(0);
 
+    /**
+     * The prompt to leave, and the ability to, arrive together — three
+     * seconds in.
+     *
+     * The credits were dismissable from the first frame, with the invitation
+     * to dismiss them printed in the roll itself: the click that ended the
+     * run tended to carry straight through and skip the ending before anyone
+     * had read a line of it.
+     */
+    const skipPrompt = scene.add.text(width / 2, height - 48, 'Click anywhere to return', {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        color: '#9aa0aa',
+        align: 'center'
+    } as Phaser.Types.GameObjects.Text.TextStyle);
+    skipPrompt.setOrigin(0.5, 0.5);
+    skipPrompt.setDepth(1003);
+    skipPrompt.setAlpha(0);
+
     // Full screen clickable area
     const clickableArea = scene.add.rectangle(width / 2, height / 2, width, height);
     clickableArea.setOrigin(0.5, 0.5);
     clickableArea.setDepth(1002);
-    clickableArea.setInteractive({ useHandCursor: true });
-    clickableArea.input!.enabled = true;
 
     // Fade in
     scene.tweens.add({
@@ -85,14 +106,21 @@ export const showCredits = (
             onComplete: () => {
                 creditsBg.destroy();
                 creditsText.destroy();
+                skipPrompt.destroy();
                 clickableArea.destroy();
                 if (onEnd) onEnd();
             }
         });
     };
 
-    // Add listener
-    clickableArea.on('pointerdown', handleClick);
+    scene.time.delayedCall(SKIP_AFTER_MS, () => {
+        if (!clickableArea.active) return;
 
-    return { creditsBg, creditsText, clickableArea };
+        clickableArea.setInteractive({ useHandCursor: true });
+        clickableArea.on('pointerdown', handleClick);
+
+        scene.tweens.add({ targets: skipPrompt, alpha: 1, duration: 400, ease: 'Power2' });
+    });
+
+    return { creditsBg, creditsText, clickableArea, skipPrompt };
 };

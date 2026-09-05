@@ -123,8 +123,12 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         }
     );
 
+    // Explicitly toured to. Every other beat points at something out in the
+    // city, but this one points at the cat itself — and the cat starts in the
+    // corner of the map, where a bounded camera cannot put it on screen centre.
     await narrative.play('체력은 가만히 있어도 줄어듭니다. 머리 위 막대가 당신에게 남은 시간입니다.', {
         speaker: '· 체력',
+        lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 2.2),
         subject: player
     });
