@@ -11,6 +11,9 @@ interface MainPageProps {
     gameSize: { width: number | string; height: number | string };
 }
 
+/** How many screen heights the opening climbs before it settles. */
+const PAN_SCREENS = 0.85;
+
 const MotionClickable = motion.div as any;
 
 /**
@@ -92,7 +95,15 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     const containerWidth = typeof gameSize.width === 'number' ? gameSize.width : window.innerWidth;
     const imageHeight = aspect ? containerWidth * aspect : 0;
     /** How far there is to climb: the image's height beyond the screen's. */
-    const panDistance = Math.max(0, imageHeight - viewportHeight);
+    /**
+     * Capped, not the whole picture.
+     *
+     * Climbing the full height of the image was a two-thousand pixel sweep on a
+     * desktop window — long enough that the opening stopped being an
+     * establishing shot and became a wait. It still finishes on the top edge, it
+     * just starts nearer to it.
+     */
+    const panDistance = Math.min(Math.max(0, imageHeight - viewportHeight), viewportHeight * PAN_SCREENS);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     /**
      * Guards the opening against running twice.
@@ -250,18 +261,17 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 {/* 타이틀 */}
                 <motion.div
                     style={{
+                        // Centred on the window rather than pinned near the top.
+                        // Flexbox does the centring so the idle wobble below can
+                        // keep the transform to itself.
                         position: 'fixed',
-                        // Only the logo belongs in the sky the climb ends on.
-                        top: isMobile ? '4%' : '5%',
-                        left: '0',
-                        right: '0',
-                        marginLeft: 'auto',
-                        marginRight: 'auto',
+                        inset: 0,
                         zIndex: 2,
-                        width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,
                         display: 'flex',
                         justifyContent: 'center',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        // The sky is the backdrop, not a target.
+                        pointerEvents: 'none'
                     }}
                     animate={{
                         x: [0, 10, 0, -10, 0],
@@ -275,7 +285,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 >
                     <motion.h1
                         style={{
-                            fontSize: isMobile ? 'clamp(2rem, 8vw, 4.5rem)' : '4.5rem',
+                            fontSize: isMobile ? 'clamp(2.6rem, 10.4vw, 5.85rem)' : '5.85rem',
                             fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                             textShadow: '4px 4px 0px rgba(0, 0, 0, 0.2)',
                             margin: 0,
@@ -324,7 +334,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 {showButton && (
                     <div style={{
                         position: 'fixed',
-                        bottom: isMobile ? '5%' : '6%',
+                        bottom: isMobile ? '9%' : '12%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,
