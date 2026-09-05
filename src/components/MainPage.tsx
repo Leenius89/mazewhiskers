@@ -11,8 +11,13 @@ interface MainPageProps {
     gameSize: { width: number | string; height: number | string };
 }
 
-/** How many screen heights the opening climbs before it settles. */
-const PAN_SCREENS = 0.85;
+/**
+ * How far short of the picture's top edge the climb stops.
+ *
+ * Ending flush with the top put more sky on screen than the shot wanted; fifty
+ * pixels down keeps the skyline in frame under the logo.
+ */
+const PAN_END_OFFSET = 50;
 
 const MotionClickable = motion.div as any;
 
@@ -95,15 +100,8 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     const containerWidth = typeof gameSize.width === 'number' ? gameSize.width : window.innerWidth;
     const imageHeight = aspect ? containerWidth * aspect : 0;
     /** How far there is to climb: the image's height beyond the screen's. */
-    /**
-     * Capped, not the whole picture.
-     *
-     * Climbing the full height of the image was a two-thousand pixel sweep on a
-     * desktop window — long enough that the opening stopped being an
-     * establishing shot and became a wait. It still finishes on the top edge, it
-     * just starts nearer to it.
-     */
-    const panDistance = Math.min(Math.max(0, imageHeight - viewportHeight), viewportHeight * PAN_SCREENS);
+    /** The whole picture: the climb starts at its bottom edge. */
+    const panDistance = Math.max(0, imageHeight - viewportHeight);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     /**
      * Guards the opening against running twice.
@@ -247,7 +245,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                             zIndex: 1
                         }}
                         initial={{ y: -panDistance }}
-                        animate={{ y: 0 }}
+                        animate={{ y: -Math.min(PAN_END_OFFSET, panDistance) }}
                         transition={{ duration: 4, ease: 'linear' }}
                     >
                         <img
