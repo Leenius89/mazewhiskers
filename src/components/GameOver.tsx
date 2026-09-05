@@ -4,6 +4,7 @@ import { RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { getSettings } from '../settings';
 import { useTranslation } from '../i18n';
+import { isMobileDevice } from '../game/systems/InputManager';
 import type { GameOverPayload } from '../game/core/GameEvents';
 import {
     button,
@@ -47,7 +48,9 @@ const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
     enemy: theme.bad,
     'apartment:player': theme.accent,
     'apartment:goal': theme.accent,
-    trapped: theme.accent
+    trapped: theme.accent,
+    sealed: theme.accent,
+    idle: theme.accent
 };
 
 const MotionButton = motion.div as React.ElementType;
@@ -229,7 +232,9 @@ const GameOver: React.FC<GameOverProps> = ({
                     </MotionButton>
                 </div>
 
-                <p style={hint}>{t('over.spaceHint')}</p>
+                {/* There is no space bar on a phone, and the line was pointing
+                    at a key the player does not have. */}
+                {!isMobileDevice() && <p style={hint}>{t('over.spaceHint')}</p>}
             </motion.div>
         </div>
     );

@@ -25,8 +25,16 @@ import { resolveMode } from './game/core/modes';
 
 /** Space the page furniture takes out of the window on desktop. */
 const CHROME = { MARGIN_X: 24, HEADER_H: 76 };
-/** Below this the layout stops making sense; scrollbars are better than nothing. */
-const MIN_CANVAS = { WIDTH: 360, HEIGHT: 420 };
+/**
+ * Below this the layout stops making sense.
+ *
+ * The height used to be a hard floor of 420, which is taller than a phone held
+ * sideways: on a short window the canvas ran a hundred pixels past the bottom
+ * of the screen and took the dialogue box with it. Nobody scrolls mid-run, so
+ * the tutorial simply could not be read. The floor now yields to the window,
+ * and only holds the line on something genuinely tiny.
+ */
+const MIN_CANVAS = { WIDTH: 320, HEIGHT: 280 };
 
 
 function App() {
@@ -46,7 +54,8 @@ function App() {
     const [isGameOver, setIsGameOver] = useState(false);
     const [isVictory, setIsVictory] = useState(false);
     const [victoryTime, setVictoryTime] = useState(0);
-    const [jumpCount, setJumpCount] = useState(0);
+    /** Jumps spent this run — what the jump bonus is paid on. */
+    const [jumpsUsed, setJumpsUsed] = useState(0);
     const [survivedMs, setSurvivedMs] = useState(0);
     const [healthLeft, setHealthLeft] = useState(0);
 
@@ -62,7 +71,7 @@ function App() {
     const score =
         milkCount * GameConfig.SCORE.PER_MILK +
         fishCount * GameConfig.SCORE.PER_FISH +
-        jumpCount * GameConfig.SCORE.PER_JUMP;
+        jumpsUsed * GameConfig.SCORE.PER_JUMP;
 
     const [showLeaderboard, setShowLeaderboard] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
@@ -165,6 +174,15 @@ function App() {
         };
 
         game.current = new Phaser.Game(config);
+
+        // Applied here, not only from the settings effect.
+        //
+        // That effect runs when `showGame` flips, which is fifty milliseconds
+        // before this function is called from its timer — so it looked at a
+        // null game and did nothing. Starting a run with the sound switched off
+        // played the music anyway, while the header button said it was muted.
+        game.current.sound.mute = getSettings().muted;
+
         bus.current = createGameEventBus(game.current);
 
         bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs, healthLeft: left }) => {
@@ -182,7 +200,7 @@ function App() {
             setIsVictory(true);
         });
 
-        bus.current.on('jumpCountChanged', setJumpCount);
+        bus.current.on('jumpsUsedChanged', setJumpsUsed);
 
         // Health is not mirrored here any more: the scene owns it and draws it
         // over the cat's head, so a second copy in React had nothing to render.
@@ -234,6 +252,35 @@ function App() {
         game.current?.scale.resize(gameSize.width * RENDER_SCALE, gameSize.height * RENDER_SCALE);
     }, [gameSize]);
 
+    /**
+     * Re-fits the canvas whenever its container's real size changes.
+     *
+     * Window resize events are not the whole story: the container gets its
+     * size from layout, which can settle after the game has already booted,
+     * and a page that never receives an animation frame (a tab opened in the
+     * background) leaves Phaser's own parent-size poll unrun. Either way the
+     * canvas stays at whatever it was born with — sometimes nothing at all.
+     * Watching the element itself closes both holes.
+     */
+    useEffect(() => {
+        const container = gameRef.current;
+        if (!container || typeof ResizeObserver === 'undefined') return;
+
+        const observer = new ResizeObserver(([entry]) => {
+            const { width, height } = entry.contentRect;
+            if (!width || !height || !game.current) return;
+
+            // `resize` rather than `refresh`: refresh re-fits within the aspect
+            // ratio the game was born with, and a game created while the window
+            // measured zero was born at the fallback size. Handing it the box it
+            // is actually sitting in replaces that ratio instead of working
+            // around it.
+            game.current.scale.resize(width * RENDER_SCALE, height * RENDER_SCALE);
+        });
+        observer.observe(container);
+        return () => observer.disconnect();
+    }, [showGame]);
+
     const restartGame = useCallback(() => {
         // 1. Destroy and cleanup
         destroyGame();
@@ -245,7 +292,7 @@ function App() {
         setVictoryTime(0);
         setMilkCount(0);
         setFishCount(0);
-        setJumpCount(0);
+        setJumpsUsed(0);
 
         // 3. Force Unmount -> Remount to ensure fresh DOM and Phaser instance
         setShowGame(false);
@@ -319,7 +366,7 @@ function App() {
         setIsShowingCredits(false);
         setMilkCount(0);
         setFishCount(0);
-        setJumpCount(0);
+        setJumpsUsed(0);
     };
 
     const handleShowLeaderboard = (mode: BoardKey) => {

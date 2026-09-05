@@ -3,7 +3,7 @@ import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
 
 /** How long the roll holds the screen before it can be dismissed. */
-const SKIP_AFTER_MS = 3000;
+const SKIP_AFTER_MS = 1500;
 
 interface CreditsObjects {
     creditsBg: Phaser.GameObjects.Graphics;

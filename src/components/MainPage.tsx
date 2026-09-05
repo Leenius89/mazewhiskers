@@ -21,6 +21,9 @@ const PAN_END_OFFSET = 50;
 
 const MotionClickable = motion.div as any;
 
+/** Set once the opening has been seen, so a return to the menu is instant. */
+const SEEN_INTRO = 'mazewhiskers.seenIntro';
+
 /**
  * The one button design this screen has.
  *
@@ -161,8 +164,25 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     useEffect(() => {
         startMusic();
 
-        const titleAt = setTimeout(() => setShowTitle(true), 4500);
-        const buttonAt = setTimeout(() => setShowButton(true), 6500);
+        /*
+         * The opening is a first impression, and only the first one.
+         *
+         * Title at 4.5s and buttons at 6.5s is the right pace for someone
+         * who has just arrived. It is the wrong pace for the exhibition's
+         * own idle timer dropping the previous player back here: the next
+         * visitor walks up to a screen with nothing on it and no reason to
+         * believe anything will appear. After the first visit the menu is
+         * simply there.
+         */
+        const firstVisit = !sessionStorage.getItem(SEEN_INTRO);
+        try {
+            sessionStorage.setItem(SEEN_INTRO, '1');
+        } catch {
+            // Private mode. The opening plays every time; no harm done.
+        }
+
+        const titleAt = setTimeout(() => setShowTitle(true), firstVisit ? 4500 : 0);
+        const buttonAt = setTimeout(() => setShowButton(true), firstVisit ? 6500 : 0);
 
         return () => {
             clearTimeout(titleAt);
@@ -259,11 +279,17 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 {/* 타이틀 */}
                 <motion.div
                     style={{
-                        // Centred on the window rather than pinned near the top.
+                        // Centred in the sky, which is the part of the window
+                        // the buttons do not use. Centring on the whole window
+                        // put the title 36px into the RANKING button on a
+                        // 1150x720 screen, and further in on anything shorter.
                         // Flexbox does the centring so the idle wobble below can
                         // keep the transform to itself.
                         position: 'fixed',
-                        inset: 0,
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: '42%',
                         zIndex: 2,
                         display: 'flex',
                         justifyContent: 'center',
@@ -283,7 +309,19 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 >
                     <motion.h1
                         style={{
-                            fontSize: isMobile ? 'clamp(2.6rem, 10.4vw, 5.85rem)' : '5.85rem',
+                            /*
+                             * The floor used to be 2.6rem, which sets WHISKERS
+                             * 333px wide — wider than a 320px phone, so the last
+                             * letter fell off the right edge. 9.6vw is the size
+                             * that actually fits there; the floor is only left to
+                             * stop it collapsing on something tiny.
+                             *
+                             * Desktop is capped against the viewport for the same
+                             * reason at the other end.
+                             */
+                            fontSize: isMobile
+                                ? 'clamp(1.9rem, 9.6vw, 5.85rem)'
+                                : 'min(5.85rem, 9.2vw)',
                             fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                             textShadow: '4px 4px 0px rgba(0, 0, 0, 0.2)',
                             margin: 0,

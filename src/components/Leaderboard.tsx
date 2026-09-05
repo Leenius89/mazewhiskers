@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
-import { difficultyOf, weighted } from '../game/core/difficulty';
+import { DIFFICULTY_ORDER, difficultyOf, weighted } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
 import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
 
@@ -74,7 +74,17 @@ const BOARDS: Board[] = [
          * different story: it is the run that should not have made it.
          */
         key: 'closest',
-        table: 'scores',
+        /**
+         * Read from the clear table, not the run table.
+         *
+         * `scores` takes a row from every run, won or lost, and a run that
+         * lost to rent ends on exactly zero health. Ranked by "least health
+         * remaining", a death is unbeatable — this board's first place was a
+         * player who did not make it, permanently. `speedrun_leaderboard` is
+         * only ever written on a clear, which is the condition the board was
+         * describing all along.
+         */
+        table: 'speedrun_leaderboard',
         column: 'health_left',
         ascending: true,
         format: (row) => `❤ ${row.health_left ?? 0}`
@@ -108,26 +118,61 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
         setFailed(false);
         try {
             /**
-             * Fetched wide, then ranked here.
+             * One short query per difficulty, then ranked here.
              *
-             * The difficulty weight has to be applied to the value before the
-             * ordering means anything, and the database has no column holding
-             * the weighted number. So a generous slice comes back sorted by the
-             * raw value and the weighting decides the eight that are shown —
-             * which is why a slower run on HARD can still take first.
+             * The weight has to be applied before the ordering means anything,
+             * and no column holds the weighted number. This used to be handled
+             * by taking the best hundred-and-twenty rows by raw value and
+             * re-sorting those, which quietly discards the very rows the
+             * weighting exists for: a hard run of ninety seconds counts as
+             * fifty-three and belongs at the top, but once a hundred and twenty
+             * easier runs sit above it on raw time it is never fetched at all.
+             *
+             * Within one difficulty the weight is a constant, so raw order and
+             * weighted order agree and only that difficulty's own top ten can
+             * reach the final ten. Asking each of them separately makes the
+             * result exact however many records pile up.
              */
-            const { data, error } = await supabase
-                .from(board.table)
-                .select('*')
-                // Rows written before the column existed sort as null; excluded
-                // rather than shown as an empty first place.
-                .not(board.column, 'is', null)
-                .order(board.column, { ascending: board.ascending })
-                .limit(120);
+            const groups = await Promise.all(
+                [...DIFFICULTY_ORDER, null].map((level) => {
+                    const query = supabase
+                        .from(board.table)
+                        .select('*')
+                        // Rows written before the column existed sort as null;
+                        // excluded rather than shown as an empty first place.
+                        .not(board.column, 'is', null);
 
-            if (error) throw error;
+                    // The last pass picks up runs recorded before difficulty
+                    // was a setting. Read as easy, as they are everywhere else.
+                    const scoped = level
+                        ? query.eq('difficulty', level)
+                        : query.is('difficulty', null);
 
-            const ranked = [...(data ?? [])]
+                    return scoped.order(board.column, { ascending: board.ascending }).limit(ROWS);
+                })
+            );
+
+            const failure = groups.find((group) => group.error);
+            if (failure?.error) {
+                /*
+                 * A board whose column has not been migrated yet is empty, not
+                 * broken.
+                 *
+                 * PostgreSQL answers 42703 for a column that does not exist. The
+                 * closest-call board reads `health_left` off the clear table,
+                 * which only arrives with the migration; until it is applied,
+                 * "no records yet" is both true and far less alarming than a
+                 * red failure notice on a board nobody has broken.
+                 */
+                if (failure.error.code === '42703') {
+                    setScores([]);
+                    return;
+                }
+                throw failure.error;
+            }
+
+            const ranked = groups
+                .flatMap((group) => group.data ?? [])
                 .map((row) => ({
                     row,
                     value: weighted(
@@ -170,9 +215,16 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                     <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>
                         {t(`board.${board.key}`)}
                     </h2>
+                    {/* Without this the list reads as broken: a slower time can
+                        sit above a faster one and only a small badge hints at why. */}
+                    <p style={{ ...hint, margin: 0 }}>{t('board.weighted')}</p>
                 </div>
 
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
+                {/* Four across on a panel that has the width for it, two by two
+                    when it does not. Forcing one row onto a phone left every tab
+                    64px wide, so three of the four read as "가장 …" and the
+                    board you were looking at could not be told from the rest. */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {BOARDS.map((option) => {
                         const on = option.key === board.key;
                         return (
@@ -181,7 +233,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                                 onClick={() => setActive(option.key)}
                                 whileTap={{ y: 1 }}
                                 style={{
-                                    flex: '1 1 0',
+                                    flex: '1 1 130px',
                                     minWidth: 0,
                                     padding: '8px 6px',
                                     borderRadius: '5px',
@@ -232,6 +284,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                                 rank={index + 1}
                                 name={entry.username}
                                 value={board.format(entry)}
+                                adjusted={adjustedLabel(board, entry)}
                                 difficulty={entry.difficulty}
                             />
                         ))}
@@ -246,13 +299,28 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
     );
 };
 
+/**
+ * What a row counts as once its difficulty is taken into account.
+ *
+ * Only produced when it differs from the raw figure, so an easy run is not
+ * decorated with a second copy of its own number.
+ */
+const adjustedLabel = (board: Board, row: Score): string | null => {
+    if (difficultyOf(row.difficulty).rankWeight === 1) return null;
+
+    const raw = Number((row as unknown as Record<string, unknown>)[board.column] ?? 0);
+    const value = weighted(raw, row.difficulty, !board.ascending);
+    return board.format({ ...row, [board.column]: Math.round(value) } as Score);
+};
+
 /** Top three are marked; the rest are a quiet list, so the podium reads first. */
-const Row: React.FC<{ rank: number; name: string; value: string; difficulty?: string }> = ({
-    rank,
-    name,
-    value,
-    difficulty
-}) => {
+const Row: React.FC<{
+    rank: number;
+    name: string;
+    value: string;
+    adjusted: string | null;
+    difficulty?: string;
+}> = ({ rank, name, value, adjusted, difficulty }) => {
     const podium = rank <= 3;
     const level = difficultyOf(difficulty);
 
@@ -312,13 +380,20 @@ const Row: React.FC<{ rank: number; name: string; value: string; difficulty?: st
 
             <span
                 style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
                     fontFamily: theme.display,
                     fontSize: '0.68rem',
                     color: podium ? theme.ink : theme.inkMuted,
-                    fontVariantNumeric: 'tabular-nums'
+                    fontVariantNumeric: 'tabular-nums',
+                    lineHeight: 1.15
                 }}
             >
                 {value}
+                {adjusted && (
+                    <span style={{ fontSize: '0.44rem', color: level.color }}>→ {adjusted}</span>
+                )}
             </span>
         </div>
     );

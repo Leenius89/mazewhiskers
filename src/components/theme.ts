@@ -37,11 +37,18 @@ export const theme = {
     body: "'Pretendard', system-ui, -apple-system, 'Malgun Gothic', sans-serif"
 } as const;
 
-/** Full-screen dim behind a result panel. */
+/**
+ * Full-screen dim behind a result panel.
+ *
+ * Nearly opaque rather than merely dark. At 82% the city behind it still read
+ * through — the menu's black-on-cyan title sat across the leaderboard, and a
+ * results panel was competing with the frozen game underneath it. A panel is a
+ * place to stop and read, so what is behind it stops.
+ */
 export const overlayBackdrop: CSSProperties = {
     position: 'fixed',
     inset: 0,
-    background: 'rgba(6, 8, 12, 0.82)',
+    background: 'rgba(6, 8, 12, 0.955)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',

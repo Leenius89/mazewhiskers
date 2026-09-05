@@ -33,7 +33,16 @@ import { districtPressure, resolveMode } from '../core/modes';
 import type { ModeSettings } from '../core/modes';
 
 /** Which system ended the run. Logged on every game over. */
-export type GameOverReason = 'health' | 'enemy' | 'apartment:player' | 'apartment:goal' | 'trapped';
+export type GameOverReason =
+    | 'health'
+    | 'enemy'
+    | 'apartment:player'
+    | 'apartment:goal'
+    | 'trapped'
+    /** Home is still standing, but the towers have cut every route to it. */
+    | 'sealed'
+    /** Nobody was playing. Distinct from `trapped`, which means walled in. */
+    | 'idle';
 
 export class GameScene extends Phaser.Scene {
     /**
@@ -92,7 +101,30 @@ export class GameScene extends Phaser.Scene {
     public cameraDirector: CameraDirector | null = null;
     public walls: Phaser.Physics.Arcade.StaticGroup | undefined;
     public goal: Phaser.Physics.Arcade.Sprite | undefined;
-    public startTime = 0;
+    /**
+     * When this district's clock started, on the scene's own clock.
+     *
+     * Deliberately not `Date.now()`. Every other cost in this game — health
+     * drain, rent, the towers going up — is driven by the scene clock, which
+     * stops with the game loop. The recorded time was the one thing on the wall
+     * clock, so a run left in a background tab paid nothing and still banked
+     * the minutes: "longest on the street" could be won by walking away.
+     *
+     * Set when the player actually takes control, so the opening fly-over and
+     * the tutorial are not counted as part of the run either.
+     */
+    private playStartedAt = 0;
+
+    /** How long this district has been played, in milliseconds. */
+    get elapsedMs(): number {
+        if (!this.playStartedAt) return 0;
+        return Math.max(0, this.time.now - this.playStartedAt);
+    }
+
+    /** This run's total across every district played so far. */
+    get totalElapsedMs(): number {
+        return (this.registry.get('carriedMs') || 0) + this.elapsedMs;
+    }
 
     /**
      * Every sprite that can hide the player, keyed by grid cell.
@@ -157,13 +189,13 @@ export class GameScene extends Phaser.Scene {
         // teardown to the lifecycle event explicitly.
         this.events.once('shutdown', this.handleShutdown, this);
 
-        this.controls = new InputManager(this);
+        this.controls = new InputManager(this, { dashEnabled: this.mode.dashEnabled });
 
         // Prevent duplicate BGM by stopping all previous sounds
         this.sound.stopAll();
         this.soundManager?.playMainBGM();
 
-        this.startTime = Date.now();
+        this.playStartedAt = 0;
         this.health = GameConfig.HEALTH.MAX;
         this.occluders.clear();
         this.nextRentAt = this.time.now + GameConfig.HEALTH.RENT.INTERVAL;
@@ -183,6 +215,8 @@ export class GameScene extends Phaser.Scene {
         );
 
         this.bus.emit('jumpCountChanged', 0);
+        this.registry.set('jumpsUsed', this.registry.get('carriedJumps') || 0);
+        this.bus.emit('jumpsUsedChanged', this.registry.get('jumpsUsed'));
         this.bus.emit('healthChanged', { health: this.health, max: GameConfig.HEALTH.MAX, delta: 0 });
 
         this.fishes = fishes;
@@ -193,6 +227,7 @@ export class GameScene extends Phaser.Scene {
             this.registry.set('carriedMilk', 0);
             this.registry.set('carriedFish', 0);
             this.registry.set('carriedMs', 0);
+            this.registry.set('carriedJumps', 0);
         }
         this.registry.set('milkCount', this.registry.get('carriedMilk') || 0);
         this.registry.set('fishCount', this.registry.get('carriedFish') || 0);
@@ -292,6 +327,11 @@ export class GameScene extends Phaser.Scene {
             if (this.state.hasEnded()) return;
         }
 
+        // The clock starts here, not at scene creation: the fly-over and the
+        // tutorial are the game talking, not the player running. Counting them
+        // made "fastest home" a race to click through seven lines of dialogue.
+        this.playStartedAt = this.time.now;
+
         const count = this.mode.enemies + this.mode.enemiesPerDistrict * (this.district - 1);
         for (let i = 0; i < count; i++) {
             this.time.delayedCall(GameConfig.ENEMY.SPAWN.DELAY_AFTER_INTRO + i * 4000, () =>
@@ -300,13 +340,25 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
+    /** Counted for the score. Called by the player each time a jump is spent. */
+    registerJumpUsed(): void {
+        const used = (this.registry.get('jumpsUsed') || 0) + 1;
+        this.registry.set('jumpsUsed', used);
+        this.bus.emit('jumpsUsedChanged', used);
+    }
+
     // ---------------------------------------------------------------- health
 
     /**
      * Single entry point for every health change. The scene decides when the
      * run ends — previously React did, on a 50ms timer, which raced.
+     *
+     * `cause` is what the results screen will say happened. It matters because
+     * every loss used to be reported as rent: the enemy took health like any
+     * other cost, so a player caught by the machine was told the landlord got
+     * them. The ending for being caught was written and never once shown.
      */
-    applyHealth(delta: number): void {
+    applyHealth(delta: number, cause: GameOverReason = 'health'): void {
         if (this.state.hasEnded()) return;
 
         const max = GameConfig.HEALTH.MAX;
@@ -317,15 +369,17 @@ export class GameScene extends Phaser.Scene {
         this.bus.emit('healthChanged', { health: next, max, delta });
 
         if (next <= 0) {
-            this.beginGameOver('health');
+            this.beginGameOver(cause);
         }
     }
 
     /**
      * Contact with the machine.
      *
-     * A heavy hit rather than a death: the run survives one mistake, which is
-     * what makes the telegraph worth reading. Two hits still end it.
+     * A heavy hit rather than a death: the run survives a mistake, which is
+     * what makes the telegraph worth reading. How many it survives is the
+     * mode's business — exhibition takes a third of full health, arcade half —
+     * so the ending it leads to no longer promises a particular number.
      */
     private handleEnemyContact(enemy: Enemy): void {
         if (this.state.hasEnded() || !this.player) return;
@@ -343,7 +397,7 @@ export class GameScene extends Phaser.Scene {
         this.physics.world.pause();
         this.time.delayedCall(hit.STOP_MS, () => this.physics.world.resume());
 
-        this.applyHealth(this.mode.contactDamage);
+        this.applyHealth(this.mode.contactDamage, 'enemy');
     }
 
     /**
@@ -377,17 +431,20 @@ export class GameScene extends Phaser.Scene {
     advanceDistrict(): void {
         this.registry.set('carriedMilk', this.registry.get('milkCount') || 0);
         this.registry.set('carriedFish', this.registry.get('fishCount') || 0);
-        this.registry.set('carriedMs', (this.registry.get('carriedMs') || 0) + (Date.now() - this.startTime));
+        this.registry.set('carriedJumps', this.registry.get('jumpsUsed') || 0);
+        this.registry.set('carriedMs', this.totalElapsedMs);
 
         this.scene.restart({ district: this.district + 1 });
     }
 
     /**
-     * Ends the run when the player has nowhere left to go.
+     * Ends the run when there is nothing left to play.
      *
-     * Two cases: sealed in by towers with no open neighbour, or simply not
-     * moving for a very long time. Both are checked only while the player
-     * actually has control — a scripted beat is not a stalemate.
+     * Three cases, and they are told apart because the results screen names
+     * the one that happened. Walled in with no open neighbour; home still
+     * standing but with every route to it built over; or simply nobody at the
+     * controls. All three are checked only while the player actually has
+     * control — a scripted beat is not a stalemate.
      */
     private checkTrapped(now: number): void {
         const player = this.player;
@@ -406,14 +463,26 @@ export class GameScene extends Phaser.Scene {
         if (boxedIn) {
             if (this.enclosedSince === 0) this.enclosedSince = now;
             if (now - this.enclosedSince >= cfg.ENCLOSED_MS) this.beginGameOver('trapped');
-        } else {
-            this.enclosedSince = 0;
+            return;
         }
+
+        this.enclosedSince = 0;
 
         // Sampled on an interval rather than per frame; a single slow frame
         // should not read as the player having stopped.
         if (now < this.trapCheckAt) return;
         this.trapCheckAt = now + 1000;
+
+        // Home may be standing and still be gone.
+        //
+        // Being walled into one cell is rare; having the whole quarter cut off
+        // from the middle of the city is not. The run used to carry on in that
+        // state until the idle timer noticed nobody was getting anywhere, and
+        // then blamed it on being surrounded. Now the game says what happened.
+        if (!this.canStillReachHome()) {
+            this.beginGameOver('sealed');
+            return;
+        }
 
         const travelled = Phaser.Math.Distance.Between(
             this.trapAnchor.x,
@@ -429,7 +498,51 @@ export class GameScene extends Phaser.Scene {
         }
 
         if (this.stillSince === 0) this.stillSince = now;
-        if (now - this.stillSince >= cfg.IDLE_MS) this.beginGameOver('trapped');
+        if (now - this.stillSince >= cfg.IDLE_MS) this.beginGameOver('idle');
+    }
+
+    /**
+     * Whether any open route still connects the cat to home.
+     *
+     * A flood fill over open, unbuilt cells. Run once a second alongside the
+     * other stalemate checks — cheap enough at 41x41, and only while playing.
+     */
+    private canStillReachHome(): boolean {
+        const player = this.player;
+        const maze = this.maze;
+        if (!player || !maze || !this.goal) return true;
+
+        const target = cellOf(this.goal.x, this.goal.y);
+        const start = cellOf(player.x, player.groundY);
+        const apartments = this.apartmentSystem;
+
+        const height = maze.length;
+        const width = maze[0]?.length ?? 0;
+        const seen = new Set<string>([`${start.gx},${start.gy}`]);
+        const queue: { gx: number; gy: number }[] = [start];
+
+        while (queue.length) {
+            const cell = queue.shift()!;
+            if (cell.gx === target.gx && cell.gy === target.gy) return true;
+
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const gx = cell.gx + dx;
+                const gy = cell.gy + dy;
+                if (gx < 0 || gy < 0 || gx >= width || gy >= height) continue;
+
+                const key = `${gx},${gy}`;
+                if (seen.has(key)) continue;
+                if (maze[gy][gx] !== 0) continue;
+                if (apartments?.isCellBuilt(gx, gy)) continue;
+
+                seen.add(key);
+                queue.push({ gx, gy });
+            }
+        }
+
+        // Milk lets the cat clear one wall, so a route that is one jump short
+        // is not a dead end. Only call it sealed when the cat has no jump left.
+        return player.jumpCount > 0;
     }
 
     /** Milliseconds until the next rent charge, for the HUD. */
@@ -539,6 +652,13 @@ export class GameScene extends Phaser.Scene {
     update() {
         this.debugOverlay?.update();
 
+        // The on-screen stick and buttons are DOM elements stacked over the
+        // canvas, so they cover whatever the game draws near the bottom of the
+        // screen — which on a phone is the dialogue box, the ending's skip
+        // prompt and the credits. Shown only while the player is the one
+        // acting, which is also the only time they do anything.
+        this.controls?.setControlsVisible(this.state.is('playing') && !this.narrativeActive);
+
         if (!this.player || this.state.hasEnded()) return;
 
         this.controls.update();
@@ -594,13 +714,13 @@ export class GameScene extends Phaser.Scene {
         if (!this.state.transitionTo('dying')) return;
 
         this.endReason = reason;
-        console.info(`[GameScene] 게임오버 원인: ${reason} (health=${this.health}, t=${Date.now() - this.startTime}ms)`);
+        console.info(`[GameScene] 게임오버 원인: ${reason} (health=${this.health}, t=${Math.round(this.elapsedMs)}ms)`);
 
         this.soundManager?.playDyingSound();
         this.soundManager?.stopMainBGM();
-        if (this.enemy?.enemySound) {
-            this.soundManager?.stopEnemySound(this.enemy.enemySound);
-        }
+        // Whatever started the chase track, and whether or not anything is
+        // still holding a handle to it. See SoundManager.activeEnemyTrack.
+        this.soundManager?.stopEnemyTrack();
 
         this.apartmentSystem?.stopSpawning();
 
@@ -671,7 +791,7 @@ export class GameScene extends Phaser.Scene {
             reason: this.endReason,
             // Districts carry, so a run that lost in the third one is credited
             // with the first two as well.
-            survivedMs: (this.registry.get('carriedMs') || 0) + (Date.now() - this.startTime),
+            survivedMs: Math.round(this.totalElapsedMs),
             healthLeft: Math.max(0, Math.round(this.health)),
             milkCount: this.registry.get('milkCount') || 0,
             fishCount: this.registry.get('fishCount') || 0
@@ -724,9 +844,7 @@ export class GameScene extends Phaser.Scene {
 
         // Only the sounds need stopping — Phaser destroys the sprites with the
         // scene, and by the time this runs its plugins are already torn down.
-        for (const enemy of this.enemies) {
-            if (enemy.enemySound) this.soundManager?.stopEnemySound(enemy.enemySound);
-        }
+        this.soundManager?.stopEnemyTrack();
         this.enemies.length = 0;
         this.enemy = null;
         this.enemySpawned = false;

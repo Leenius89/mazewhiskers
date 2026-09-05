@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import type { GameOverReason } from '../scenes/GameScene';
 import type { GamePhase } from './GameState';
 
 /**
@@ -30,8 +31,12 @@ export interface GameOverPayload extends RunSummary {
      *
      * The results screen names it. "You died" tells a first-time player nothing;
      * "there was nowhere left to be pushed" tells them what the game is about.
+     *
+     * The list itself lives with the scene that decides it, so the two cannot
+     * drift apart — they did, and the screen lost the ability to name new
+     * endings the moment they were added.
      */
-    reason: 'health' | 'enemy' | 'apartment:player' | 'apartment:goal' | 'trapped';
+    reason: GameOverReason;
     /**
      * How long the cat lasted, districts included.
      *
@@ -60,7 +65,16 @@ export interface GameEventMap {
     phaseChanged: PhaseChangedPayload;
     /** Authoritative health, owned by the scene. React only displays it. */
     healthChanged: HealthChangedPayload;
+    /** How many jumps the cat is holding. Drives the dots over its head. */
     jumpCountChanged: number;
+    /**
+     * How many jumps have been spent this run.
+     *
+     * The score used to be built from the stock instead, which meant using a
+     * jump took ten points off and a district change reset the bonus. What the
+     * player earned is the jumping they did, so that is what is counted.
+     */
+    jumpsUsedChanged: number;
     milkCollected: number;
     fishCollected: number;
     gameOver: GameOverPayload;
@@ -116,6 +130,7 @@ const EVENT_KEYS: Record<EventKey, true> = {
     phaseChanged: true,
     healthChanged: true,
     jumpCountChanged: true,
+    jumpsUsedChanged: true,
     milkCollected: true,
     fishCollected: true,
     gameOver: true,

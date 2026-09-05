@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { t } from '../../i18n';
 import { TILE_UNIT, hasLineOfSight } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
+import { isMobileDevice } from './InputManager';
 
 /**
  * Nearest member of a group that the player could actually see.
@@ -73,7 +74,9 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         height: TILE_UNIT * cells
     });
 
-    await narrative.play(t('tut.move'), {
+    // A phone has no arrow keys, and the line that named them was the
+    // first thing a visitor read.
+    await narrative.play(t(isMobileDevice() ? 'tut.move.touch' : 'tut.move'), {
         speaker: '· 고양이',
         lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 1.8),

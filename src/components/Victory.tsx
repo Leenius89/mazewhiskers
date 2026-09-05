@@ -68,7 +68,17 @@ const Victory: React.FC<VictoryProps> = ({
 
             const { error } = await supabase
                 .from('speedrun_leaderboard')
-                .insert([{ username: name, time_ms: timeMs, difficulty: getSettings().difficulty }]);
+                // `health_left` rides along here rather than only on `scores`,
+                // because this table is the record of runs that were actually
+                // finished — which is what the closest-call board ranks.
+                .insert([
+                    {
+                        username: name,
+                        time_ms: timeMs,
+                        health_left: healthLeft,
+                        difficulty: getSettings().difficulty
+                    }
+                ]);
 
             if (error) throw error;
 

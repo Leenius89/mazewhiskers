@@ -24,6 +24,21 @@ export class SoundManager {
      */
     private enemySwapPending = false;
 
+    /**
+     * The chase track that is actually sounding, whoever asked for it.
+     *
+     * The scene used to hold this, on the enemy that triggered it. That worked
+     * only when the file was already cached: on the slow path `playEnemySound`
+     * returned null, the enemy stored nothing, and when the download finished
+     * the deferred swap started the loop with nobody holding the handle. The
+     * game over screen then had nothing to stop, and the chase music played on
+     * over the results — for the full forty-five seconds an exhibition waits
+     * before it returns to the menu.
+     *
+     * Kept here instead, where every start and every stop can see it.
+     */
+    private activeEnemyTrack: Phaser.Sound.BaseSound | null = null;
+
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
         this.sounds = {};
@@ -194,6 +209,7 @@ export class SoundManager {
 
                 const enemySound = this.sounds.enemySound;
                 enemySound.play();
+                this.activeEnemyTrack = enemySound;
 
                 // Fade in
                 this.scene.tweens.add({
@@ -254,13 +270,36 @@ export class SoundManager {
         }
     }
 
-    stopEnemySound(enemySound: Phaser.Sound.BaseSound) {
-        if (enemySound && enemySound.isPlaying) {
-            enemySound.stop();
+    stopEnemySound(enemySound?: Phaser.Sound.BaseSound) {
+        const track = enemySound ?? this.activeEnemyTrack;
+        if (track && track.isPlaying) {
+            track.stop();
+        }
+        if (!enemySound || enemySound === this.activeEnemyTrack) {
+            this.activeEnemyTrack = null;
         }
     }
 
+    /**
+     * Silences the chase track however it was started.
+     *
+     * Also cancels a swap that has been requested but not yet honoured, so a
+     * download that lands after the run is over does not start the music on
+     * the results screen.
+     */
+    stopEnemyTrack(): void {
+        this.enemySwapPending = false;
+        this.stopEnemySound();
+
+        // Belt and braces: anything looping this key, whoever created it.
+        this.scene.sound.getAllPlaying().forEach((sound) => {
+            if (sound.key === 'enemySound') sound.stop();
+        });
+    }
+
     stopAllSounds() {
+        this.enemySwapPending = false;
+        this.activeEnemyTrack = null;
         if (this.soundsLoaded) {
             // Stop all currently playing sounds
             this.scene.sound.getAllPlaying().forEach(sound => {

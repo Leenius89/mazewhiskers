@@ -197,6 +197,20 @@ export class ApartmentSystem {
             );
             if (distance < cfg.MIN_PLAYER_DISTANCE_CELLS) continue;
 
+            // A block that walls the cat off from home is not pressure, it
+            // is a coin toss. Once the towers were built often enough and
+            // large enough to be felt, two runs in three ended with the
+            // route severed inside a minute — at five per cent built, which
+            // is nothing like a city that has closed in. Candidates that cut
+            // the map are simply not chosen.
+            //
+            // Late on, when home itself is fair game, this stops applying:
+            // by then being cut off is the thing the game has been saying
+            // would happen, and it has earned the right to say it.
+            if (this.development < GameConfig.APARTMENT.GOAL_SAFE_UNTIL && this.wouldSeverRoute(gx, gy, width, height)) {
+                continue;
+            }
+
             return { gx, gy, width, height };
         }
 
@@ -204,6 +218,86 @@ export class ApartmentSystem {
     }
 
     /** The goal survives until the redevelopment is well advanced. */
+    /**
+     * Every open cell the cat can currently walk to.
+     *
+     * `skip` is treated as already built, which is how a candidate block is
+     * tried on for size before it is announced.
+     */
+    private reachableFrom(origin: Cell, skip: Set<string>): Set<string> {
+        const maze = this.scene.maze;
+        const seen = new Set<string>();
+        if (!maze) return seen;
+
+        const size = maze.length;
+        const startKey = this.cellKey(origin.gx, origin.gy);
+        seen.add(startKey);
+        const queue: Cell[] = [origin];
+
+        while (queue.length) {
+            const cell = queue.shift()!;
+
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const gx = cell.gx + dx;
+                const gy = cell.gy + dy;
+                if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
+
+                const key = this.cellKey(gx, gy);
+                if (seen.has(key) || skip.has(key)) continue;
+                if (maze[gy][gx] !== 0) continue;
+                if (this.isCellBuilt(gx, gy)) continue;
+                if (this.pending.has(key)) continue;
+
+                seen.add(key);
+                queue.push({ gx, gy });
+            }
+        }
+
+        return seen;
+    }
+
+    /**
+     * Whether this block would cut anywhere the cat can walk off from home.
+     *
+     * Not just the cat's own route. Checking only that stopped the obvious
+     * case and left a subtler one: a block can leave the current position
+     * connected while sealing a pocket a few streets over, and a cat that
+     * wanders into it is stranded through no decision of its own. The test is
+     * therefore the whole region — every cell reachable now must still reach
+     * home afterwards.
+     *
+     * Two flood fills over a forty-one square grid, run only while a block is
+     * looking for somewhere to land.
+     */
+    private wouldSeverRoute(gx: number, gy: number, width: number, height: number): boolean {
+        const maze = this.scene.maze;
+        const player = this.scene.player;
+        if (!maze || !player || !this.goal) return false;
+
+        const doomed = new Set<string>();
+        for (let y = gy; y < gy + height; y++) {
+            for (let x = gx; x < gx + width; x++) doomed.add(this.cellKey(x, y));
+        }
+
+        const from = cellOf(player.x, player.groundY);
+        const to = cellOf(this.goal.x, this.goal.y);
+
+        // Where the cat could get to before the block, and where home can get
+        // to after it. The first must be contained in the second.
+        const nowReachable = this.reachableFrom(from, new Set());
+        const stillHome = this.reachableFrom(to, doomed);
+
+        // `forEach` rather than `for...of`: this project compiles to ES5, where
+        // iterating a Set directly needs downlevelIteration turned on.
+        let severed = false;
+        nowReachable.forEach((key) => {
+            if (severed || doomed.has(key)) return;
+            if (!stillHome.has(key)) severed = true;
+        });
+
+        return severed;
+    }
+
     private isProtectedGoal(gx: number, gy: number): boolean {
         if (!this.goal) return false;
         if (this.development >= GameConfig.APARTMENT.GOAL_SAFE_UNTIL) return false;
@@ -591,7 +685,9 @@ export class ApartmentSystem {
         return `${gx},${gy}`;
     }
 
-    private isCellBuilt(gx: number, gy: number): boolean {
+    /** Whether a tower already stands on this cell. Public: the scene's
+     *  reachability check needs to know which cells are gone. */
+    isCellBuilt(gx: number, gy: number): boolean {
         return this.occupiedPositions.has(this.cellKey(gx, gy));
     }
 

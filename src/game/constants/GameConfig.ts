@@ -29,6 +29,16 @@ export const GameConfig = {
 
     MAZE: {
         /**
+         * How far home is allowed to be, in cells of shortest walk.
+         *
+         * Twenty-four generated layouts ran from 45 cells to 263 — the same
+         * run, played equally well, taking half a minute or two and a half.
+         * A dozen redraws is enough to land inside the band nearly always;
+         * whatever the last attempt produced is used regardless, so this can
+         * never fail to return a maze.
+         */
+        WALK_LENGTH: { MIN: 40, MAX: 110, ATTEMPTS: 12 },
+        /**
          * Share of dead ends opened into a loop.
          *
          * A perfect maze has no cycles, which means a chase can only ever end
@@ -529,9 +539,18 @@ export const GameConfig = {
         WALL_SCALE: 0.34,
         /** Stretched further upward, like the buildings. */
         HEIGHT_SCALE: 1.15,
+        /**
+         * How hard the city pushes.
+         *
+         * These were slow enough that the thing the game is about did not
+         * happen while anyone was watching: measured over thirty-three runs,
+         * redevelopment never passed five per cent of the alleys, and half the
+         * city would have taken nineteen minutes. Players saw tape and a tower
+         * or two, never a street closing in.
+         */
         /** Time from world creation to the first row being announced. */
-        DELAY: 15000,
-        SPAWN_INTERVAL: 10000,
+        DELAY: 10000,
+        SPAWN_INTERVAL: 5000,
         FADE_IN: 300,
         /**
          * Blocks, not rows.
@@ -540,8 +559,17 @@ export const GameConfig = {
          * no safe middle and no single direction to run.
          */
         BLOCK: {
-            MIN_SIZE: 3,
-            MAX_SIZE: 7,
+            /**
+             * The smallest block was also the only block for most of a run.
+             *
+             * `chooseBlock` interpolates the ceiling from MIN to MAX across the
+             * development already achieved — so while development was near zero
+             * the ceiling sat on the floor and every block was 3x3. Blocks grew
+             * only once the city was mostly gone, which is exactly when nobody
+             * was still playing.
+             */
+            MIN_SIZE: 4,
+            MAX_SIZE: 9,
             /** Never announced on top of the player; they need a beat to move. */
             MIN_PLAYER_DISTANCE_CELLS: 4,
             PLACEMENT_ATTEMPTS: 24

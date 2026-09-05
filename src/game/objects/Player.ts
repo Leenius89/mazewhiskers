@@ -495,6 +495,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private performJump(direction: Phaser.Math.Vector2, target: Phaser.Math.Vector2): boolean {
         this.jumpCount--;
         this.scene.bus.emit('jumpCountChanged', this.jumpCount);
+        this.scene.registerJumpUsed();
         this.scene.soundManager?.playJumpSound();
 
         this.isJumping = true;

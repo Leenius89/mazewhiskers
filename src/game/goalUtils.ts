@@ -101,10 +101,8 @@ export const createGoal = (
 
         if (scene.enemy) {
             scene.enemy.setVelocity(0, 0);
-            if (scene.enemy.enemySound) {
-                scene.soundManager?.stopEnemySound(scene.enemy.enemySound);
-            }
         }
+        scene.soundManager?.stopEnemyTrack();
 
         scene.time.removeAllEvents();
 
@@ -124,15 +122,12 @@ export const createGoal = (
 
             // Every enemy track is stopped first, so the win lands on the main
             // theme rather than on top of the chase music.
-            scene.enemies.forEach((enemy) => {
-                if (enemy.enemySound) scene.soundManager?.stopEnemySound(enemy.enemySound);
-            });
+            scene.soundManager?.stopEnemyTrack();
             scene.soundManager?.playMainBGM();
 
             scene.time.delayedCall(GameConfig.GOAL.VICTORY_DELAY, () => {
-                const carried = scene.registry.get('carriedMs') || 0;
                 scene.scene.launch('VictoryScene', {
-                    timeMs: carried + (Date.now() - scene.startTime),
+                    timeMs: Math.round(scene.totalElapsedMs),
                     milkCount: scene.registry.get('milkCount') || 0,
                     fishCount: scene.registry.get('fishCount') || 0,
                     healthLeft: Math.max(0, Math.round(scene.health))

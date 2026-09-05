@@ -2,8 +2,14 @@ import Phaser from 'phaser';
 import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
 
-/** How long the ending holds the screen before it can be skipped. */
-const SKIP_AFTER_MS = 3000;
+/**
+ * How long the ending holds the screen before it can be skipped.
+ *
+ * Long enough that the offer does not arrive on top of the first line and read
+ * as an apology for it, short enough that a player who has already seen the
+ * ending is not held for a third of a minute before they are allowed to go.
+ */
+const SKIP_AFTER_MS = 1500;
 
 export const showEndingMessages = async (
     scene: Phaser.Scene,
@@ -130,7 +136,7 @@ export const showEndingMessages = async (
             });
         });
 
-    await hold(2000);
+    await hold(1200);
 
     for (let i = 0; i < messages.length; i++) {
         if (skipped) {
@@ -139,12 +145,17 @@ export const showEndingMessages = async (
         }
 
         await typewriteText(messages[i], texts[i]);
-        if (i < messages.length - 1) await hold(1000);
+        if (i < messages.length - 1) await hold(700);
     }
 
     // Once skipped the whole roll has been read at once, so it does not need
     // the long beat that a played-out ending earns.
-    await hold(skipped ? 1200 : 4000);
+    //
+    // Timed end to end, reaching home used to cost thirty-two seconds before
+    // the results appeared, and up to a minute. That is a long time to hold
+    // someone who has just finished, and on a phone the skip prompt was hidden
+    // behind the jump button, so most of them had no way out of it.
+    await hold(skipped ? 900 : 2200);
 
     scene.input.keyboard?.off('keydown-ENTER', requestSkip);
     scene.input.keyboard?.off('keydown-SPACE', requestSkip);
