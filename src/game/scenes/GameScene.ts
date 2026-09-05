@@ -80,6 +80,8 @@ export class GameScene extends Phaser.Scene {
     public apartmentSystem: ApartmentSystem | null = null;
     /** Speech bubbles. Public so the apartment system can react in character. */
     public barks: BarkSystem | null = null;
+    /** A beat that is explaining the health bar keeps it on screen. */
+    public narrativeShowsStatus = false;
     private sweat: SweatDrops | null = null;
     public tileSize: number = GameConfig.TILE_SIZE;
     public spacing: number = GameConfig.SPACING;

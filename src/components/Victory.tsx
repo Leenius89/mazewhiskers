@@ -29,6 +29,7 @@ interface VictoryProps {
     timeMs: number;
     milkCount: number;
     fishCount: number;
+    score: number;
 }
 
 const formatTime = (ms: number) => {
@@ -47,7 +48,8 @@ const Victory: React.FC<VictoryProps> = ({
     onShowCredits,
     timeMs,
     milkCount,
-    fishCount
+    fishCount,
+    score
 }) => {
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -57,11 +59,32 @@ const Victory: React.FC<VictoryProps> = ({
         if (!username.trim()) return;
         setIsSubmitting(true);
         try {
+            const name = username.toUpperCase();
+
             const { error } = await supabase
                 .from('speedrun_leaderboard')
-                .insert([{ username: username.toUpperCase(), time_ms: timeMs }]);
+                .insert([{ username: name, time_ms: timeMs }]);
 
             if (error) throw error;
+
+            /**
+             * A win belongs on the other two boards as well.
+             *
+             * Winning wrote to the speedrun table and nowhere else, so a run
+             * that took the longest way round eating everything in sight
+             * vanished from "longest on the street" and "best fed" the moment it
+             * succeeded — the only runs those boards ever saw were the losing
+             * ones. Time to the goal is time survived.
+             */
+            const { error: runError } = await supabase
+                .from('scores')
+                .insert([{ username: name, score, survived_ms: timeMs, fish_count: fishCount }]);
+
+            if (runError) {
+                // The run is already recorded where it matters most; the other
+                // boards are worth a warning, not a failed submission.
+                console.warn('클리어 기록을 scores 에 남기지 못했습니다:', runError.message);
+            }
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting time:', error);

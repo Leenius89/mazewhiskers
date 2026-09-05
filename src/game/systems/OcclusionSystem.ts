@@ -44,17 +44,35 @@ export class OcclusionSystem {
 
         const playerBounds = player.getBounds();
         const rows = GameConfig.OCCLUSION.SEARCH_ROWS;
+        const area = playerBounds.width * playerBounds.height;
+        if (area <= 0) return false;
+
+        let covered = 0;
 
         for (let dy = 0; dy <= rows; dy++) {
             for (let dx = -1; dx <= 1; dx++) {
                 const occluder = occluders.get(`${gx + dx},${gy + dy}`);
                 if (!occluder || !occluder.active) continue;
                 if (occluder.depth <= player.depth) continue;
-                if (Phaser.Geom.Rectangle.Overlaps(playerBounds, occluder.getBounds())) return true;
+
+                covered += this.coveredArea(playerBounds, occluder.getBounds());
             }
         }
 
-        return false;
+        // A single overlapping pixel used to be enough. Walking past the side of
+        // a building therefore switched on a full silhouette while the cat was
+        // still entirely visible, and the two drew on top of each other — the
+        // doubled, ghostly cat that shows up moving left and right behind a row
+        // of buildings.
+        return covered / area >= GameConfig.OCCLUSION.MIN_COVERED;
+    }
+
+    /** Area of the part of `subject` that `cover` hides. */
+    private coveredArea(subject: Phaser.Geom.Rectangle, cover: Phaser.Geom.Rectangle): number {
+        const width = Math.min(subject.right, cover.right) - Math.max(subject.left, cover.left);
+        const height = Math.min(subject.bottom, cover.bottom) - Math.max(subject.top, cover.top);
+
+        return width > 0 && height > 0 ? width * height : 0;
     }
 
     /**

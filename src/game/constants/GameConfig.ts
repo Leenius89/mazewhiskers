@@ -64,7 +64,14 @@ export const GameConfig = {
         TINT: 0xffd166,
         ALPHA: 0.5,
         /** How many grid rows below the player can still cover it. */
-        SEARCH_ROWS: 3
+        SEARCH_ROWS: 3,
+        /**
+         * How much of the cat has to be hidden before the copy is drawn.
+         *
+         * Any overlap at all used to qualify, so brushing the edge of a
+         * building drew a second, half-transparent cat over the visible one.
+         */
+        MIN_COVERED: 0.42
     },
 
     /**

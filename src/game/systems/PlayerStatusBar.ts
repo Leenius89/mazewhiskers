@@ -44,7 +44,10 @@ export class PlayerStatusBar {
         this.graphics.clear();
 
         const player = this.scene.player;
-        if (!player || !player.active || this.scene.narrativeActive) return;
+        // Hidden during a scripted beat — except the beat that is about this
+        // bar, which used to explain it while hiding it.
+        if (!player || !player.active) return;
+        if (this.scene.narrativeActive && !this.scene.narrativeShowsStatus) return;
 
         const cfg = GameConfig.STATUS_BAR;
         const camera = this.scene.cameras.main;

@@ -81,6 +81,8 @@ const GameOver: React.FC<GameOverProps> = ({
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
+    /** Recorded, but without the fields the other two boards rank by. */
+    const [partial, setPartial] = useState(false);
 
     const ending = ENDINGS[reason] ?? ENDINGS.health;
 
@@ -122,11 +124,18 @@ const GameOver: React.FC<GameOverProps> = ({
                 .insert([{ username: name, score, survived_ms: survivedMs, fish_count: fishCount ?? 0 }]);
 
             if (error) {
-                const missingColumn = /column .* does not exist|schema cache/i.test(error.message ?? '');
-                if (!missingColumn) throw error;
+                // Any failure at all, not just an unknown column: a stale insert
+                // policy rejects the new fields as a row-level security
+                // violation, which reads nothing like a missing column and used
+                // to lose the run entirely.
+                console.warn('기록 저장 1차 실패, 축소 형태로 재시도:', error.message);
 
                 const retry = await supabase.from('scores').insert([{ username: name, score }]);
                 if (retry.error) throw retry.error;
+
+                // Saved, but only onto the score board. Saying so beats a silent
+                // success the player cannot tell apart from a real one.
+                setPartial(true);
             }
             setSubmitted(true);
         } catch (error) {
@@ -182,7 +191,11 @@ const GameOver: React.FC<GameOverProps> = ({
                 </div>
 
                 {submitted ? (
-                    <p style={{ ...hint, color: theme.good }}>기록 등록 완료 / SUBMITTED</p>
+                    <p style={{ ...hint, color: partial ? theme.bad : theme.good }}>
+                        {partial
+                            ? '점수만 등록됨 — 생존·생선 기록은 저장되지 않았습니다'
+                            : '기록 등록 완료 / SUBMITTED'}
+                    </p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input

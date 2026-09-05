@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { fontPx, ui } from '../core/uiScale';
 
 /** How long the roll holds the screen before it can be dismissed. */
 const SKIP_AFTER_MS = 3000;
@@ -18,6 +19,8 @@ export const showCredits = (
     onEnd?: () => void
 ): CreditsObjects => {
     if (onStart) onStart();
+
+    const camera = scene.cameras.main;
 
     const creditsBg = scene.add.graphics();
     creditsBg.fillStyle(0x000000, 1);
@@ -70,11 +73,13 @@ export const showCredits = (
      * run tended to carry straight through and skip the ending before anyone
      * had read a line of it.
      */
-    const skipPrompt = scene.add.text(width / 2, height - 48, 'Click anywhere to return', {
-        fontFamily: 'Arial',
-        fontSize: '16px',
-        color: '#9aa0aa',
-        align: 'center'
+    const skipPrompt = scene.add.text(width / 2, height - ui(56, camera), '▸  SKIP  /  건너뛰기', {
+        fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
+        fontSize: fontPx(13, camera),
+        color: '#ffffff',
+        align: 'center',
+        backgroundColor: 'rgba(20,22,28,0.92)',
+        padding: { x: ui(16, camera), y: ui(11, camera) }
     } as Phaser.Types.GameObjects.Text.TextStyle);
     skipPrompt.setOrigin(0.5, 0.5);
     skipPrompt.setDepth(1003);

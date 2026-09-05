@@ -18,7 +18,14 @@ import { createGameEventBus, GameEventBus } from './game/core/GameEvents';
 import type { GameOverPayload } from './game/core/GameEvents';
 import { isDebugEnabled } from './game/core/debug';
 import { RENDER_SCALE } from './game/core/renderScale';
+
 import { resolveMode } from './game/core/modes';
+
+/** Space the page furniture takes out of the window on desktop. */
+const CHROME = { MARGIN_X: 24, HEADER_H: 76 };
+/** Below this the layout stops making sense; scrollbars are better than nothing. */
+const MIN_CANVAS = { WIDTH: 360, HEIGHT: 420 };
+
 
 function App() {
     const gameRef = useRef<HTMLDivElement>(null);
@@ -70,23 +77,26 @@ function App() {
 
     useEffect(() => {
         const handleResize = () => {
-            const baseWidth = 768;
             const width = window.innerWidth;
             const height = window.innerHeight;
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
             if (isMobile) {
-                const maxWidth = Math.min(width * 0.9, baseWidth);
-                setGameSize({
-                    width: maxWidth,
-                    height: height * 0.8
-                });
-            } else {
-                setGameSize({
-                    width: baseWidth,
-                    height: Math.min(height * 0.9, baseWidth * 1.33)
-                });
+                setGameSize({ width: width * 0.9, height: height * 0.8 });
+                return;
             }
+
+            // The window, less the run bar and a margin.
+            //
+            // It used to be pinned to 768 wide whatever the monitor was, which
+            // left most of a desktop browser as background. The reference width
+            // the interface is measured against is still 768 — that is a
+            // readability baseline, not a canvas size — so a wider window simply
+            // shows more city.
+            setGameSize({
+                width: Math.max(width - CHROME.MARGIN_X, MIN_CANVAS.WIDTH),
+                height: Math.max(height - CHROME.HEADER_H, MIN_CANVAS.HEIGHT)
+            });
         };
 
         handleResize();
@@ -327,7 +337,9 @@ function App() {
                             // WebkitTouchCallout: 'none', // React doesn't support this style property directly without casing or ignore
                             userSelect: 'none',
                             position: 'relative',
-                            maxWidth: '768px',
+                            // Was capped at 768, which quietly undid any wider
+                            // canvas the resize handler asked for.
+                            maxWidth: '100%',
                             boxShadow: '0 0 10px rgba(0,0,0,0.3)'
                         }}
                     />
@@ -369,6 +381,7 @@ function App() {
                     timeMs={victoryTime}
                     milkCount={milkCount}
                     fishCount={fishCount}
+                    score={score}
                 />
             )}
 

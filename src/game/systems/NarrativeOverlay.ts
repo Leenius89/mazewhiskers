@@ -14,6 +14,8 @@ export interface SpotlightTarget {
 }
 
 export interface BeatOptions {
+    /** Keeps the health bar on screen for a beat that is talking about it. */
+    showStatusBar?: boolean;
     /** Who is speaking. Shown above the line. */
     speaker?: string;
     /** World rectangle to cut out of the dimming. */
@@ -196,6 +198,7 @@ export class NarrativeOverlay {
         if (this.skipped) return;
 
         this.scene.narrativeActive = true;
+        this.scene.narrativeShowsStatus = options.showStatusBar ?? false;
         this.activeSpotlight = options.spotlight ?? null;
 
         // Cleared before the box is shown. Leaving the previous line in place
@@ -240,6 +243,7 @@ export class NarrativeOverlay {
 
     /** Ends the sequence and hands the world back. */
     finish(): void {
+        this.scene.narrativeShowsStatus = false;
         this.restoreBounds();
         this.drop();
         this.skipped = false;

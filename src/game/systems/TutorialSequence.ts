@@ -102,7 +102,7 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     const milk = nearestVisible(scene.milks, scene.maze, player.x, player.y);
     if (milk) {
         await narrative.play(
-            '우유를 마시면 두 칸을 뛰어넘을 수 있습니다. 스페이스바를 누른 채로 방향을 보면 착지 지점이 보입니다.',
+            '우유를 마시면 방향대로 점프할 수 있습니다.',
             {
                 speaker: '· 우유',
                 lookAt: { x: milk.x, y: milk.y },
@@ -115,7 +115,7 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     // The one thing that has not happened yet, so it is described on the grid
     // it will happen to rather than on an object.
     await narrative.play(
-        '도시 아무 데나 노란 줄이 쳐집니다. 3초 뒤 그 구역 전체에 아파트가 들어섭니다. 안에 있으면 바깥으로 밀려나고, 밀려날 곳이 없으면 거기서 끝입니다.',
+        '노란 줄은 아파트가 들어서는 자리입니다. 피하세요.',
         {
             speaker: '· 재개발',
             lookAt: { x: player.x, y: player.y },
@@ -130,12 +130,19 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         speaker: '· 체력',
         lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 2.2),
-        subject: player
+        subject: player,
+        // The bar is normally hidden while anything is being narrated, which
+        // meant this line described something the player could not see.
+        showStatusBar: true
     });
 
-    await narrative.play('집까지 가세요. 도시가 먼저 도착하기 전에.', {
+    // Lit, not shaded. A null spotlight darkens the whole screen, so the last
+    // thing the tutorial did was send the player off while hiding the cat.
+    await narrative.play('자, 이제 집까지 가세요!', {
         speaker: '· 시작',
-        spotlight: null
+        spotlight: spotOn(player, 2.6),
+        subject: player,
+        showStatusBar: true
     });
 
     await narrative.returnToPlayer();
