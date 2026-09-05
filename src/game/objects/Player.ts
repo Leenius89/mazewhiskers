@@ -273,7 +273,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.recoveryUntil = this.scene.time.now + GameConfig.APARTMENT.PUSH.DURATION;
         this.dashUntil = 0;
 
-        this.knockback(fromX, fromY, contact.KNOCKBACK, GameConfig.APARTMENT.PUSH.DURATION);
+        this.knockback(fromX, fromY, contact.KNOCKBACK, contact.KNOCKBACK_MS);
         return true;
     }
 
@@ -472,6 +472,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.scene.time.delayedCall(GameConfig.HIT.FLASH_MS, () => {
             if (this.active) this.clearTint();
         });
+    }
+
+    /** True while a shove or a hit still owns the cat's movement. */
+    get isRecovering(): boolean {
+        return this.scene.time.now < this.recoveryUntil;
     }
 
     /** Called by the scene when the buffered jump input is consumed. */

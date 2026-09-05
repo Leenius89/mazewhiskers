@@ -450,7 +450,15 @@ export const GameConfig = {
          * An instant kill gives an exhibition visitor nothing to learn from.
          * Two hits still end the run, so it stays frightening.
          */
-        CONTACT: { DAMAGE: -35, KNOCKBACK: 300, INVULNERABLE_MS: 1500 },
+        /**
+         * Being hit throws the cat clear.
+         *
+         * The knockback has its own duration because the hit-stop freezes physics
+         * for the first 80ms of it — sharing the apartment shove's 220ms left
+         * barely a third of a second of actual travel, which read as no knockback
+         * at all.
+         */
+        CONTACT: { DAMAGE: -35, KNOCKBACK: 340, KNOCKBACK_MS: 340, INVULNERABLE_MS: 1500 },
         JUMP: {
             HEIGHT: 120,
             /** Reach in grid cells, matching the player's. */

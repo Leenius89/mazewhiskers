@@ -64,22 +64,35 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
     const t = useTranslation();
 
-    const backgroundRef = useRef<HTMLImageElement>(null);
-    /** How far there is to climb: the image's height beyond the screen's. */
-    const [panDistance, setPanDistance] = useState(0);
-
-    const measureBackground = useCallback(() => {
-        const image = backgroundRef.current;
-        if (!image) return;
-
-        setPanDistance(Math.max(0, image.offsetHeight - window.innerHeight));
-    }, []);
+    /**
+     * The picture's own proportions, learned before anything is drawn.
+     *
+     * Measuring the rendered <img> in its `onLoad` was too late: Framer reads
+     * `initial` once, at mount, and at that point the distance was still zero —
+     * so the climb was set up to travel nowhere and never played at all.
+     * Loading the image separately means the travel is known on the first
+     * render that matters.
+     */
+    const [aspect, setAspect] = useState(0);
 
     useEffect(() => {
-        measureBackground();
-        window.addEventListener('resize', measureBackground);
-        return () => window.removeEventListener('resize', measureBackground);
-    }, [measureBackground]);
+        const probe = new Image();
+        probe.onload = () => setAspect(probe.naturalHeight / probe.naturalWidth);
+        probe.src = 'sources/main.png';
+    }, []);
+
+    const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
+
+    useEffect(() => {
+        const onResize = () => setViewportHeight(window.innerHeight);
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+    }, []);
+
+    const containerWidth = typeof gameSize.width === 'number' ? gameSize.width : window.innerWidth;
+    const imageHeight = aspect ? containerWidth * aspect : 0;
+    /** How far there is to climb: the image's height beyond the screen's. */
+    const panDistance = Math.max(0, imageHeight - viewportHeight);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     /**
      * Guards the opening against running twice.
@@ -213,32 +226,33 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                   * it ends on the top edge of the picture at any window size, and
                   * stops there.
                 */}
-                <motion.div
-                    style={{
-                        width: '100%',
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        zIndex: 1
-                    }}
-                    initial={{ y: -panDistance }}
-                    animate={{ y: 0 }}
-                    transition={{ duration: 4, ease: 'linear' }}
-                >
-                    <img
-                        ref={backgroundRef}
-                        src="sources/main.png"
-                        alt="Background"
-                        onLoad={measureBackground}
-                        style={{ width: '100%', height: 'auto', display: 'block' }}
-                    />
-                </motion.div>
+                {aspect > 0 && (
+                    <motion.div
+                        style={{
+                            width: '100%',
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            zIndex: 1
+                        }}
+                        initial={{ y: -panDistance }}
+                        animate={{ y: 0 }}
+                        transition={{ duration: 4, ease: 'linear' }}
+                    >
+                        <img
+                            src="sources/main.png"
+                            alt="Background"
+                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                        />
+                    </motion.div>
+                )}
 
                 {/* 타이틀 */}
                 <motion.div
                     style={{
                         position: 'fixed',
-                        top: isMobile ? '10%' : '15%',
+                        // Only the logo belongs in the sky the climb ends on.
+                        top: isMobile ? '4%' : '5%',
                         left: '0',
                         right: '0',
                         marginLeft: 'auto',
@@ -310,7 +324,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 {showButton && (
                     <div style={{
                         position: 'fixed',
-                        bottom: isMobile ? '15%' : '20%',
+                        bottom: isMobile ? '5%' : '6%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,

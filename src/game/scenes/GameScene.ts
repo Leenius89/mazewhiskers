@@ -570,6 +570,7 @@ export class GameScene extends Phaser.Scene {
         this.barks?.update(now);
         this.sweat?.update(now);
         this.apartmentSystem?.drawWarnings(now);
+        this.apartmentSystem?.enforceClearance();
         this.atmosphere?.setDevelopment(this.apartmentSystem?.development ?? 0);
         // Refitted per frame: the jump's camera punch-out changes the zoom, and a
         // screen overlay sized for zoom 1 stops covering the screen.

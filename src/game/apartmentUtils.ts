@@ -243,6 +243,47 @@ export class ApartmentSystem {
         });
     }
 
+    /**
+     * Nobody is left standing inside a tower, on any frame.
+     *
+     * `settleBlock` clears the block the moment it lands, which covers the
+     * cat being there when it arrives. It does not cover every other way of
+     * ending up inside one — a shove that lands in a cell a second block is
+     * about to take, a jump that clears a wall into a footprint, physics
+     * separating a body the wrong side of a static box. The result was a cat
+     * standing in the middle of an apartment with no way out and nothing
+     * pushing it, which is what the knockback was supposed to prevent.
+     *
+     * Checked continuously rather than at landing, so however it happens, it
+     * is undone on the next frame.
+     */
+    enforceClearance(): void {
+        const player = this.scene.player;
+        if (!player || this.scene.state.hasEnded()) return;
+
+        // A shove already in flight is the fix, not the problem.
+        if (player.isRecovering) return;
+
+        // Being hit throws the cat about, and a hit is never allowed to end the
+        // run this way — that loss belongs to the towers, not to the black cat.
+        if (player.isInvulnerable) return;
+
+        const cell = cellOf(player.x, player.groundY);
+        if (!this.isCellBuilt(cell.gx, cell.gy)) return;
+
+        const here = worldOf(cell);
+        const exit = this.exitCell(cell, this.outward(here, player.x, player.groundY), new Set());
+
+        // Pushed with nowhere to be pushed to. That is the loss this game is
+        // about, so it ends the run rather than leaving the cat embedded.
+        if (!exit) {
+            this.triggerGameOver('apartment:player');
+            return;
+        }
+
+        player.shoveTo(exit.x, exit.y);
+    }
+
     isPendingCell(gx: number, gy: number): boolean {
         return this.pending.has(this.cellKey(gx, gy));
     }
