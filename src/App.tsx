@@ -10,6 +10,8 @@ import MainPage from './components/MainPage';
 import GameOver from './components/GameOver';
 import Victory from './components/Victory';
 import Leaderboard from './components/Leaderboard';
+import SettingsPanel from './components/SettingsPanel';
+import { getSettings, subscribe } from './settings';
 import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
@@ -62,6 +64,7 @@ function App() {
         jumpCount * GameConfig.SCORE.PER_JUMP;
 
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+    const [showSettings, setShowSettings] = useState(false);
     const [leaderboardMode, setLeaderboardMode] = useState<BoardKey>('survived');
     const [isShowingCredits, setIsShowingCredits] = useState(false);
     const [endReason, setEndReason] = useState<GameOverPayload['reason']>('health');
@@ -207,6 +210,22 @@ function App() {
      *
      * The scale mode is RESIZE, so Phaser handles the new viewport itself.
      */
+    /**
+     * One switch for everything the game plays.
+     *
+     * Phaser has a global mute, so the setting does not have to reach every
+     * `sound.add` call individually — and it applies to a game created after the
+     * setting was changed, which is why this also runs when `showGame` flips.
+     */
+    useEffect(() => {
+        const apply = () => {
+            if (game.current) game.current.sound.mute = getSettings().muted;
+        };
+
+        apply();
+        return subscribe(apply);
+    }, [showGame]);
+
     useEffect(() => {
         gameSizeRef.current = gameSize;
         game.current?.scale.resize(gameSize.width * RENDER_SCALE, gameSize.height * RENDER_SCALE);
@@ -348,6 +367,8 @@ function App() {
             ) : (
                 <MainPage
                     onStartGame={startGame}
+                    onShowLeaderboard={() => handleShowLeaderboard('fastest')}
+                    onShowSettings={() => setShowSettings(true)}
                     gameSize={gameSize}
                 />
             )}
@@ -384,6 +405,8 @@ function App() {
                     score={score}
                 />
             )}
+
+            {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
             {showLeaderboard && (
                 <Leaderboard

@@ -360,6 +360,16 @@ export const GameConfig = {
             DURATION: 600,
             /** Held stock. Capped so jumps cannot be hoarded for the endgame. */
             MAX_STOCK: 3,
+            /**
+             * One jump in hand from the start.
+             *
+             * The towers begin landing while the tutorial is still running, so
+             * a player could be walled in before they had found a single milk
+             * — sealed in on the first screen with no way out and nothing they
+             * did wrong. One jump is the difference between a hard start and
+             * an impossible one.
+             */
+            START_STOCK: 1,
             /** Axis input above this magnitude counts toward the eight-way direction. */
             DIRECTION_THRESHOLD: 0.38,
             /** Brief freeze on touchdown, so landing has weight. */

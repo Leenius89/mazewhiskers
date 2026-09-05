@@ -5,7 +5,7 @@ import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
-    public jumpCount = 0;
+    public jumpCount = GameConfig.PLAYER.JUMP.START_STOCK;
     public isJumping = false;
     public lastDirection: 'left' | 'right' = 'right';
 

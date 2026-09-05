@@ -1,5 +1,6 @@
 import React from 'react';
-import { RotateCcw } from 'lucide-react';
+import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { useSettings } from '../settings';
 import { theme } from './theme';
 
 interface HeaderProps {
@@ -20,6 +21,7 @@ interface HeaderProps {
  */
 const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, score, gameSize }) => {
     const width = typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width;
+    const [settings, update] = useSettings();
 
     return (
         <div
@@ -73,6 +75,25 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, scor
                     SCORE
                     <strong style={{ fontSize: '0.72rem', color: theme.accent }}>{score}</strong>
                 </span>
+
+                <button
+                    onClick={() => update({ muted: !settings.muted })}
+                    title={settings.muted ? '소리 켜기 / Unmute' : '소리 끄기 / Mute'}
+                    aria-label={settings.muted ? '소리 켜기' : '소리 끄기'}
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '6px',
+                        background: 'transparent',
+                        border: `1px solid ${theme.rule}`,
+                        borderRadius: '4px',
+                        color: settings.muted ? theme.bad : theme.inkFaint,
+                        cursor: 'pointer'
+                    }}
+                >
+                    {settings.muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                </button>
 
                 <button
                     onClick={restartGame}

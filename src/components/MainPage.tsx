@@ -1,14 +1,36 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Settings as SettingsIcon, Trophy } from 'lucide-react';
+import { getSettings, subscribe } from '../settings';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
+    onShowLeaderboard: () => void;
+    onShowSettings: () => void;
     onStartGame: () => void;
     gameSize: { width: number | string; height: number | string };
 }
 
 const MotionClickable = motion.div as any;
 
-const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
+/** Quiet next to the red GAME START, so it is still obviously the main way in. */
+const secondaryButton = (isMobile: boolean): React.CSSProperties => ({
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    minWidth: isMobile ? '190px' : '230px',
+    padding: isMobile ? '9px 18px' : '11px 22px',
+    background: 'rgba(12,14,19,0.82)',
+    border: '2px solid rgba(255,255,255,0.34)',
+    borderRadius: '4px',
+    color: '#f2f4f8',
+    fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
+    fontSize: isMobile ? '0.62rem' : '0.72rem',
+    letterSpacing: '0.04em',
+    cursor: 'pointer'
+});
+
+const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onShowSettings, gameSize }) => {
     const [showButton, setShowButton] = useState(false);
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
@@ -51,6 +73,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
             const audio = new Audio('sources/main.mp3');
             audio.loop = true;
             audio.volume = 0.5;
+            audio.muted = getSettings().muted;
             audioRef.current = audio;
             await audio.play();
         } catch {
@@ -102,6 +125,16 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [showButton, handleStartGame]);
+
+    // The title track is a detached Audio element, so the global Phaser mute
+    // never reaches it. Muting while it is playing has to mute it too.
+    useEffect(
+        () =>
+            subscribe(({ muted }) => {
+                if (audioRef.current) audioRef.current.muted = muted;
+            }),
+        []
+    );
 
     useEffect(() => stopMusic, [stopMusic]);
 
@@ -229,9 +262,33 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, gameSize }) => {
                         transform: 'translateX(-50%)',
                         width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,
                         display: 'flex',
-                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        // Ranking on top, then settings, then the way in — the
+                        // order they are reached for, least often first.
+                        gap: isMobile ? '10px' : '12px',
                         zIndex: 2
                     }}>
+                        <MotionClickable
+                            style={secondaryButton(isMobile)}
+                            onClick={onShowLeaderboard}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 0 }}
+                        >
+                            <Trophy size={isMobile ? 13 : 15} />
+                            랭킹 / RANKING
+                        </MotionClickable>
+
+                        <MotionClickable
+                            style={secondaryButton(isMobile)}
+                            onClick={onShowSettings}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 0 }}
+                        >
+                            <SettingsIcon size={isMobile ? 13 : 15} />
+                            설정 / SETTINGS
+                        </MotionClickable>
+
                         <MotionClickable
                             style={{
                                 backgroundColor: '#ff0000',
