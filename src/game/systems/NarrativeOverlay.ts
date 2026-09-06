@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { canvasTheme, onCanvasThemeChange } from '../core/canvasTheme';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
 import { TEXT, fontPx, uiScale } from '../core/uiScale';
@@ -99,7 +100,7 @@ export class NarrativeOverlay {
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                 fontSize: fontPx(10, camera, TEXT.DIALOGUE),
-                color: cfg.SPEAKER_COLOR
+                color: canvasTheme.speaker
             })
             .setScrollFactor(0)
             .setDepth(DEPTH.OVERLAY + 103);
@@ -108,7 +109,7 @@ export class NarrativeOverlay {
             .text(0, 0, '', {
                 fontFamily: "'Pretendard', sans-serif",
                 fontSize: fontPx(15, camera, TEXT.DIALOGUE),
-                color: cfg.TEXT_COLOR,
+                color: canvasTheme.text,
                 lineSpacing: 7,
                 wordWrap: { width: 100 }
             })
@@ -121,7 +122,7 @@ export class NarrativeOverlay {
             .text(0, 0, '', {
                 fontFamily: "'Pretendard', sans-serif",
                 fontSize: fontPx(15, camera, TEXT.DIALOGUE),
-                color: cfg.TEXT_COLOR,
+                color: canvasTheme.text,
                 lineSpacing: 7,
                 wordWrap: { width: 100 }
             })
@@ -132,7 +133,7 @@ export class NarrativeOverlay {
             .text(0, 0, '', {
                 fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                 fontSize: fontPx(8, camera, TEXT.DIALOGUE),
-                color: cfg.HINT_COLOR
+                color: canvasTheme.hint
             })
             .setOrigin(1, 1)
             .setScrollFactor(0)
@@ -147,8 +148,8 @@ export class NarrativeOverlay {
             .text(0, 0, t('tut.skip'), {
                 fontFamily: "'Press Start 2P', monospace",
                 fontSize: fontPx(parseInt(cfg.SKIP_SIZE, 10), camera, TEXT.PROMPT),
-                color: cfg.SKIP_COLOR,
-                backgroundColor: 'rgba(11,13,19,0.92)',
+                color: canvasTheme.skip,
+                backgroundColor: canvasTheme.skipBackground,
                 padding: { x: 11, y: 8 }
             })
             .setOrigin(1, 1)
@@ -157,7 +158,23 @@ export class NarrativeOverlay {
             .setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.requestSkip());
 
+        // The box and the shade are redrawn every frame, so they pick the new
+        // palette up on their own. Text colours are set once, at construction.
+        this.stopWatchingTheme = onCanvasThemeChange(() => this.repaintText());
+        scene.events.once('shutdown', () => this.stopWatchingTheme?.());
+
         this.setVisible(false);
+    }
+
+    private stopWatchingTheme: (() => void) | null = null;
+
+    /** Re-applies the palette to type that was coloured when it was created. */
+    private repaintText(): void {
+        this.speakerText.setColor(canvasTheme.speaker);
+        this.bodyText.setColor(canvasTheme.text);
+        this.hintText.setColor(canvasTheme.hint);
+        this.skipText.setColor(canvasTheme.skip);
+        this.skipText.setBackgroundColor(canvasTheme.skipBackground);
     }
 
     /** True once the player has asked to stop being talked to. */
@@ -425,7 +442,7 @@ export class NarrativeOverlay {
         const cfg = GameConfig.NARRATIVE;
         this.shade.clear();
         this.pointer.clear();
-        this.shade.fillStyle(cfg.SHADE_COLOR, cfg.SHADE_ALPHA);
+        this.shade.fillStyle(canvasTheme.shade, canvasTheme.shadeAlpha);
 
         const spot = this.activeSpotlight;
         if (!spot) {
@@ -451,11 +468,11 @@ export class NarrativeOverlay {
 
         // Pulsing frame, so the eye lands on the hole rather than the darkness.
         const pulse = 0.65 + 0.35 * Math.sin((time / cfg.PULSE_MS) * Math.PI * 2);
-        this.pointer.lineStyle(2, cfg.HIGHLIGHT_COLOR, pulse);
+        this.pointer.lineStyle(2, canvasTheme.highlight, pulse);
         this.pointer.strokeRect(left, top, right - left, bottom - top);
 
-        this.drawCorners(left, top, right, bottom, cfg.HIGHLIGHT_COLOR);
-        this.pointer.lineStyle(1, cfg.HIGHLIGHT_COLOR, 0.5 * pulse);
+        this.drawCorners(left, top, right, bottom, canvasTheme.highlight);
+        this.pointer.lineStyle(1, canvasTheme.highlight, 0.5 * pulse);
         this.pointer.lineBetween(cx, bottom, cx, this.boxTop - 6);
     }
 
@@ -543,9 +560,9 @@ export class NarrativeOverlay {
         this.boxTop = top;
 
         this.box.clear();
-        this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
+        this.box.fillStyle(canvasTheme.box, canvasTheme.boxAlpha);
         this.box.fillRect(left, top, boxWidth, boxHeight);
-        this.box.lineStyle(2 * k, cfg.HIGHLIGHT_COLOR, 0.9);
+        this.box.lineStyle(2 * k, canvasTheme.highlight, 0.9);
         this.box.strokeRect(left, top, boxWidth, boxHeight);
 
         this.speakerText.setPosition(left + padding, top + 12 * k);

@@ -29,6 +29,7 @@ import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
 import { playEnemyEntrance, runTutorial } from '../systems/TutorialSequence';
+import { currentDifficulty } from '../core/difficulty';
 import { districtPressure, resolveMode } from '../core/modes';
 import type { ModeSettings } from '../core/modes';
 
@@ -102,23 +103,28 @@ export class GameScene extends Phaser.Scene {
     public walls: Phaser.Physics.Arcade.StaticGroup | undefined;
     public goal: Phaser.Physics.Arcade.Sprite | undefined;
     /**
-     * When this district's clock started, on the scene's own clock.
+     * How long this district has been played, added up a frame at a time.
      *
-     * Deliberately not `Date.now()`. Every other cost in this game — health
-     * drain, rent, the towers going up — is driven by the scene clock, which
-     * stops with the game loop. The recorded time was the one thing on the wall
-     * clock, so a run left in a background tab paid nothing and still banked
-     * the minutes: "longest on the street" could be won by walking away.
+     * Three things have to be true of the run's clock and only this gets all
+     * three. It was `Date.now()` once, which meant a run left in a background
+     * tab paid nothing and still banked the minutes. Reading the scene clock
+     * fixed that but not pausing: `time.now` is an absolute reading that
+     * jumps forward when a paused scene resumes, so thirty seconds spent in
+     * the menu arrived on the record as thirty seconds of play.
      *
-     * Set when the player actually takes control, so the opening fly-over and
-     * the tutorial are not counted as part of the run either.
+     * A sum of frame deltas cannot do either. Frames that do not happen are
+     * not counted, and the ones that do are only counted while the player is
+     * actually playing — not during the opening, the tutorial, or a beat that
+     * has taken the controls away.
      */
-    private playStartedAt = 0;
+    private playedMs = 0;
+
+    /** False until the tutorial is done with; the run has not started yet. */
+    private clockRunning = false;
 
     /** How long this district has been played, in milliseconds. */
     get elapsedMs(): number {
-        if (!this.playStartedAt) return 0;
-        return Math.max(0, this.time.now - this.playStartedAt);
+        return this.playedMs;
     }
 
     /** This run's total across every district played so far. */
@@ -195,7 +201,8 @@ export class GameScene extends Phaser.Scene {
         this.sound.stopAll();
         this.soundManager?.playMainBGM();
 
-        this.playStartedAt = 0;
+        this.playedMs = 0;
+        this.clockRunning = false;
         this.health = GameConfig.HEALTH.MAX;
         this.occluders.clear();
         this.nextRentAt = this.time.now + GameConfig.HEALTH.RENT.INTERVAL;
@@ -261,6 +268,20 @@ export class GameScene extends Phaser.Scene {
 
         this.cameras.main.startFollow(player, true);
         this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+
+        /*
+         * Bounds are recalculated whenever the canvas changes size.
+         *
+         * Phaser works out how far the camera may scroll when the bounds are
+         * set, against the camera's size at that moment. Grow the canvas
+         * afterwards — a phone filling its screen, a desktop window dragged
+         * wider — and the clamp is still the old one, so the view slides past
+         * the edge of the world and shows several hundred pixels of nothing
+         * above the top-left corner, which is exactly where every run starts.
+         */
+        const refit = () => this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+        this.scale.on('resize', refit);
+        this.events.once('shutdown', () => this.scale.off('resize', refit));
 
         // Multiplied by the render scale so the framing is unchanged and the
         // extra canvas resolution goes into detail rather than into showing more
@@ -330,7 +351,7 @@ export class GameScene extends Phaser.Scene {
         // The clock starts here, not at scene creation: the fly-over and the
         // tutorial are the game talking, not the player running. Counting them
         // made "fastest home" a race to click through seven lines of dialogue.
-        this.playStartedAt = this.time.now;
+        this.clockRunning = true;
 
         const count = this.mode.enemies + this.mode.enemiesPerDistrict * (this.district - 1);
         for (let i = 0; i < count; i++) {
@@ -562,24 +583,46 @@ export class GameScene extends Phaser.Scene {
         this.nextRentAt = this.time.now + GameConfig.HEALTH.RENT.INTERVAL;
         this.hud?.playRentFlash();
         this.cameraDirector?.shakeFrom(this.player?.x ?? 0, this.player?.y ?? 0, 0.005, 260);
-        this.applyHealth(GameConfig.HEALTH.RENT.AMOUNT);
+        this.applyHealth(GameConfig.HEALTH.RENT.AMOUNT * currentDifficulty().costScale);
     }
 
     // ----------------------------------------------------------- pause/resume
 
+    /**
+     * Everything stops, and nothing is spent while it is stopped.
+     *
+     * `scene.pause()` halts the update loop and the scene's own clock, which
+     * is what every cost in this game runs on — the health drain, rent day,
+     * the towers, the enemy. The run's timer is on that clock too, so a
+     * player who steps away pays nothing for it.
+     *
+     * The soundtrack is paused rather than stopped. Stopping it meant the
+     * chase music was replaced by the main theme on the way back, so opening
+     * a menu with the black cat two streets away returned you to a calm
+     * screen.
+     */
     private handlePauseRequest(): void {
         if (!this.state.pause()) return;
+
+        // Before the scene stops updating: nothing will call this again
+        // until it resumes, and a joystick left on screen over a menu can
+        // still be dragged.
+        this.controls?.setControlsVisible(false);
+
         this.scene.pause();
-        this.soundManager?.stopAllSounds();
+        this.sound.pauseAll();
     }
 
     private handleResumeRequest(): void {
         if (!this.state.resume()) return;
+
         this.scene.resume();
         this.physics.resume();
+        this.sound.resumeAll();
+
         if (this.input.keyboard) this.input.keyboard.enabled = true;
         this.input.enabled = true;
-        this.soundManager?.playMainBGM();
+        this.controls?.setControlsVisible(this.state.is('playing') && !this.narrativeActive);
     }
 
     // ----------------------------------------------------------------- enemy
@@ -649,7 +692,13 @@ export class GameScene extends Phaser.Scene {
 
     // ---------------------------------------------------------------- update
 
-    update() {
+    update(_time: number, delta: number) {
+        // Capped because a resumed scene can deliver one very large frame,
+        // and a single stutter should not read as time played.
+        if (this.clockRunning && this.state.is('playing') && !this.narrativeActive) {
+            this.playedMs += Math.min(delta, 100);
+        }
+
         this.debugOverlay?.update();
 
         // The on-screen stick and buttons are DOM elements stacked over the

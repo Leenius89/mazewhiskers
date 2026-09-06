@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { RotateCcw, Volume2, VolumeX } from 'lucide-react';
-import { useSettings } from '../settings';
+import { Menu } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { theme } from './theme';
 
 interface HeaderProps {
-    restartGame: () => void;
+    onOpenMenu: () => void;
     milkCount: number;
     fishCount: number;
     score: number;
@@ -30,9 +29,8 @@ interface HeaderProps {
  */
 const TIGHT_WIDTH = 520;
 
-const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, score, gameSize }) => {
+const Header: React.FC<HeaderProps> = ({ onOpenMenu, milkCount, fishCount, score, gameSize }) => {
     const width = typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width;
-    const [settings, update] = useSettings();
     const t = useTranslation();
 
     const [tight, setTight] = useState(() => window.innerWidth < TIGHT_WIDTH);
@@ -115,38 +113,28 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, scor
                     <strong style={{ fontSize: '0.72rem', color: theme.accent }}>{score}</strong>
                 </span>
 
+                {/*
+                    One way in, rather than two things to press by accident.
+                  *
+                  * A mute toggle and a restart button is two controls for the
+                  * two things nobody wants mid-run — and restart sat one thumb
+                  * away from the game with nothing between it and losing a run.
+                  * Everything is behind this now, and opening it stops the
+                  * clock.
+                */}
                 <button
-                    onClick={() => update({ muted: !settings.muted })}
-                    title={t(settings.muted ? 'header.unmute' : 'header.mute')}
-                    aria-label={t(settings.muted ? 'header.unmute' : 'header.mute')}
+                    onClick={onOpenMenu}
+                    title={t('header.menu')}
+                    aria-label={t('header.menu')}
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '6px',
+                        gap: '6px',
+                        padding: tight ? '7px' : '6px 11px',
                         background: 'transparent',
                         border: `1px solid ${theme.rule}`,
                         borderRadius: '4px',
-                        color: settings.muted ? theme.bad : theme.inkFaint,
-                        flexShrink: 0,
-                        cursor: 'pointer'
-                    }}
-                >
-                    {settings.muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                </button>
-
-                <button
-                    onClick={restartGame}
-                    title={t('header.restart')}
-                    style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        padding: tight ? '6px' : '5px 9px',
-                        background: 'transparent',
-                        border: `1px solid ${theme.rule}`,
-                        borderRadius: '4px',
-                        color: theme.inkFaint,
+                        color: theme.inkMuted,
                         fontFamily: theme.display,
                         fontSize: '0.5rem',
                         letterSpacing: '0.06em',
@@ -154,10 +142,9 @@ const Header: React.FC<HeaderProps> = ({ restartGame, milkCount, fishCount, scor
                         flexShrink: 0,
                         cursor: 'pointer'
                     }}
-                    aria-label={t('header.restart')}
                 >
-                    <RotateCcw size={11} />
-                    {!tight && 'RESTART'}
+                    <Menu size={13} />
+                    {!tight && 'MENU'}
                 </button>
             </div>
         </div>

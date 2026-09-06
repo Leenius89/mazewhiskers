@@ -260,7 +260,9 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     return (
         <div style={{
             width: '100%',
-            height: '100vh',
+            // The viewport as it stands, not the taller one that exists only
+            // while a phone's address bar is out of the way.
+            height: '100dvh',
             display: 'flex',
             justifyContent: 'center',
             // The letterbox either side of the picture. Part of the room,

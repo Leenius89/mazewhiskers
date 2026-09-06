@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
+import { currentDifficulty } from './core/difficulty';
 import type { GameScene } from './scenes/GameScene';
 
 /**
@@ -26,7 +27,8 @@ export const setupHealthSystem = (
             // are free. Charging for time the player cannot act in is a cheap
             // way to lose.
             if (!scene.state.is('playing') || scene.narrativeActive) return;
-            scene.applyHealth(GameConfig.HEALTH.DRAIN_AMOUNT);
+            // What existing costs, and it costs more on a harder setting.
+            scene.applyHealth(GameConfig.HEALTH.DRAIN_AMOUNT * currentDifficulty().costScale);
         },
         loop: true
     });

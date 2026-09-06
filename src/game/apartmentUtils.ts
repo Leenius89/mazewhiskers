@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
-import { difficultyOf } from './core/difficulty';
+import { currentDifficulty, difficultyOf } from './core/difficulty';
 import { getSettings } from '../settings';
 import { setStaticFootBody } from './core/bodies';
 import { DEPTH, sortDepth } from './core/depth';
@@ -124,10 +124,21 @@ export class ApartmentSystem {
 
     private startSpawning(): void {
         this.spawnTimer = this.scene.time.addEvent({
+            /*
+             * The difficulty belongs here too.
+             *
+             * It was applied to the wait before the first tower and then
+             * forgotten, so every setting built at exactly the same rate for
+             * the rest of the run — the whole difference between easy and hard
+             * was when the first block landed. Measured over identical seeds,
+             * redevelopment reached the same four per cent at thirty seconds on
+             * all three.
+             */
             delay:
                 GameConfig.APARTMENT.SPAWN_INTERVAL *
                 this.scene.mode.apartmentIntervalScale *
-                this.scene.pressure,
+                this.scene.pressure *
+                currentDifficulty().apartmentScale,
             callback: () => this.announceBlock(),
             callbackScope: this,
             loop: true

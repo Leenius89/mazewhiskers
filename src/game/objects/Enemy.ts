@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
-import { difficultyOf } from '../core/difficulty';
+import { currentDifficulty, difficultyOf } from '../core/difficulty';
 import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
@@ -212,7 +212,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        this.steerTo(target, GameConfig.ENEMY.SPEED);
+        this.steerTo(target, GameConfig.ENEMY.SPEED * currentDifficulty().enemySpeedScale);
     }
 
     private steerTo(target: { x: number; y: number }, speed: number): void {
@@ -239,7 +239,8 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         this.cone.clear();
         this.cone.fillStyle(color, alpha);
-        this.cone.slice(this.x, this.groundY, vision.RANGE, this.facing - half, this.facing + half, false);
+        const reach = vision.RANGE * currentDifficulty().enemyVisionScale;
+        this.cone.slice(this.x, this.groundY, reach, this.facing - half, this.facing + half, false);
         this.cone.fillPath();
     }
 

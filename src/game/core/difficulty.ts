@@ -1,3 +1,5 @@
+import { getSettings } from '../../settings';
+
 export type DifficultyKey = 'easy' | 'normal' | 'hard';
 
 export interface Difficulty {
@@ -11,6 +13,22 @@ export interface Difficulty {
      * between blocks. Below 1 means the city closes in sooner and faster.
      */
     apartmentScale: number;
+
+    /** Multiplies how fast health drains and how much rent takes. */
+    costScale: number;
+
+    /** Multiplies the black cat's chase speed. Never past the player's own. */
+    enemySpeedScale: number;
+
+    /**
+     * How far the vision cone is drawn.
+     *
+     * The cone is a signal, not a sensor — the black cat always knows where
+     * you are, and always has. A longer reach on a harder setting is honest
+     * about that: it tells the player how much of the street is unsafe
+     * before they learn it the expensive way.
+     */
+    enemyVisionScale: number;
 
     /**
      * Multiplies the enemy's jump cooldown. Below 1 means it clears the wall it
@@ -35,12 +53,27 @@ export interface Difficulty {
  * it, and a paragraph explaining what a difficulty does is a paragraph nobody
  * in a gallery is going to read.
  */
+/**
+ * Three settings that should feel like three games.
+ *
+ * They used to differ in two numbers — how often a tower went up, and how
+ * often the black cat could jump a wall — and both of those are things a
+ * player only notices in hindsight. Whether a run was hard is decided by how
+ * fast the money goes and how soon you are seen, so those are here too.
+ *
+ * The chase speed stays under the player's 160 at every setting: the point is
+ * that it can always be outrun, and losing that would turn a chase into a
+ * coin toss.
+ */
 export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
     easy: {
         key: 'easy',
         label: 'EASY',
         color: '#5cbba6',
         apartmentScale: 1,
+        costScale: 1,
+        enemySpeedScale: 1,
+        enemyVisionScale: 1,
         enemyJumpScale: 1,
         rankWeight: 1
     },
@@ -48,21 +81,30 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         key: 'normal',
         label: 'NORMAL',
         color: '#f0b429',
-        apartmentScale: 0.72,
-        enemyJumpScale: 0.65,
+        apartmentScale: 0.6,
+        costScale: 1.3,
+        enemySpeedScale: 1.14,
+        enemyVisionScale: 1.25,
+        enemyJumpScale: 0.6,
         rankWeight: 1.3
     },
     hard: {
         key: 'hard',
         label: 'HARD',
         color: '#e8635a',
-        apartmentScale: 0.5,
-        enemyJumpScale: 0.42,
+        apartmentScale: 0.36,
+        costScale: 1.75,
+        enemySpeedScale: 1.3,
+        enemyVisionScale: 1.55,
+        enemyJumpScale: 0.34,
         rankWeight: 1.7
     }
 };
 
 export const DIFFICULTY_ORDER: DifficultyKey[] = ['easy', 'normal', 'hard'];
+
+/** The setting this run is being played on. */
+export const currentDifficulty = (): Difficulty => difficultyOf(getSettings().difficulty);
 
 export const difficultyOf = (key: string | undefined | null): Difficulty =>
     DIFFICULTIES[(key as DifficultyKey) ?? 'easy'] ?? DIFFICULTIES.easy;

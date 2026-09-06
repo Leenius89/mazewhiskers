@@ -84,7 +84,12 @@ class Bubble {
 
         // Re-sized per line rather than once at construction, so a rotated phone
         // does not keep type meant for the screen it used to be.
-        const scale = worldUiScale(camera);
+        //
+        // Keyed on the zoom as well as the interface scale: the wrap width is
+        // a share of the screen converted into world units, so a camera that
+        // has punched out mid-jump needs a different one even though nothing
+        // about the screen changed.
+        const scale = worldUiScale(camera) * (camera.zoom || 1);
         if (scale !== this.appliedScale) {
             this.appliedScale = scale;
             this.label.setFontSize(worldFontPx(cfg.FONT_SIZE, camera, TEXT.BARK));
@@ -226,31 +231,46 @@ class Bubble {
         return Math.min(x, rightmost);
     }
 
+    /**
+     * Draws the box around whatever the label currently measures.
+     *
+     * The box is worked out as a rectangle first and the label is then hung
+     * from its bottom edge. It used to be done by flipping the sign on every
+     * term, and the label's own offset came out two paddings too low in the
+     * flipped case — so a bubble drawn below its speaker had its text sitting
+     * outside the bottom of the bubble. Which was most of what the black cat
+     * ever said, because it arrives at the top of the map where there is no
+     * room to draw above a head.
+     */
     private draw(): void {
         const cfg = GameConfig.BARKS;
         const camera = this.scene.cameras.main;
         const tail = worldUi(cfg.TAIL, camera);
-        const width = this.label.width + worldUi(cfg.PADDING.X, camera) * 2;
-        const height = this.label.height + worldUi(cfg.PADDING.Y, camera) * 2;
-        // Positive is downward, so flipping is a sign change on everything.
-        const direction = this.flipped ? -1 : 1;
+        const padX = worldUi(cfg.PADDING.X, camera);
+        const padY = worldUi(cfg.PADDING.Y, camera);
+
+        const width = this.label.width + padX * 2;
+        const height = this.label.height + padY * 2;
+
+        // The speaker's head is the origin. Positive y is downward, so a
+        // bubble above it starts at a negative y and one below starts past
+        // the tail.
+        const top = this.flipped ? tail : -tail - height;
+        const bottom = top + height;
 
         this.boxWidth = width;
         this.boxHeight = height;
-        this.label.setY(direction * -(tail + worldUi(cfg.PADDING.Y, camera)) + (this.flipped ? height : 0));
+        // Origin is (0.5, 1): the label hangs from its own bottom edge, which
+        // sits one padding above the bottom of the box in both orientations.
+        this.label.setY(bottom - padY);
 
         this.box.clear();
         this.box.fillStyle(cfg.BOX_COLOR, cfg.BOX_ALPHA);
-        this.box.fillRoundedRect(
-            -width / 2,
-            this.flipped ? tail : -tail - height,
-            width,
-            height,
-            worldUi(cfg.CORNER, camera)
-        );
+        this.box.fillRoundedRect(-width / 2, top, width, height, worldUi(cfg.CORNER, camera));
 
         // Tail: a small wedge from the bubble back to the head.
-        this.box.fillTriangle(-tail, direction * -tail, tail, direction * -tail, 0, 0);
+        const throat = this.flipped ? tail : -tail;
+        this.box.fillTriangle(-tail, throat, tail, throat, 0, 0);
     }
 
     destroy(): void {

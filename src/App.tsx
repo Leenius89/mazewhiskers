@@ -11,8 +11,10 @@ import GameOver from './components/GameOver';
 import Victory from './components/Victory';
 import Leaderboard from './components/Leaderboard';
 import SettingsPanel from './components/SettingsPanel';
+import PauseMenu from './components/PauseMenu';
 import { getSettings, subscribe, useSettings } from './settings';
 import { theme } from './components/theme';
+import { isMobileDevice } from './game/systems/InputManager';
 import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
@@ -24,8 +26,33 @@ import { RENDER_SCALE } from './game/core/renderScale';
 
 import { resolveMode } from './game/core/modes';
 
-/** Space the page furniture takes out of the window on desktop. */
-const CHROME = { MARGIN_X: 24, HEADER_H: 76 };
+/**
+ * How tall the run bar is. The canvas gets everything else.
+ *
+ * Kept in one place because both the layout and the size handed to Phaser
+ * have to agree about it; they drifted apart before, which is how the canvas
+ * ended up hanging past the bottom of a short window.
+ */
+const HEADER_H = 42;
+/** Breathing room on a desktop, where the page is not the whole screen. */
+const DESKTOP_INSET = { X: 24, Y: 20 };
+
+/**
+ * The area actually visible right now, in CSS pixels.
+ *
+ * `innerHeight` on a phone is the window including whatever the browser has
+ * temporarily slid out of the way — the address bar on Safari and Chrome
+ * both — so a layout built on it is taller than the screen and the bottom of
+ * the game sits under the toolbar. `visualViewport` is what the person can
+ * see, and it changes as the bar hides and returns.
+ */
+const viewport = (): { width: number; height: number } => {
+    const vv = window.visualViewport;
+    return {
+        width: Math.round(vv?.width ?? window.innerWidth),
+        height: Math.round(vv?.height ?? window.innerHeight)
+    };
+};
 /**
  * Below this the layout stops making sense.
  *
@@ -80,6 +107,8 @@ function App() {
         jumpsUsed * GameConfig.SCORE.PER_JUMP;
 
     const [showLeaderboard, setShowLeaderboard] = useState(false);
+    /** The run bar's menu, which holds the game still while it is open. */
+    const [showPause, setShowPause] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
     const [leaderboardMode, setLeaderboardMode] = useState<BoardKey>('survived');
     const [isShowingCredits, setIsShowingCredits] = useState(false);
@@ -96,35 +125,42 @@ function App() {
 
     useEffect(() => {
         const handleResize = () => {
-            const width = window.innerWidth;
-            const height = window.innerHeight;
-            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const { width, height } = viewport();
+            const isMobile = isMobileDevice();
 
-            if (isMobile) {
-                setGameSize({ width: width * 0.9, height: height * 0.8 });
-                return;
-            }
+            /*
+             * The whole window, less the run bar.
+             *
+             * A phone used to be given ninety per cent of the width and eighty
+             * of the height, which left a visible frame of page all the way
+             * round the game and threw away a fifth of the screen — on the one
+             * device that has the least of it. There is no reason for the
+             * margin: the canvas is the game.
+             *
+             * A desktop keeps a little inset, because there the page around it
+             * is a window on a larger screen rather than the whole device.
+             */
+            const insetX = isMobile ? 0 : DESKTOP_INSET.X;
+            const insetY = isMobile ? 0 : DESKTOP_INSET.Y;
 
-            // The window, less the run bar and a margin.
-            //
-            // It used to be pinned to 768 wide whatever the monitor was, which
-            // left most of a desktop browser as background. The reference width
-            // the interface is measured against is still 768 — that is a
-            // readability baseline, not a canvas size — so a wider window simply
-            // shows more city.
             setGameSize({
-                width: Math.max(width - CHROME.MARGIN_X, MIN_CANVAS.WIDTH),
-                height: Math.max(height - CHROME.HEADER_H, MIN_CANVAS.HEIGHT)
+                width: Math.max(width - insetX, MIN_CANVAS.WIDTH),
+                height: Math.max(height - HEADER_H - insetY, MIN_CANVAS.HEIGHT)
             });
         };
 
         handleResize();
         window.addEventListener('resize', handleResize);
         window.addEventListener('orientationchange', handleResize);
+        // Fires when the address bar slides away, which `resize` does not.
+        window.visualViewport?.addEventListener('resize', handleResize);
+        window.visualViewport?.addEventListener('scroll', handleResize);
 
         return () => {
             window.removeEventListener('resize', handleResize);
             window.removeEventListener('orientationchange', handleResize);
+            window.visualViewport?.removeEventListener('resize', handleResize);
+            window.visualViewport?.removeEventListener('scroll', handleResize);
         };
     }, []);
 
@@ -365,6 +401,24 @@ function App() {
         return () => document.removeEventListener('gameVictory', handleVictory);
     }, [restartGame]);
 
+    /**
+     * Opens the run menu and stops the world behind it.
+     *
+     * The scene refuses to pause once a run has ended, and the results panel
+     * is already covering the screen at that point, so the menu simply does
+     * not open there.
+     */
+    const openPause = useCallback(() => {
+        if (isGameOver || isVictory || isShowingCredits) return;
+        bus.current?.emit('pauseGame');
+        setShowPause(true);
+    }, [isGameOver, isVictory, isShowingCredits]);
+
+    const closePause = useCallback(() => {
+        setShowPause(false);
+        bus.current?.emit('resumeGame');
+    }, []);
+
     const startGame = () => {
         setShowGame(true);
         setIsGameOver(false);
@@ -374,6 +428,18 @@ function App() {
         setFishCount(0);
         setJumpsUsed(0);
     };
+
+    const restartFromPause = useCallback(() => {
+        setShowPause(false);
+        restartGame();
+    }, [restartGame]);
+
+    const mainMenuFromPause = useCallback(() => {
+        setShowPause(false);
+        setIsGameOver(false);
+        setIsVictory(false);
+        setShowGame(false);
+    }, []);
 
     const handleShowLeaderboard = (mode: BoardKey) => {
         setLeaderboardMode(mode);
@@ -385,19 +451,22 @@ function App() {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            minHeight: '100vh',
+            // `dvh` is the viewport as it stands right now; `vh` on a phone is
+            // the taller one that exists only while the address bar is hidden,
+            // and building on it puts the bottom of the page under the bar.
+            minHeight: '100dvh',
             maxWidth: '100vw',
             overflow: 'hidden',
             position: 'relative',
             // The page around the canvas. Follows the interface's light, not
             // the game world's — the world is a night city either way.
             backgroundColor: theme.ground,
-            padding: '10px'
+            padding: 0
         }}>
             {showGame ? (
                 <>
                     <Header
-                        restartGame={restartGame}
+                        onOpenMenu={openPause}
                         milkCount={milkCount}
                         fishCount={fishCount}
                         score={score}
@@ -409,7 +478,7 @@ function App() {
                         style={{
                             width: `${gameSize.width}px`,
                             height: `${gameSize.height}px`,
-                            margin: '10px auto',
+                            margin: '0 auto',
                             touchAction: 'none',
                             // WebkitTouchCallout: 'none', // React doesn't support this style property directly without casing or ignore
                             userSelect: 'none',
@@ -463,6 +532,14 @@ function App() {
                     fishCount={fishCount}
                     score={score}
                     healthLeft={healthLeft}
+                />
+            )}
+
+            {showPause && (
+                <PauseMenu
+                    onResume={closePause}
+                    onRestart={restartFromPause}
+                    onMainMenu={mainMenuFromPause}
                 />
             )}
 

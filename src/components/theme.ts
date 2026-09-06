@@ -77,15 +77,22 @@ const DARK: Palette = {
 };
 
 const LIGHT: Palette = {
-    /** Poured concrete in daylight, warm rather than blue. */
-    ground: '#E5E2DA',
-    surface: '#F6F4EF',
-    surfaceRaised: '#ECE9E1',
-    rule: '#CFCBC0',
+    /**
+     * Newsprint and poured concrete, not paper white.
+     *
+     * The first light set was built around #F6F4EF, which on a phone at full
+     * brightness is a torch. This is the same idea taken several steps down and
+     * several degrees warmer: the beige of a photocopied notice taped to a wall,
+     * which is where this game's words would actually be.
+     */
+    ground: '#D8D2C3',
+    surface: '#EAE3D3',
+    surfaceRaised: '#E0D8C5',
+    rule: '#BEB5A0',
 
-    ink: '#17181B',
-    inkMuted: '#4E535B',
-    inkFaint: '#767B84',
+    ink: '#24211A',
+    inkMuted: '#575245',
+    inkFaint: '#837C6B',
 
     /**
      * Amber, darkened until it holds its own on paper.
@@ -94,13 +101,13 @@ const LIGHT: Palette = {
      * ground and fails contrast against it; this is the same hue taken down to
      * where it stays a warning.
      */
-    accent: '#A96B00',
-    onAccent: '#FFF8E8',
-    good: '#1B7A66',
-    bad: '#C0392C',
+    accent: '#96590A',
+    onAccent: '#FFF6E4',
+    good: '#186354',
+    bad: '#AC3226',
 
-    scrim: 'rgba(233, 230, 222, 0.955)',
-    panelShadow: '0 18px 50px rgba(30,28,24,0.18)',
+    scrim: 'rgba(216, 210, 195, 0.96)',
+    panelShadow: '0 18px 50px rgba(46,40,28,0.22)',
 
     ...FACES
 };

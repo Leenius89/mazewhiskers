@@ -22,6 +22,12 @@ const ko: Dict = {
     'menu.settings': '설정 / SETTINGS',
 
     // ------------------------------------------------------------ settings
+    'pause.eyebrow': 'PAUSED',
+    'pause.title': '잠시 멈춤',
+    'pause.resume': '이어하기',
+    'pause.restart': '다시 시작',
+    'pause.mainMenu': '메뉴로',
+    'header.menu': '메뉴 / MENU',
     'settings.eyebrow': 'SETTINGS',
     'settings.title': '설정',
     'settings.sound': '소리 / SOUND',
@@ -136,6 +142,12 @@ const en: Dict = {
     'menu.ranking': 'RANKING',
     'menu.settings': 'SETTINGS',
 
+    'pause.eyebrow': 'PAUSED',
+    'pause.title': 'Paused',
+    'pause.resume': 'RESUME',
+    'pause.restart': 'RESTART',
+    'pause.mainMenu': 'MAIN MENU',
+    'header.menu': 'MENU',
     'settings.eyebrow': 'SETTINGS',
     'settings.title': 'Settings',
     'settings.sound': 'SOUND',

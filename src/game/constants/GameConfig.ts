@@ -63,8 +63,16 @@ export const GameConfig = {
         ENEMY: { WIDTH: 48, HEIGHT: 24, FOOT_INSET: 4 },
         /** A wall tile is its own footprint, so the box is centred, not foot-aligned. */
         WALL: { WIDTH: 96, HEIGHT: 96 },
-        /** Ground footprint of an apartment tower — one tile, slightly inset. */
-        APARTMENT: { WIDTH: 92, HEIGHT: 64 },
+        /**
+         * Ground footprint of an apartment tower: exactly one tile.
+         *
+         * It was 92x64 while a building next to it was 96x96, and a tower is
+         * anchored to the bottom of its tile — so the top third of the cell had
+         * no collision in it at all and the cat could walk round the back of a
+         * block that the maze grid already considered solid. A tower replaces a
+         * building; it stands on the same ground.
+         */
+        APARTMENT: { WIDTH: 96, HEIGHT: 96 },
         GOAL_RADIUS: 48,
         PICKUP_RADIUS: 44
     },
