@@ -61,7 +61,7 @@ export const setupHealthSystem = (
 const scheduleRent = (scene: GameScene) => {
     const rent = GameConfig.HEALTH.RENT;
 
-    scene.time.addEvent({
+    scene.rentTimer = scene.time.addEvent({
         delay: rent.INTERVAL,
         loop: true,
         callback: () => {

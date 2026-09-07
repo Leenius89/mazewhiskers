@@ -122,6 +122,36 @@ export class GameScene extends Phaser.Scene {
     /** False until the tutorial is done with; the run has not started yet. */
     private clockRunning = false;
 
+    /** Time spent in the pause menu, summed over the run. */
+    private pausedTotalMs = 0;
+
+    /** Loop time when the current pause began. Meaningless while playing. */
+    private pausedAtMs = 0;
+
+    /**
+     * The scene clock with the pauses taken out of it.
+     *
+     * Everything with a deadline stores it as `now + duration` and compares
+     * against `now` later — rent day, the cat's invulnerability after a hit,
+     * the recovery from a shove, the enemy's stagger and telegraph, the bark
+     * timings, the idle warning. Phaser's `time.now` is written once per
+     * update from the game loop's clock, and a paused scene gets no updates,
+     * so it freezes at the moment of the pause and then jumps the whole
+     * length of the pause forward on the first frame back.
+     *
+     * Every one of those deadlines therefore came due at once on resume. Open
+     * the menu for a minute and rent was charged the instant you closed it;
+     * pause after taking a hit and the invulnerability that was meant to get
+     * you clear was already gone.
+     *
+     * Subtracting the time spent paused makes the reading continuous across a
+     * pause instead. Deadlines set before one are still the same distance away
+     * after it, which is what the player is owed: nothing progressed.
+     */
+    get runNow(): number {
+        return this.time.now - this.pausedTotalMs;
+    }
+
     /** How long this district has been played, in milliseconds. */
     get elapsedMs(): number {
         return this.playedMs;
@@ -150,8 +180,20 @@ export class GameScene extends Phaser.Scene {
     private statusBar: PlayerStatusBar | null = null;
     private threat: ThreatFeedback | null = null;
 
-    /** Scene clock reading of the next rent charge, for the HUD countdown. */
-    private nextRentAt = 0;
+    /**
+     * The timer that charges rent. Also what the HUD counts down.
+     *
+     * There were two rent clocks before this: the timer that actually took
+     * the money, and a `nextRentAt` stamp kept beside it for the bar. They
+     * were seeded at different moments and only one of them was reset when
+     * rent was skipped for landing during a story beat, so they drifted
+     * apart within the first minute and the bar then sat empty and amber for
+     * the rest of the run, promising a charge that was half a minute off.
+     *
+     * A `TimerEvent` already tracks its own remaining time and already stops
+     * with the scene, so the second clock was never needed.
+     */
+    public rentTimer: Phaser.Time.TimerEvent | null = null;
 
     /** Why the run ended, carried through to the results screen. */
     private endReason: GameOverReason = 'health';
@@ -203,9 +245,11 @@ export class GameScene extends Phaser.Scene {
 
         this.playedMs = 0;
         this.clockRunning = false;
+        this.pausedTotalMs = 0;
+        this.pausedAtMs = 0;
         this.health = GameConfig.HEALTH.MAX;
         this.occluders.clear();
-        this.nextRentAt = this.time.now + GameConfig.HEALTH.RENT.INTERVAL;
+        this.rentTimer = null;
 
         const player = new Player(this, 100, 100);
         this.player = player;
@@ -568,7 +612,8 @@ export class GameScene extends Phaser.Scene {
 
     /** Milliseconds until the next rent charge, for the HUD. */
     msUntilRent(): number {
-        return Math.max(0, this.nextRentAt - this.time.now);
+        if (!this.rentTimer) return GameConfig.HEALTH.RENT.INTERVAL;
+        return Math.max(0, this.rentTimer.getRemaining());
     }
 
     /**
@@ -580,7 +625,6 @@ export class GameScene extends Phaser.Scene {
     chargeRent(): void {
         if (this.state.hasEnded() || this.narrativeActive) return;
 
-        this.nextRentAt = this.time.now + GameConfig.HEALTH.RENT.INTERVAL;
         this.hud?.playRentFlash();
         this.cameraDirector?.shakeFrom(this.player?.x ?? 0, this.player?.y ?? 0, 0.005, 260);
         this.applyHealth(GameConfig.HEALTH.RENT.AMOUNT * currentDifficulty().costScale);
@@ -609,12 +653,18 @@ export class GameScene extends Phaser.Scene {
         // still be dragged.
         this.controls?.setControlsVisible(false);
 
+        // The loop keeps time while the scene does not; this is what the gap
+        // gets measured against on the way back.
+        this.pausedAtMs = this.game.loop.time;
+
         this.scene.pause();
         this.sound.pauseAll();
     }
 
     private handleResumeRequest(): void {
         if (!this.state.resume()) return;
+
+        this.pausedTotalMs += Math.max(0, this.game.loop.time - this.pausedAtMs);
 
         this.scene.resume();
         this.physics.resume();
@@ -735,7 +785,7 @@ export class GameScene extends Phaser.Scene {
         // After the actors move, so the silhouette matches this frame.
         this.occlusion?.update();
 
-        const now = this.time.now;
+        const now = this.runNow;
         this.barks?.update(now);
         this.sweat?.update(now);
         this.apartmentSystem?.drawWarnings(now);

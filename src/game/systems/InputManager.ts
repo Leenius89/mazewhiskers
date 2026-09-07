@@ -73,6 +73,16 @@ export class InputManager {
         scene.events.once('shutdown', () => this.destroy());
     }
 
+    /*
+     * These two stay on the raw scene clock, unlike every other deadline in
+     * the game, which reads GameScene.runNow so that a pause costs nothing.
+     *
+     * Here the pause should cost something. The buffer exists to carry a
+     * press across a few frames, and `time.now` jumping forward on resume
+     * expires it — which is the wanted behaviour. A jump pressed before the
+     * menu opened should not fire when the menu closes.
+     */
+
     /** Records a jump press. Held briefly so a press just before landing counts. */
     requestJump(): void {
         this.jumpRequestedAt = this.scene.time.now;

@@ -151,7 +151,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      */
     private updateProceduralMotion(): void {
         const cfg = GameConfig.PROCEDURAL_MOTION;
-        const now = this.scene.time.now;
+        const now = this.scene.runNow;
         const speed = this.body ? this.body.velocity.length() : 0;
         const moving = speed > 8;
 
@@ -180,11 +180,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     get isDashing(): boolean {
-        return this.scene.time.now < this.dashUntil;
+        return this.scene.runNow < this.dashUntil;
     }
 
     get isInvulnerable(): boolean {
-        return this.scene.time.now < this.invulnerableUntil;
+        return this.scene.runNow < this.invulnerableUntil;
     }
 
     /** Blink while untouchable, so the state is never a mystery. */
@@ -195,7 +195,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         }
 
         const period = GameConfig.PLAYER.INVULNERABLE_BLINK_MS;
-        this.setAlpha(Math.floor(this.scene.time.now / period) % 2 === 0 ? 1 : 0.35);
+        this.setAlpha(Math.floor(this.scene.runNow / period) % 2 === 0 ? 1 : 0.35);
     }
 
     /**
@@ -207,7 +207,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     tryDash(moveDirection: Phaser.Math.Vector2): boolean {
         if (!this.scene.mode.dashEnabled) return false;
 
-        const now = this.scene.time.now;
+        const now = this.scene.runNow;
         if (this.isJumping || this.isDashing || now < this.dashReadyAt) return false;
 
         const dash = GameConfig.PLAYER.DASH;
@@ -269,8 +269,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (this.isInvulnerable) return false;
 
         const contact = GameConfig.ENEMY.CONTACT;
-        this.invulnerableUntil = this.scene.time.now + contact.INVULNERABLE_MS;
-        this.recoveryUntil = this.scene.time.now + GameConfig.APARTMENT.PUSH.DURATION;
+        this.invulnerableUntil = this.scene.runNow + contact.INVULNERABLE_MS;
+        this.recoveryUntil = this.scene.runNow + GameConfig.APARTMENT.PUSH.DURATION;
         this.dashUntil = 0;
 
         this.knockback(fromX, fromY, contact.KNOCKBACK, contact.KNOCKBACK_MS);
@@ -286,7 +286,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     knockback(fromX: number, fromY: number, speed: number, durationMs: number): void {
         if (speed <= 0) return;
 
-        this.recoveryUntil = Math.max(this.recoveryUntil, this.scene.time.now + durationMs);
+        this.recoveryUntil = Math.max(this.recoveryUntil, this.scene.runNow + durationMs);
 
         const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.groundY);
         this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -294,7 +294,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     private handleMovement(moveDirection: Phaser.Math.Vector2): void {
         // Knockback owns velocity for its duration; do not fight it.
-        if (this.scene.time.now < this.recoveryUntil) return;
+        if (this.scene.runNow < this.recoveryUntil) return;
 
         const moving = moveDirection.lengthSq() > 0;
 
@@ -416,7 +416,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     shoveTo(x: number, y: number): void {
         const duration = GameConfig.APARTMENT.PUSH.DURATION;
 
-        this.recoveryUntil = this.scene.time.now + duration;
+        this.recoveryUntil = this.scene.runNow + duration;
         this.setVelocity(0);
 
         this.scene.tweens.add({
@@ -476,7 +476,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     /** True while a shove or a hit still owns the cat's movement. */
     get isRecovering(): boolean {
-        return this.scene.time.now < this.recoveryUntil;
+        return this.scene.runNow < this.recoveryUntil;
     }
 
     /** Called by the scene when the buffered jump input is consumed. */
@@ -549,13 +549,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     private land(at: Phaser.Math.Vector2): void {
         this.isJumping = false;
-        this.landedAt = this.scene.time.now;
+        this.landedAt = this.scene.runNow;
         this.x = at.x;
         this.groundY = at.y;
         this.y = at.y;
         this.syncGroundVisuals();
 
-        this.recoveryUntil = this.scene.time.now + GameConfig.PLAYER.JUMP.RECOVERY_MS;
+        this.recoveryUntil = this.scene.runNow + GameConfig.PLAYER.JUMP.RECOVERY_MS;
         this.setVelocity(0);
 
         this.spawnLandingDust();

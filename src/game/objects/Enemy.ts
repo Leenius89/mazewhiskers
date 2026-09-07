@@ -148,7 +148,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     knockback(fromX: number, fromY: number, speed: number, durationMs: number): void {
         if (speed <= 0 || this.isJumping) return;
 
-        this.staggerUntil = this.scene.time.now + durationMs;
+        this.staggerUntil = this.scene.runNow + durationMs;
 
         const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.groundY);
         this.setVelocity(Math.cos(angle) * speed, Math.sin(angle) * speed);
@@ -166,7 +166,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** Holds still for a beat, so its arrival registers before it moves. */
     announce(): void {
         this.awareness = 'telegraph';
-        this.telegraphUntil = this.scene.time.now + GameConfig.ENEMY.TELEGRAPH.DURATION_MS;
+        this.telegraphUntil = this.scene.runNow + GameConfig.ENEMY.TELEGRAPH.DURATION_MS;
         this.setVelocity(0, 0);
         this.scene.soundManager?.playEnemyAlert();
     }
@@ -176,7 +176,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     update(): void {
         if (!this.active || this.isJumping) return;
 
-        const now = this.scene.time.now;
+        const now = this.scene.runNow;
 
         if (this.awareness === 'telegraph') {
             this.setVelocity(0, 0);
@@ -251,7 +251,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
      * cooldown has expired. Returns false when the hop is refused.
      */
     tryJumpToward(targetX: number, targetY: number): boolean {
-        const now = this.scene.time.now;
+        const now = this.scene.runNow;
         if (this.isJumping || now < this.jumpReadyAt) return false;
 
         const cfg = GameConfig.ENEMY.JUMP;
@@ -301,7 +301,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.groundY = endY;
                 this.y = endY;
                 this.jumpReadyAt =
-                    this.scene.time.now +
+                    this.scene.runNow +
                     GameConfig.ENEMY.JUMP.COOLDOWN_MS * difficultyOf(getSettings().difficulty).enemyJumpScale;
                 this.syncGroundVisuals();
                 this.play('enemyWalk', true);
