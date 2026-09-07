@@ -19,7 +19,7 @@ export class AssetLoader {
         this.scene.load.image('fish2', 'sources/fish2.png');
         this.scene.load.image('enemy1', 'sources/enemy1.png');
         this.scene.load.image('enemy2', 'sources/enemy2.png');
-        this.scene.load.image('goal', 'sources/ith.png');
+        this.scene.load.image('goal', 'sources/building4.png');
         this.scene.load.image('goalBackground', 'sources/goalbackground.png');
         this.scene.load.image('apt1', 'sources/apt1.png');
         this.scene.load.image('apt2', 'sources/apt2.png');
