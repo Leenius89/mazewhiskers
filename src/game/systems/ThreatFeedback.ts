@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { currentDifficulty } from '../core/difficulty';
 import { DEPTH } from '../core/depth';
 import { viewportOf } from '../core/screenSpace';
 import type { GameScene } from '../scenes/GameScene';
@@ -32,6 +33,18 @@ export class ThreatFeedback {
 
     private nextShakeAt = 0;
 
+    /**
+     * Where the pulse is in its cycle, carried between frames.
+     *
+     * The rate changes with distance, and a wave written as
+     * `sin(time * rate)` jumps every time the rate does — the phase
+     * is time multiplied by it. Advancing a phase by rate * delta
+     * instead means the pulse quickens smoothly rather than
+     * restarting each time the enemy moves.
+     */
+    private phase = 0;
+    private lastTime = 0;
+
     constructor(scene: GameScene) {
         this.scene = scene;
 
@@ -55,25 +68,6 @@ export class ThreatFeedback {
         this.wash.setSize(viewport.width * viewport.scale, viewport.height * viewport.scale);
     }
 
-    /** 0 when nothing is near, 1 when something is on top of the player. */
-    private proximity(): number {
-        const player = this.scene.player;
-        if (!player || this.scene.enemies.length === 0) return 0;
-
-        let closest = Infinity;
-        for (const enemy of this.scene.enemies) {
-            if (!enemy.active) continue;
-            closest = Math.min(
-                closest,
-                Phaser.Math.Distance.Between(player.x, player.groundY, enemy.x, enemy.groundY)
-            );
-        }
-
-        const cfg = GameConfig.THREAT;
-        if (!Number.isFinite(closest)) return 0;
-        return 1 - Phaser.Math.Clamp((closest - cfg.NEAR) / (cfg.FAR - cfg.NEAR), 0, 1);
-    }
-
     update(time: number): void {
         this.resize();
 
@@ -84,7 +78,14 @@ export class ThreatFeedback {
         }
 
         const cfg = GameConfig.THREAT;
-        const nearness = this.proximity();
+        const nearness = this.scene.enemyNearness;
+
+        // The chase music hears about this whether or not anything is drawn,
+        // so it can wind back down as the enemy loses the player.
+        this.scene.soundManager?.setChaseUrgency(nearness);
+
+        const delta = this.lastTime ? Math.min(time - this.lastTime, 100) : 0;
+        this.lastTime = time;
 
         if (nearness <= 0) {
             this.wash.setAlpha(0);
@@ -92,17 +93,25 @@ export class ThreatFeedback {
         }
 
         const intensity = Math.pow(nearness, cfg.FALLOFF_POWER);
+        const dread = currentDifficulty().dread;
 
         // Reduced motion reduces motion — it does not remove the warning. How
         // close the machine is is information the player needs, so it still
         // arrives, just as a steady glow instead of a pulse, and with no shake.
         if (this.reducedMotion) {
             this.wash.setAlpha(cfg.MAX_FLASH_ALPHA * cfg.REDUCED_MOTION_SCALE * intensity);
+
             return;
         }
 
-        const pulse = 0.5 + 0.5 * Math.sin((time / 1000) * cfg.PULSE_HZ * Math.PI * 2);
-        this.wash.setAlpha(cfg.MAX_FLASH_ALPHA * intensity * pulse);
+        // Quickens as it closes, from the resting rate up to the ceiling that
+        // photosensitivity guidance allows — never past it, on any setting.
+        const rate = Phaser.Math.Linear(cfg.PULSE_HZ, cfg.PULSE_HZ_NEAR, intensity);
+        this.phase += (delta / 1000) * rate * Math.PI * 2;
+
+        const pulse = 0.5 + 0.5 * Math.sin(this.phase);
+        const bite = dread ? cfg.DREAD_ALPHA_SCALE : 1;
+        this.wash.setAlpha(Math.min(1, cfg.MAX_FLASH_ALPHA * bite * intensity * pulse));
 
         // Shaking on an interval rather than every frame keeps it a tremble
         // rather than a vibration.

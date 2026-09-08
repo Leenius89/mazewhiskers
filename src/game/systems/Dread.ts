@@ -34,6 +34,12 @@ export class Dread {
     private nextGlitchAt = 0;
     private elapsed = 0;
 
+    /** Advanced by rate * delta, so quickening it does not jump the wave. */
+    private breath = 0;
+
+    /** Eased, so rounding a corner into the enemy winds up rather than snaps. */
+    private nearness = 0;
+
     constructor(scene: GameScene) {
         this.scene = scene;
 
@@ -83,19 +89,46 @@ export class Dread {
         const cfg = GameConfig.DREAD;
         this.elapsed += delta;
 
+        // Everything here gets worse as the black cat closes. The wash is
+        // already violet and the picture already breathes; what nearness
+        // changes is how fast and how far, which is the difference between a
+        // place being wrong and a place coming apart.
+        this.nearness = Phaser.Math.Linear(this.nearness, this.scene.enemyNearness, cfg.CLOSING.EASE);
+        const panic = this.nearness;
+
         // Two waves at unrelated periods, so the pulse never settles into a
-        // rhythm the player can hold on to.
-        const slow = Math.sin(this.elapsed / cfg.BREATH_MS);
-        const fast = Math.sin(this.elapsed / cfg.BREATH_MS / 0.37);
+        // rhythm the player can hold on to. Both quicken together.
+        const rush = 1 + panic * cfg.CLOSING.BREATH_RUSH;
+        this.breath += (delta / cfg.BREATH_MS) * rush;
+
+        const slow = Math.sin(this.breath);
+        const fast = Math.sin(this.breath / 0.37);
         const breath = (slow * 0.65 + fast * 0.35);
 
-        this.wash.setAlpha(cfg.TINT_ALPHA + breath * cfg.TINT_SWING);
+        const swing = cfg.TINT_SWING * (1 + panic * cfg.CLOSING.SWING_GAIN);
+        this.wash.setAlpha(Math.min(1, cfg.TINT_ALPHA + panic * cfg.CLOSING.TINT_GAIN + breath * swing));
+
+        // Towards red as it arrives: the violet is the setting, the red is the
+        // thing in it. They meet in the middle, which is an ugly colour on
+        // purpose.
+        //
+        // `Interpolate` hands back a plain {r,g,b,a}, not a Color — reading
+        // `.color` off it gives undefined, and assigning that to fillColor
+        // leaves the wash with no colour at all.
+        const mixed = Phaser.Display.Color.Interpolate.ColorWithColor(
+            Phaser.Display.Color.ValueToColor(cfg.TINT),
+            Phaser.Display.Color.ValueToColor(cfg.CLOSING.TINT_NEAR),
+            100,
+            Math.round(panic * 100)
+        );
+        this.wash.fillColor = Phaser.Display.Color.GetColor(mixed.r, mixed.g, mixed.b);
 
         if (this.barrel) {
-            this.barrel.amount = 1 + cfg.WARP + breath * cfg.WARP;
+            const warp = cfg.WARP * (1 + panic * cfg.CLOSING.WARP_GAIN);
+            this.barrel.amount = 1 + warp + breath * warp;
         }
 
-        this.updateGlitch();
+        this.updateGlitch(panic);
         this.resize();
     }
 
@@ -106,14 +139,18 @@ export class Dread {
      * that arrives exactly every four seconds stops being a fault and becomes
      * a metronome, and the player starts waiting for it.
      */
-    private updateGlitch(): void {
+    private updateGlitch(panic: number): void {
         const cfg = GameConfig.DREAD;
         const now = this.elapsed;
 
         if (now >= this.nextGlitchAt) {
-            this.nextGlitchAt = now + Phaser.Math.Between(cfg.GLITCH.GAP_MIN_MS, cfg.GLITCH.GAP_MAX_MS);
+            // The gap collapses as it closes: a fault every four seconds at
+            // rest, several a second when the thing is on top of you.
+            const squeeze = 1 - panic * cfg.CLOSING.GAP_SQUEEZE;
+            this.nextGlitchAt =
+                now + Phaser.Math.Between(cfg.GLITCH.GAP_MIN_MS, cfg.GLITCH.GAP_MAX_MS) * squeeze;
             this.glitchUntil = now + Phaser.Math.Between(cfg.GLITCH.HOLD_MIN_MS, cfg.GLITCH.HOLD_MAX_MS);
-            this.scene.cameras.main.shake(cfg.GLITCH.SHAKE_MS, cfg.GLITCH.SHAKE, true);
+            this.scene.cameras.main.shake(cfg.GLITCH.SHAKE_MS, cfg.GLITCH.SHAKE * (1 + panic * 2), true);
         }
 
         this.tear.clear();
@@ -124,10 +161,13 @@ export class Dread {
         const width = viewport.width * viewport.scale;
         const height = viewport.height * viewport.scale;
 
-        for (let band = 0; band < cfg.GLITCH.BANDS; band++) {
+        const bands = cfg.GLITCH.BANDS + Math.round(panic * cfg.CLOSING.EXTRA_BANDS);
+
+        for (let band = 0; band < bands; band++) {
             const y = viewport.y + Math.random() * height;
             const thickness = Phaser.Math.Between(cfg.GLITCH.BAND_MIN, cfg.GLITCH.BAND_MAX);
-            const shift = Phaser.Math.Between(-cfg.GLITCH.SHIFT, cfg.GLITCH.SHIFT);
+            const reach = cfg.GLITCH.SHIFT * (1 + panic * cfg.CLOSING.SHIFT_GAIN);
+            const shift = Phaser.Math.Between(-reach, reach);
 
             this.tear.fillStyle(cfg.GLITCH.COLORS[band % cfg.GLITCH.COLORS.length], cfg.GLITCH.ALPHA);
             this.tear.fillRect(viewport.x + shift, y, width, thickness);

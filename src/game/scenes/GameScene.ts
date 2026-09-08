@@ -194,6 +194,9 @@ export class GameScene extends Phaser.Scene {
     /** Where the last reveal was run from, so it runs once per cell. */
     private revealedFrom = '';
 
+    /** And which way it was looking, so a turn recasts the cone. */
+    private revealedFacing = Number.NaN;
+
     private debugOverlay: DebugOverlay | null = null;
     private occlusion: OcclusionSystem | null = null;
     private vignette: Vignette | null = null;
@@ -277,6 +280,7 @@ export class GameScene extends Phaser.Scene {
         this.visited.clear();
         this.visible.clear();
         this.revealedFrom = '';
+        this.revealedFacing = Number.NaN;
         this.rentTimer = null;
 
         const player = new Player(this, 100, 100);
@@ -861,20 +865,51 @@ export class GameScene extends Phaser.Scene {
 
         const from = cellOf(this.player.x, this.player.groundY);
         const key = `${from.gx},${from.gy}`;
-        if (key === this.revealedFrom) return;
+        const facing = this.player.facingAngle;
+
+        // Recast on a new cell or a real turn. Standing still looking the same
+        // way is the one case where the answer cannot have changed.
+        const turned =
+            Number.isNaN(this.revealedFacing) ||
+            Math.abs(Phaser.Math.Angle.ShortestBetween(
+                Phaser.Math.RadToDeg(this.revealedFacing),
+                Phaser.Math.RadToDeg(facing)
+            )) >= GameConfig.FOG.RECAST_DEG;
+
+        if (key === this.revealedFrom && !turned) return;
         this.revealedFrom = key;
+        this.revealedFacing = facing;
 
         const reach = GameConfig.FOG.SIGHT_CELLS;
         const here = worldOf(from);
         const size = this.maze.length;
 
         // Rebuilt rather than added to: what was in sight from the last corner
-        // is not in sight from this one.
+        // is not in sight from this one, and neither is what is behind you
+        // after you turn round.
         this.visible.clear();
+
+        const half = Phaser.Math.DegToRad(GameConfig.FOG.CONE_HALF_ANGLE_DEG);
+        const near = GameConfig.FOG.NEAR_CELLS;
 
         for (let gy = from.gy - reach; gy <= from.gy + reach; gy++) {
             for (let gx = from.gx - reach; gx <= from.gx + reach; gx++) {
                 if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
+
+                const dx = gx - from.gx;
+                const dy = gy - from.gy;
+                const away = Math.hypot(dx, dy);
+                if (away > reach) continue;
+
+                // Underfoot and within whiskers' reach is known whichever way
+                // it is looking; past that, only what the cone covers.
+                if (away > near) {
+                    const bearing = Math.atan2(dy, dx);
+                    const off = Math.abs(
+                        Phaser.Math.Angle.Wrap(bearing - facing)
+                    );
+                    if (off > half) continue;
+                }
 
                 const there = worldOf({ gx, gy });
                 // The cell underfoot is always known; a wall you are pressed
@@ -891,6 +926,33 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.hud?.invalidateMap();
+    }
+
+    /**
+     * How near the nearest black cat is, 0 far off and 1 on top of the player.
+     *
+     * Lives here rather than in either of the two systems that want it. The red
+     * wash and the chase music were the first; nightmare's warp and tearing are
+     * the second, and two copies of the same falloff would have drifted apart
+     * the first time either was tuned.
+     */
+    get enemyNearness(): number {
+        const player = this.player;
+        if (!player || this.enemies.length === 0) return 0;
+
+        let closest = Infinity;
+        for (const enemy of this.enemies) {
+            if (!enemy.active) continue;
+            closest = Math.min(
+                closest,
+                Phaser.Math.Distance.Between(player.x, player.groundY, enemy.x, enemy.groundY)
+            );
+        }
+
+        if (!Number.isFinite(closest)) return 0;
+
+        const cfg = GameConfig.THREAT;
+        return 1 - Phaser.Math.Clamp((closest - cfg.NEAR) / (cfg.FAR - cfg.NEAR), 0, 1);
     }
 
     /** Whether this run hides the parts of the city it has not been to. */

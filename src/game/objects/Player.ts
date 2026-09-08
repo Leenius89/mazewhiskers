@@ -24,6 +24,17 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     /** Facing used when a jump is taken with no direction held. */
     private readonly facing = new Phaser.Math.Vector2(1, 0);
+
+    /**
+     * Which way the cat is looking, in radians.
+     *
+     * The last direction it actually moved, held while it stands still —
+     * a cat that stops walking does not stop facing. Nightmare's sight
+     * cone is cast along this.
+     */
+    get facingAngle(): number {
+        return Math.atan2(this.facing.y, this.facing.x);
+    }
     /** Brief freeze after touching down, so a landing has weight. */
     private recoveryUntil = 0;
     /**

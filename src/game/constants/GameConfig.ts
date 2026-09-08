@@ -169,7 +169,39 @@ export const GameConfig = {
         /** Below 1 makes the effect ramp up earlier rather than only at contact. */
         FALLOFF_POWER: 1.15,
         /** Steady-glow strength when the system asks for reduced motion. */
-        REDUCED_MOTION_SCALE: 0.55
+        REDUCED_MOTION_SCALE: 0.55,
+
+        /**
+         * The pulse quickens as it closes, rather than only brightening.
+         *
+         * A rate that rises is read as panic in a way a rising brightness is
+         * not — it is the difference between a light getting stronger and a
+         * heart getting faster.
+         *
+         * PULSE_HZ is the floor. The ceiling is the hard part: flashing
+         * anywhere near three times a second is the boundary photosensitivity
+         * guidance draws, so 2.6 is as far as this is allowed to go and
+         * nightmare does not get to raise it. Nightmare takes its extra from
+         * the colour and the sound instead, neither of which flashes.
+         */
+        PULSE_HZ_NEAR: 2.6,
+
+        /** How much harder the wash bites on a setting with dread. */
+        DREAD_ALPHA_SCALE: 1.35,
+
+        /**
+         * The chase track, dragged about by how near the thing is.
+         *
+         * Detune is in cents: at contact the enemy theme is pulled a whole
+         * tone sharp and run a fifth faster than written, which is the sound
+         * of something arriving rather than something approaching.
+         */
+        AUDIO: {
+            DETUNE_NEAR: 220,
+            RATE_NEAR: 1.2,
+            /** How quickly the track follows a change in distance, 0 to 1. */
+            EASE: 0.06
+        }
     },
 
     /** Guided tutorial and story beats. */
@@ -679,7 +711,37 @@ export const GameConfig = {
      * fills in with what was actually visible rather than with more than the
      * player was shown.
      */
-    FOG: { SIGHT_CELLS: 5 },
+    FOG: {
+        /** How far down a street the cat can see. */
+        SIGHT_CELLS: 6,
+        /**
+         * Half the width of the cone, in degrees.
+         *
+         * Sixty each way is a hundred and twenty across — wider than a person's
+         * useful vision and deliberately so. This is a cat on a street seen
+         * from above, not a torch in a corridor: too narrow and the player
+         * spends the run sweeping the stick about to see what is beside them,
+         * which is fiddling rather than playing.
+         */
+        CONE_HALF_ANGLE_DEG: 60,
+        /**
+         * Seen regardless of which way it is looking.
+         *
+         * Whiskers, more or less. Without it the cell you are standing beside
+         * is unknown until you turn to face it, which reads as a bug rather
+         * than as darkness — you can always tell what is within reach of you.
+         */
+        NEAR_CELLS: 1.6,
+        /**
+         * How far the cat must turn before the cone is worked out again.
+         *
+         * The cone follows the facing, and the facing changes on every frame
+         * the stick is held at an angle. Recomputing a hundred and forty line
+         * of sight tests that often is work for a picture that has not
+         * meaningfully changed.
+         */
+        RECAST_DEG: 8
+    },
 
     /**
      * Nightmare's presentation. See systems/Dread.
@@ -718,6 +780,36 @@ export const GameConfig = {
             DETUNE: -150,
             /** Playback speed, dragged just under. */
             RATE: 0.92
+        },
+
+        /**
+         * How much worse all of it gets with the black cat on top of you.
+         *
+         * Every gain here multiplies something that is already happening, so
+         * at rest the setting is unchanged and only the approach is new. The
+         * one thing deliberately not scaled is the flash rate of the red
+         * wash — that has a photosensitivity ceiling and this does not get to
+         * lift it.
+         */
+        CLOSING: {
+            /** How quickly the panic follows the distance, 0 to 1. */
+            EASE: 0.05,
+            /** Violet meets this as it arrives. */
+            TINT_NEAR: 0xff2d3a,
+            /** Flat addition to the wash at contact. */
+            TINT_GAIN: 0.16,
+            /** Multiplies how far the wash breathes. */
+            SWING_GAIN: 1.4,
+            /** Multiplies the breathing rate. */
+            BREATH_RUSH: 2.2,
+            /** Multiplies the lens warp. */
+            WARP_GAIN: 2.4,
+            /** Shortens the gap between tears, up to this share of it. */
+            GAP_SQUEEZE: 0.88,
+            /** Extra torn bands at contact. */
+            EXTRA_BANDS: 7,
+            /** Multiplies how far a band slides. */
+            SHIFT_GAIN: 2.5
         }
     },
 

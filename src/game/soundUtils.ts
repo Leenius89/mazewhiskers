@@ -215,6 +215,11 @@ export class SoundManager {
                 enemySound.play();
                 this.activeEnemyTrack = enemySound;
 
+                // The chase theme is a tune like any other, and on nightmare it
+                // is played wrong like any other. Nearness bends it further
+                // from here — see setChaseUrgency.
+                bendSound(enemySound, currentDifficulty().dread);
+
                 // Fade in
                 this.scene.tweens.add({
                     targets: enemySound,
@@ -233,6 +238,48 @@ export class SoundManager {
         this.enemySwapPending = true;
         this.loadDeferredSounds();
         return null;
+    }
+
+    /**
+     * Drags the chase track towards panic as the thing closes.
+     *
+     * @param nearness 0 when it is far off, 1 when it is on top of the player.
+     *
+     * Both the pitch and the speed rise, and they rise together: pitch alone
+     * sounds like a tape fault, speed alone sounds like a tape fault, and the
+     * two together sound like something running. Eased rather than set, so a
+     * player rounding a corner into the enemy hears it wind up rather than
+     * jump — a step change reads as a bug in the audio.
+     *
+     * Nightmare's own bend is the floor this works up from, so on that setting
+     * the chase starts a semitone and a half flat and ends up a whole tone
+     * sharp of where it was written. Which is the intended amount of wrong.
+     */
+    setChaseUrgency(nearness: number): void {
+        const track = this.activeEnemyTrack as
+            | (Phaser.Sound.BaseSound & { detune?: number; rate?: number })
+            | undefined;
+        if (!track || !track.isPlaying) return;
+
+        const cfg = GameConfig.THREAT.AUDIO;
+        const dread = currentDifficulty().dread ? GameConfig.DREAD.AUDIO : null;
+
+        const baseDetune = dread ? dread.DETUNE : 0;
+        const baseRate = dread ? dread.RATE : 1;
+
+        const wantedDetune = baseDetune + (cfg.DETUNE_NEAR - baseDetune) * nearness;
+        const wantedRate = baseRate + (cfg.RATE_NEAR - baseRate) * nearness;
+
+        try {
+            if (typeof track.detune === 'number') {
+                track.detune = Phaser.Math.Linear(track.detune, wantedDetune, cfg.EASE);
+            }
+            if (typeof track.rate === 'number') {
+                track.rate = Phaser.Math.Linear(track.rate, wantedRate, cfg.EASE);
+            }
+        } catch {
+            // A backing that will not be bent is not worth failing a run over.
+        }
     }
 
     /**
