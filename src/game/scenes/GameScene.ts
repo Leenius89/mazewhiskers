@@ -16,6 +16,7 @@ import { isDebugEnabled } from '../core/debug';
 import { OcclusionSystem } from '../systems/OcclusionSystem';
 import { Dread, bendSound } from '../systems/Dread';
 import { Vignette } from '../systems/Vignette';
+import { WorldFog } from '../systems/WorldFog';
 import { InputManager, isMobileDevice } from '../systems/InputManager';
 import { CameraDirector } from '../systems/CameraDirector';
 import { HudOverlay } from '../systems/HudOverlay';
@@ -201,6 +202,7 @@ export class GameScene extends Phaser.Scene {
     private occlusion: OcclusionSystem | null = null;
     private vignette: Vignette | null = null;
     private dread: Dread | null = null;
+    private worldFog: WorldFog | null = null;
     /** Public so world-space overlays can keep clear of it. */
     public hud: HudOverlay | null = null;
     private atmosphere: Atmosphere | null = null;
@@ -388,6 +390,10 @@ export class GameScene extends Phaser.Scene {
         // that asks for it — there is nothing to switch off mid-run, because
         // the difficulty cannot be changed mid-run either.
         if (currentDifficulty().dread) this.dread = new Dread(this);
+
+        // The city itself is hidden on a setting with fog. Built before the
+        // first reveal runs, so the opening frame is fog rather than a map.
+        if (this.fogOfWar) this.worldFog = new WorldFog(this);
         this.hud = new HudOverlay(this);
 
         this.statusBar = new PlayerStatusBar(this);
@@ -791,6 +797,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.dread?.update(Math.min(delta, 100));
+        this.worldFog?.update();
 
         this.debugOverlay?.update();
 
@@ -926,6 +933,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.hud?.invalidateMap();
+        this.worldFog?.invalidate();
     }
 
     /**
@@ -1072,6 +1080,8 @@ export class GameScene extends Phaser.Scene {
         this.vignette = null;
         this.dread?.destroy();
         this.dread = null;
+        this.worldFog?.destroy();
+        this.worldFog = null;
 
         this.hud?.destroy();
         this.hud = null;

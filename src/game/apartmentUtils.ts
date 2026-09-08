@@ -414,7 +414,12 @@ export class ApartmentSystem {
             if (!enemy.active) return;
 
             const cell = cellOf(enemy.x, enemy.groundY);
-            if (!this.isCellBuilt(cell.gx, cell.gy)) return;
+
+            // Any solid cell, not only a tower. `isCellBuilt` counts what this
+            // system put there and nothing else, so a cat shoved into one of
+            // the city's original buildings — which is most of the map — was
+            // never seen as stuck and stayed there for the rest of the run.
+            if (isOpen(this.scene.maze, cell.gx, cell.gy)) return;
 
             const here = worldOf(cell);
             const exit =

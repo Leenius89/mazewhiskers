@@ -740,7 +740,20 @@ export const GameConfig = {
          * of sight tests that often is work for a picture that has not
          * meaningfully changed.
          */
-        RECAST_DEG: 8
+        RECAST_DEG: 8,
+
+        /**
+         * The fog laid over the city itself. See systems/WorldFog.
+         *
+         * Not quite black: a void reads as a hole in the render, and fog reads
+         * as weather. The remembered layer is thin enough to make out the shape
+         * of a street and thick enough that a tower which went up in it since
+         * cannot be told apart from the house it replaced — which is exactly
+         * what the cat would know.
+         */
+        COLOR: 0x0a0710,
+        UNKNOWN_ALPHA: 0.98,
+        REMEMBERED_ALPHA: 0.72
     },
 
     /**
