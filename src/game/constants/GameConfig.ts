@@ -540,13 +540,27 @@ export const GameConfig = {
 
     APARTMENT: {
         /**
-         * Towers loom. They were drawn barely larger than the houses they
-         * replace, which undersold the only thing in the game that is winning.
-         * The ground footprint is unchanged — this is purely how big it reads.
+         * How wide a tower is drawn, as a multiple of its tile.
+         *
+         * Measured against the tile the way the houses are, rather than fixed
+         * against a particular drawing. It used to be a bare scale of 0.34,
+         * which on a 928px source put a 315px sprite on a 96px tile — three
+         * and a third tiles wide. Neighbours in the same block sat 96px apart
+         * and covered two thirds of each other, so a block landed as one
+         * smear of overlapping towers instead of a row of buildings.
+         *
+         * Houses use 1.05. A quarter over the tile keeps towers visibly wider
+         * than what they replace while still standing on their own ground.
          */
-        WALL_SCALE: 0.34,
-        /** Stretched further upward, like the buildings. */
-        HEIGHT_SCALE: 1.15,
+        TILE_OVERLAP: 1.25,
+        /**
+         * Stretched upward, like the buildings, but further.
+         *
+         * Towers have to loom — they are the only thing in the game that is
+         * winning. At this the tallest tower clears the tallest house by about
+         * a sixth, which reads without the sprite leaving its plot.
+         */
+        HEIGHT_SCALE: 1.45,
         /**
          * How hard the city pushes.
          *

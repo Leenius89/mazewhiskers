@@ -49,7 +49,6 @@ export class ApartmentSystem {
 
     private readonly mazeSize = GameConfig.MAZE_SIZE;
     private readonly tileUnit = TILE_UNIT;
-    private readonly wallScale = GameConfig.APARTMENT.WALL_SCALE;
 
     private readonly occupiedPositions = new Set<string>();
     /** Cells currently under hazard tape, keyed by cell. */
@@ -366,6 +365,11 @@ export class ApartmentSystem {
         const player = this.scene.player;
         if (!player || this.scene.state.hasEnded()) return;
 
+        // Before the cat's own guards, all of which return early. The black
+        // cat's predicament has nothing to do with whether this one is
+        // mid-shove or mid-hit.
+        this.freeTrappedEnemies();
+
         // A shove already in flight is the fix, not the problem.
         if (player.isRecovering) return;
 
@@ -387,6 +391,69 @@ export class ApartmentSystem {
         }
 
         player.shoveTo(exit.x, exit.y);
+    }
+
+    /**
+     * The black cat does not get to be walled in either.
+     *
+     * `settleBlock` moves it when a block lands on it, which covers the common
+     * case and nothing else. On hard the towers come often enough and in big
+     * enough blocks that an enemy could be enclosed by a *second* block while
+     * the first was still settling, or step into a footprint during the dust —
+     * and then nothing ever looked again. It stood inside a building for the
+     * rest of the run, visible through the wall and unable to move, which is
+     * both a broken chase and an obviously broken picture.
+     *
+     * The player's version of this can end the run, because being displaced
+     * with nowhere left to go is the story the game is telling. The enemy's
+     * cannot: it is furniture in that story, so it is simply put somewhere it
+     * fits.
+     */
+    private freeTrappedEnemies(): void {
+        this.scene.enemies.forEach((enemy) => {
+            if (!enemy.active) return;
+
+            const cell = cellOf(enemy.x, enemy.groundY);
+            if (!this.isCellBuilt(cell.gx, cell.gy)) return;
+
+            const here = worldOf(cell);
+            const exit =
+                this.exitCell(cell, this.outward(here, enemy.x, enemy.groundY), new Set()) ??
+                this.nearestOpenCell(cell, new Set());
+
+            if (exit) enemy.placeAt(exit.x, exit.y);
+        });
+    }
+
+    /**
+     * Any open cell at all, nearest first, with no cap on how far it looks.
+     *
+     * The fallback for when the six-cell search comes back empty because the
+     * whole neighbourhood has been built over. Rings outward across the grid,
+     * so it stays the closest answer rather than an arbitrary one.
+     */
+    private nearestOpenCell(from: Cell, blocked: Set<string>): Point | null {
+        const maze = this.scene.maze;
+        if (!maze) return null;
+
+        for (let radius = 1; radius < this.mazeSize; radius++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+
+                    const gx = from.gx + dx;
+                    const gy = from.gy + dy;
+
+                    if (!isOpen(maze, gx, gy)) continue;
+                    if (blocked.has(this.cellKey(gx, gy))) continue;
+                    if (this.isPendingCell(gx, gy) || this.isCellBuilt(gx, gy)) continue;
+
+                    return worldOf({ gx, gy });
+                }
+            }
+        }
+
+        return null;
     }
 
     isPendingCell(gx: number, gy: number): boolean {
@@ -490,7 +557,14 @@ export class ApartmentSystem {
 
             if (inside(enemy.x, enemy.groundY)) {
                 const from = cellOf(enemy.x, enemy.groundY);
-                const exit = this.exitCell(from, this.outward(centre, enemy.x, enemy.groundY), blocked);
+                const exit =
+                    this.exitCell(from, this.outward(centre, enemy.x, enemy.groundY), blocked) ??
+                    this.nearestOpenCell(from, blocked);
+
+                // Unlike the cat, the black cat is never killed by a tower —
+                // it is moved. Giving up here was what walled it in: the local
+                // search only reaches six cells, and on hard the towers arrive
+                // fast enough to cover more than that at once.
                 if (exit) enemy.placeAt(exit.x, exit.y);
             } else {
                 this.knockClear(enemy, cells);
@@ -602,7 +676,7 @@ export class ApartmentSystem {
 
         const dust = this.scene.add.sprite(x, baseY, 'dust1');
         dust.setOrigin(0.5, 1);
-        dust.setScale(this.wallScale);
+        dust.setScale(this.tileScale(dust));
         dust.setDepth(sortDepth(baseY) + 1);
         dust.play('dust');
 
@@ -610,6 +684,17 @@ export class ApartmentSystem {
             dust.destroy();
             this.raiseTower(cell, x, baseY);
         });
+    }
+
+    /**
+     * How much to shrink a drawing so it stands on one tile.
+     *
+     * Taken from the sprite's own width, so swapping the art for a picture
+     * of a different size does not silently change how much of the street a
+     * tower covers.
+     */
+    private tileScale(sprite: Phaser.GameObjects.Sprite): number {
+        return (this.tileUnit / sprite.width) * GameConfig.APARTMENT.TILE_OVERLAP;
     }
 
     private raiseTower(cell: PendingCell, x: number, baseY: number): void {
@@ -622,7 +707,8 @@ export class ApartmentSystem {
         const apartment = this.apartments.create(x, baseY, `apt${apartmentType}`) as Phaser.Physics.Arcade.Sprite;
 
         apartment.setOrigin(0.5, 1);
-        apartment.setScale(this.wallScale, this.wallScale * GameConfig.APARTMENT.HEIGHT_SCALE);
+        const scale = this.tileScale(apartment);
+        apartment.setScale(scale, scale * GameConfig.APARTMENT.HEIGHT_SCALE);
         apartment.setDepth(sortDepth(baseY));
 
         setStaticFootBody(apartment, {

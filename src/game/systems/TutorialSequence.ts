@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
 import { t } from '../../i18n';
-import { TILE_UNIT, hasLineOfSight } from '../core/grid';
+import { GameConfig } from '../constants/GameConfig';
+import { DEPTH, sortDepth } from '../core/depth';
+import { TILE_UNIT, cellOf, hasLineOfSight, isOpen, worldOf } from '../core/grid';
+import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 import { isMobileDevice } from './InputManager';
 
@@ -44,6 +47,146 @@ const nearestVisible = (
 };
 
 /**
+ * Redevelopment, shown once before it is ever done for real.
+ *
+ * This beat used to be the only one that pointed at nothing. Every other line
+ * in the tutorial flies the camera to a thing that exists — the fish, the milk,
+ * home — and then names it. Redevelopment had not happened yet, so it got a
+ * spotlight on an empty patch of road and a sentence describing something the
+ * player had never seen. The first hazard tape they actually met was the real
+ * one, with three seconds to work out what it meant.
+ *
+ * So it is rehearsed here: the tape goes down around the cat, and then the
+ * towers come up on it, in the same order and the same colours as the real
+ * thing. Nothing about it is real — no bodies, no grid cells, no shove and no
+ * cost. The sprites are ordinary images sitting on the road, and they are taken
+ * away again when the line is done.
+ */
+interface Rehearsal {
+    dismiss: () => void;
+}
+
+/**
+ * How long the tape stands alone before the towers come up on it.
+ *
+ * Not the real warning of three seconds. The line is still being typed at
+ * this point — the Korean takes about three quarters of a second — so the
+ * towers arrive while the player is still reading, and the first thing they
+ * can do about it is the acknowledgement that ends the beat. Waiting the
+ * real three seconds meant the towers never appeared at all: the beat was
+ * over long before the timer.
+ */
+const REHEARSAL_TAPE_MS = 700;
+
+const rehearseRedevelopment = (scene: GameScene, at: Cell): Rehearsal => {
+    const cfg = GameConfig.APARTMENT.WARNING;
+    const half = TILE_UNIT / 2;
+
+    // The ring around the cat, minus the cell it is standing in: the city
+    // closing in on it, rather than landing on top of it. A tower dropped on
+    // the cat with no consequence would teach the opposite of the rule.
+    const ring: Cell[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+            if (dx === 0 && dy === 0) continue;
+            const gx = at.gx + dx;
+            const gy = at.gy + dy;
+            if (!isOpen(scene.maze, gx, gy)) continue;
+            ring.push({ gx, gy });
+        }
+    }
+
+    const tape = scene.add.graphics();
+    tape.setDepth(DEPTH.GROUND + 3);
+
+    const paint = (alpha: number) => {
+        tape.clear();
+        tape.fillStyle(cfg.COLOR, cfg.ALPHA * 0.22 * alpha);
+        tape.lineStyle(2, cfg.COLOR, cfg.ALPHA * alpha);
+
+        ring.forEach((cell) => {
+            const left = cell.gx * TILE_UNIT - half;
+            const top = cell.gy * TILE_UNIT - half;
+
+            tape.fillRect(left, top, TILE_UNIT, TILE_UNIT);
+            tape.strokeRect(left + 2, top + 2, TILE_UNIT - 4, TILE_UNIT - 4);
+
+            for (let offset = cfg.STRIPE; offset < TILE_UNIT; offset += cfg.STRIPE) {
+                tape.lineBetween(left + offset, top, left, top + offset);
+                tape.lineBetween(left + TILE_UNIT, top + offset, left + offset, top + TILE_UNIT);
+            }
+        });
+    };
+
+    paint(1);
+
+    // Same pulse the real tape has, driven by a tween rather than the frame
+    // loop, because the frame loop is what a narrated beat has stopped.
+    const pulse = scene.tweens.addCounter({
+        from: 0.6,
+        to: 1,
+        duration: cfg.PULSE_MS / 2,
+        yoyo: true,
+        repeat: -1,
+        onUpdate: (tween) => paint(tween.getValue())
+    });
+
+    const raised: Phaser.GameObjects.Sprite[] = [];
+
+    const raise = () => {
+        ring.forEach((cell) => {
+            const world = worldOf(cell);
+            const baseY = world.y + half;
+
+            const tower = scene.add.sprite(world.x, baseY, `apt${Phaser.Math.Between(1, 3)}`);
+            tower.setOrigin(0.5, 1);
+            const scale = (TILE_UNIT / tower.width) * GameConfig.APARTMENT.TILE_OVERLAP;
+            tower.setScale(scale, scale * GameConfig.APARTMENT.HEIGHT_SCALE);
+            tower.setDepth(sortDepth(baseY));
+            tower.setAlpha(0);
+
+            scene.tweens.add({
+                targets: tower,
+                alpha: 1,
+                duration: GameConfig.APARTMENT.FADE_IN,
+                ease: 'Power2'
+            });
+
+            raised.push(tower);
+        });
+
+        scene.soundManager?.playConstructSound();
+    };
+
+    let risen = false;
+    const timer = scene.time.delayedCall(REHEARSAL_TAPE_MS, () => {
+        risen = true;
+        raise();
+    });
+
+    return {
+        dismiss: () => {
+            timer.remove(false);
+            pulse.stop();
+            // Read faster than the towers could land. Nothing to take away
+            // but the tape, and no late arrival over the following beat.
+            if (!risen) raised.length = 0;
+
+            scene.tweens.add({
+                targets: [tape, ...raised],
+                alpha: 0,
+                duration: 260,
+                ease: 'Power2',
+                onComplete: () => {
+                    tape.destroy();
+                    raised.forEach((tower) => tower.destroy());
+                }
+            });
+        }
+    };
+};
+
+/**
  * The opening, taught by showing rather than by listing.
  *
  * The previous version was a wall of text in front of a game the player had not
@@ -65,13 +208,6 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         y: sprite.y - sprite.displayHeight * (1 - sprite.originY) * 0.5,
         width: sprite.displayWidth * pad,
         height: sprite.displayHeight * pad
-    });
-
-    const cell = (x: number, y: number, cells = 1.6) => ({
-        x,
-        y,
-        width: TILE_UNIT * cells,
-        height: TILE_UNIT * cells
     });
 
     // A phone has no arrow keys, and the line that named them was the
@@ -115,16 +251,26 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
         );
     }
 
-    // The one thing that has not happened yet, so it is described on the grid
-    // it will happen to rather than on an object.
+    // Rehearsed rather than described. Wide enough a spotlight to hold the
+    // ring and the towers standing on it, and lifted, because a tower is most
+    // of two tiles tall and grows upward out of its own cell.
+    const rehearsal = rehearseRedevelopment(scene, cellOf(player.x, player.groundY));
+
     await narrative.play(
         t('tut.apartment'),
         {
             speaker: t('tut.apartment.speaker'),
             lookAt: { x: player.x, y: player.y },
-            spotlight: cell(player.x, player.y, 2.4)
+            spotlight: {
+                x: player.x,
+                y: player.y - TILE_UNIT * 0.7,
+                width: TILE_UNIT * 4.4,
+                height: TILE_UNIT * 4.6
+            }
         }
     );
+
+    rehearsal.dismiss();
 
     // Explicitly toured to. Every other beat points at something out in the
     // city, but this one points at the cat itself — and the cat starts in the
