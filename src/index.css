@@ -139,30 +139,19 @@ code {
 }
 
 /*
- * The black cat crossing the menu.
+ * The black cat's hop.
  *
- * One pass left to right, then it turns and comes back — done by flipping the
- * sprite at the halfway point of the same animation rather than by running two,
- * so the turn always happens exactly where the travel reverses.
+ * A CSS transition can move it from one point to another but cannot arc, so
+ * the horizontal travel is the transition on the parent and this is the rise
+ * and fall on the sprite itself. The height comes in as a custom property so
+ * one rule covers every jump.
  */
-@keyframes mw-prowl {
-  0%   { transform: translateX(-90px); }
-  49%  { transform: translateX(calc(100vw + 20px)); }
-  50%  { transform: translateX(calc(100vw + 20px)); }
-  99%  { transform: translateX(-90px); }
-  100% { transform: translateX(-90px); }
-}
-
-@keyframes mw-prowl-face {
-  0%, 49%   { transform: scaleX(1); }
-  50%, 100% { transform: scaleX(-1); }
-}
-
-.mw-prowl-cat {
-  animation: mw-prowl-face 22000ms steps(1, end) infinite;
+@keyframes mw-cat-hop {
+  0%   { translate: 0 0; }
+  45%  { translate: 0 calc(var(--mw-hop, 70px) * -1); }
+  100% { translate: 0 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mw-prowl { animation: none !important; transform: translateX(12vw) !important; }
-  .mw-prowl-cat { animation: none !important; }
+  .mw-cat-hop, [style*="mw-cat-hop"] { animation: none !important; }
 }

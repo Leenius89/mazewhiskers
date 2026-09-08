@@ -529,7 +529,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     fly-over is a shot, and a cat wandering through it is a cat
                     wandering through a shot.
                 */}
-                {showButton && <ProwlingCat />}
+                {showButton && <ProwlingCat size={76} />}
 
                 {/* GAME START 버튼 */}
                 {showButton && (

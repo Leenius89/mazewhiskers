@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { getSettings } from '../settings';
 import { useTranslation } from '../i18n';
 import { isMobileDevice } from '../game/systems/InputManager';
+import ProwlingCat from './ProwlingCat';
 import type { GameOverPayload } from '../game/core/GameEvents';
 import {
     button,
@@ -148,6 +149,8 @@ const GameOver: React.FC<GameOverProps> = ({
     return (
         <div style={overlayBackdrop}>
             <motion.div
+                // Named so the cat can find its top edge and sit on it.
+                data-mw-perch=""
                 style={panel}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -258,6 +261,18 @@ const GameOver: React.FC<GameOverProps> = ({
                     at a key the player does not have. */}
                 {!isMobileDevice() && <p style={hint}>{t('over.spaceHint')}</p>}
             </motion.div>
+
+            {/*
+                The thing that just won, taking its time about it.
+
+                On the menu the cat is scenery; here it is the other party to
+                what happened, which is why it gets the taunts and why it is
+                allowed to climb onto the panel and read the score from up
+                there. It still cannot take a click — the whole layer is
+                pointer-events: none, and the buttons underneath it are the
+                point of the screen.
+            */}
+            <ProwlingCat perchSelector="[data-mw-perch]" mood="taunt" />
         </div>
     );
 };
