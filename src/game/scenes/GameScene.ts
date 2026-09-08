@@ -180,6 +180,16 @@ export class GameScene extends Phaser.Scene {
      */
     public readonly visited = new Set<string>();
 
+    /**
+     * What the cat can see from where it is standing, this moment.
+     *
+     * The difference between this and `visited` is the difference between
+     * looking and remembering, and the map draws them differently: what is
+     * in sight is the city, what is only remembered is a grey record of a
+     * street that may not be there any more.
+     */
+    public readonly visible = new Set<string>();
+
     /** Where the last reveal was run from, so it runs once per cell. */
     private revealedFrom = '';
 
@@ -263,6 +273,7 @@ export class GameScene extends Phaser.Scene {
         this.health = GameConfig.HEALTH.MAX;
         this.occluders.clear();
         this.visited.clear();
+        this.visible.clear();
         this.revealedFrom = '';
         this.rentTimer = null;
 
@@ -847,14 +858,14 @@ export class GameScene extends Phaser.Scene {
         const reach = GameConfig.FOG.SIGHT_CELLS;
         const here = worldOf(from);
         const size = this.maze.length;
-        let added = false;
+
+        // Rebuilt rather than added to: what was in sight from the last corner
+        // is not in sight from this one.
+        this.visible.clear();
 
         for (let gy = from.gy - reach; gy <= from.gy + reach; gy++) {
             for (let gx = from.gx - reach; gx <= from.gx + reach; gx++) {
                 if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
-
-                const cell = `${gx},${gy}`;
-                if (this.visited.has(cell)) continue;
 
                 const there = worldOf({ gx, gy });
                 // The cell underfoot is always known; a wall you are pressed
@@ -864,12 +875,13 @@ export class GameScene extends Phaser.Scene {
                     hasLineOfSight(this.maze, here.x, here.y, there.x, there.y);
                 if (!seen) continue;
 
+                const cell = `${gx},${gy}`;
+                this.visible.add(cell);
                 this.visited.add(cell);
-                added = true;
             }
         }
 
-        if (added) this.hud?.invalidateMap();
+        this.hud?.invalidateMap();
     }
 
     /** Whether this run hides the parts of the city it has not been to. */

@@ -455,6 +455,18 @@ export const GameConfig = {
             CONE_ALPHA_ALERT: 0.2,
             CONE_COLOR_ALERT: 0xff6b5c
         },
+        /**
+         * Following a route rather than a straight line.
+         *
+         * ARRIVE is how close counts as standing on a cell — under half a
+         * tile, so it does not cut the corner into the building it is walking
+         * around. REFRESH_MS is the slow tick that catches the city changing
+         * under a route that is otherwise still valid; the route is also
+         * redrawn immediately whenever the player changes cell or a tower
+         * lands on the next step, so this only has to be a backstop.
+         */
+        PATH: { ARRIVE: 34, REFRESH_MS: 700 },
+
         PATROL: { SPEED: 55, REPICK_MS: 2600 },
         /** Heard something: walks to where the player was last seen. */
         SUSPICIOUS: { SPEED: 72, GIVE_UP_MS: 3000 },
@@ -635,6 +647,10 @@ export const GameConfig = {
             /** Never more than this share of the canvas width. */
             MAX_WIDTH_FRACTION: 0.26,
             BACKGROUND: 0x11131a,
+            /** Under fog: city that has not been seen at all. */
+            UNKNOWN: 0x000000,
+            /** Under fog: a street walked once and not currently in sight. */
+            REMEMBERED: 0x4b4f57,
             OPEN: 0x4a5568,
             WALL: 0x22262f,
             APARTMENT: 0x8b5a2b,

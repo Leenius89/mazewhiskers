@@ -4,7 +4,8 @@ import { currentDifficulty, difficultyOf } from '../core/difficulty';
 import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
-import { cellOf, isOpen, worldOf } from '../core/grid';
+import { cellOf, hasLineOfSight, isOpen, worldOf } from '../core/grid';
+import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
 /**
@@ -37,6 +38,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private telegraphUntil = 0;
     /** Knocked off its feet by a tower landing; not pursuing this beat. */
     private staggerUntil = 0;
+
+    /** Cells still to walk, nearest first. Empty means going straight. */
+    private path: Cell[] = [];
+    /** The cell the current path was worked out to. */
+    private pathTo = '';
+    /** When it was worked out, on the run clock. */
+    private pathAt = 0;
 
     public scene: GameScene;
 
@@ -193,26 +201,149 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     }
 
     /**
-     * Straight at the player, over a wall only when a wall is in the way.
+     * Along a route through the streets, not straight through the buildings.
      *
-     * The jump used to fire on a timer and whenever it felt stuck, which read
-     * as the thing hopping about at random. Now it is the single, legible
-     * answer to one specific problem: the direct path is blocked.
+     * It used to walk at the player and nothing else — a look-ahead of one
+     * cell, a two-cell hop when that cell was a wall, and no idea of the city
+     * beyond that. Against the old maze that was survivable, because a wall is
+     * one cell thick and the hop clears it. Against the towers it was not: a
+     * block is several cells of solid on every side, the hop lands in more of
+     * it and is refused, and the thing spends the rest of the run grinding
+     * into a wall four streets from anybody. That is the shape a chase should
+     * never have — it stops being a threat and becomes scenery.
+     *
+     * So it walks a real route now. The straight line is still preferred when
+     * the street is actually straight, both because it is cheaper and because
+     * a cat that can see you should come at you rather than pick its way along
+     * a grid. The route is only for when it cannot.
      */
     private pursue(): void {
-        const target = { x: this.player.x, y: this.player.y };
-        const angle = Phaser.Math.Angle.Between(this.x, this.groundY, target.x, target.y);
+        const speed = GameConfig.ENEMY.SPEED * currentDifficulty().enemySpeedScale;
+        const targetY = this.player.body ? (this.player as { groundY?: number }).groundY ?? this.player.y : this.player.y;
+        const target = { x: this.player.x, y: targetY };
 
-        const look = cellOf(
-            this.x + Math.cos(angle) * GameConfig.ENEMY.LOOK_AHEAD_DIST,
-            this.groundY + Math.sin(angle) * GameConfig.ENEMY.LOOK_AHEAD_DIST
-        );
-
-        if (!isOpen(this.maze, look.gx, look.gy) && this.tryJumpToward(target.x, target.y)) {
+        // In the open, go straight. This is also what keeps the chase reading
+        // as a chase in the parts of the map that have not been built over.
+        if (hasLineOfSight(this.maze, this.x, this.groundY, target.x, target.y)) {
+            this.path = [];
+            this.pathTo = '';
+            this.steerTo(target, speed);
             return;
         }
 
-        this.steerTo(target, GameConfig.ENEMY.SPEED * currentDifficulty().enemySpeedScale);
+        const from = cellOf(this.x, this.groundY);
+        const to = cellOf(target.x, target.y);
+        this.ensurePath(from, to);
+
+        const next = this.path[0];
+        if (!next) {
+            // No route at all: walled in, or the player is. The wall is the
+            // only way through, which is exactly what the hop is for.
+            if (this.tryJumpToward(target.x, target.y)) return;
+            this.steerTo(target, speed);
+            return;
+        }
+
+        const step = worldOf(next);
+        if (Phaser.Math.Distance.Between(this.x, this.groundY, step.x, step.y) <= GameConfig.ENEMY.PATH.ARRIVE) {
+            this.path.shift();
+        }
+
+        this.steerTo(step, speed);
+    }
+
+    /**
+     * Keeps the route fresh enough to be worth following.
+     *
+     * Recomputed when the player has moved to a different cell, when the next
+     * step has had a tower dropped on it, and on a slow tick regardless —
+     * the city changes underneath a route that is otherwise perfectly valid.
+     * Not every frame: this is a flood fill over sixteen hundred cells and it
+     * would be the most expensive thing in the game for no gain.
+     */
+    private ensurePath(from: Cell, to: Cell): void {
+        const key = `${to.gx},${to.gy}`;
+        const now = this.scene.runNow;
+        const next = this.path[0];
+
+        const stale =
+            key !== this.pathTo ||
+            now - this.pathAt > GameConfig.ENEMY.PATH.REFRESH_MS ||
+            this.path.length === 0 ||
+            !isOpen(this.maze, next.gx, next.gy);
+
+        if (!stale) return;
+
+        this.pathTo = key;
+        this.pathAt = now;
+        this.path = this.route(from, to);
+    }
+
+    /**
+     * Shortest walk between two cells, as a list of cells to stand on.
+     *
+     * A breadth-first fill, which on a grid this size is both exact and cheap.
+     * Indexed by `gy * size + gx` into flat arrays rather than a Set of string
+     * keys: same answer, without allocating a few thousand strings every time
+     * the black cat loses sight of the player.
+     */
+    private route(from: Cell, to: Cell): Cell[] {
+        const maze = this.maze;
+        if (!maze) return [];
+
+        const size = maze.length;
+        const inside = (gx: number, gy: number) => gx >= 0 && gy >= 0 && gx < size && gy < size;
+        if (!inside(from.gx, from.gy) || !inside(to.gx, to.gy)) return [];
+
+        const start = from.gy * size + from.gx;
+        const goal = to.gy * size + to.gx;
+        if (start === goal) return [];
+
+        const cameFrom = new Int32Array(size * size).fill(-1);
+        const seen = new Uint8Array(size * size);
+        seen[start] = 1;
+
+        const queue = [start];
+        let head = 0;
+        let found = false;
+
+        while (head < queue.length) {
+            const at = queue[head++];
+            if (at === goal) {
+                found = true;
+                break;
+            }
+
+            const gx = at % size;
+            const gy = (at - gx) / size;
+
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+                const nx = gx + dx;
+                const ny = gy + dy;
+                if (!inside(nx, ny)) continue;
+
+                const index = ny * size + nx;
+                if (seen[index]) continue;
+                // The goal cell is entered even if something has been built on
+                // it, so a player standing somewhere impossible still has a
+                // route drawn to them rather than none at all.
+                if (index !== goal && maze[ny][nx] !== 0) continue;
+
+                seen[index] = 1;
+                cameFrom[index] = at;
+                queue.push(index);
+            }
+        }
+
+        if (!found) return [];
+
+        const cells: Cell[] = [];
+        for (let at = goal; at !== start && at !== -1; at = cameFrom[at]) {
+            const gx = at % size;
+            cells.push({ gx, gy: (at - gx) / size });
+        }
+
+        return cells.reverse();
     }
 
     private steerTo(target: { x: number; y: number }, speed: number): void {

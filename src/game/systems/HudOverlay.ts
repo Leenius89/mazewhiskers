@@ -128,17 +128,30 @@ export class HudOverlay {
         const fog = this.scene.fogOfWar;
 
         this.mapLayer.clear();
-        this.mapLayer.fillStyle(cfg.BACKGROUND, cfg.ALPHA);
+        // Black under fog rather than the usual panel colour: the unknown city
+        // should read as absence, not as a surface with nothing drawn on it.
+        this.mapLayer.fillStyle(fog ? cfg.UNKNOWN : cfg.BACKGROUND, fog ? 1 : cfg.ALPHA);
         this.mapLayer.fillRect(this.origin.x - 2, this.origin.y - 2, size + 4, size + 4);
 
         for (let gy = 0; gy < GameConfig.MAZE_SIZE; gy++) {
             for (let gx = 0; gx < GameConfig.MAZE_SIZE; gx++) {
-                // Unvisited ground is left as the backdrop rather than drawn
-                // in an "unknown" colour. A shape drawn in the dark is still a
-                // shape, and the point is that there is nothing there to read.
-                if (fog && !this.scene.visited.has(`${gx},${gy}`)) continue;
+                const key = `${gx},${gy}`;
 
-                const built = this.scene.occluders.get(`${gx},${gy}`);
+                // Three states under fog, and the difference between the last
+                // two is the whole point of it. In sight: the city, in the
+                // colours it is really in. Remembered: a grey trace of a street
+                // that was there once — no tower, no tape, no telling whether
+                // it still goes anywhere. Neither: black, because there is
+                // nothing to read, and a shape drawn in the dark is a shape.
+                if (fog && !this.scene.visited.has(key)) continue;
+
+                if (fog && !this.scene.visible.has(key)) {
+                    this.mapLayer.fillStyle(cfg.REMEMBERED, cfg.ALPHA);
+                    this.mapLayer.fillRect(this.origin.x + gx * cell, this.origin.y + gy * cell, cell, cell);
+                    continue;
+                }
+
+                const built = this.scene.occluders.get(key);
                 const isTower = built?.texture.key.startsWith('apt');
 
                 if (maze[gy][gx] === 0) {
@@ -163,7 +176,7 @@ export class HudOverlay {
         const known = (worldX: number, worldY: number): boolean => {
             if (!fog) return true;
             const unit = GameConfig.TILE_SIZE * GameConfig.SPACING;
-            return this.scene.visited.has(`${Math.round(worldX / unit)},${Math.round(worldY / unit)}`);
+            return this.scene.visible.has(`${Math.round(worldX / unit)},${Math.round(worldY / unit)}`);
         };
         this.markerLayer.clear();
 
@@ -189,7 +202,7 @@ export class HudOverlay {
             const pulse = 0.5 + 0.5 * Math.sin((time / GameConfig.APARTMENT.WARNING.PULSE_MS) * Math.PI * 2);
             this.markerLayer.fillStyle(cfg.WARNING, 0.35 + 0.5 * pulse);
             pending.forEach((c) => {
-                if (fog && !this.scene.visited.has(`${c.gx},${c.gy}`)) return;
+                if (fog && !this.scene.visible.has(`${c.gx},${c.gy}`)) return;
                 this.markerLayer.fillRect(this.origin.x + c.gx * cell, this.origin.y + c.gy * cell, cell, cell);
             });
         }
