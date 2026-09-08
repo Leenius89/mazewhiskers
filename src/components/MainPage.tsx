@@ -3,6 +3,7 @@ import { Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { getSettings, subscribe, useSettings } from '../settings';
 import type { Appearance } from '../settings';
 import { useTranslation } from '../i18n';
+import { difficultyOf } from '../game/core/difficulty';
 import { theme } from './theme';
 import { motion } from 'framer-motion';
 
@@ -20,6 +21,29 @@ interface MainPageProps {
  * pixels down keeps the skyline in frame under the logo.
  */
 const PAN_END_OFFSET = 50;
+/**
+ * Drags the menu track flat and slow, or puts it back.
+ *
+ * `preservesPitch` is the whole point: left on, a slower rate is just a
+ * slower tune, and the browser works quite hard to keep it sounding correct.
+ * Turned off, the pitch falls with the speed, which is the sound of a tape
+ * running down — and that is what nightmare is supposed to sound like.
+ *
+ * Prefixed spellings for the browsers that still only have those.
+ */
+const bendAudio = (audio: HTMLAudioElement, bent: boolean): void => {
+    const target = audio as HTMLAudioElement & {
+        preservesPitch?: boolean;
+        mozPreservesPitch?: boolean;
+        webkitPreservesPitch?: boolean;
+    };
+
+    target.preservesPitch = !bent;
+    target.mozPreservesPitch = !bent;
+    target.webkitPreservesPitch = !bent;
+    audio.playbackRate = bent ? 0.86 : 1;
+};
+
 
 const MotionClickable = motion.div as any;
 
@@ -106,6 +130,10 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     // palette below read the new values.
     const [settings] = useSettings();
 
+    // The same subscription is what makes nightmare arrive the instant it is
+    // picked, rather than when the run starts.
+    const dread = difficultyOf(settings.difficulty).dread;
+
     /**
      * The picture's own proportions, learned before anything is drawn.
      *
@@ -176,6 +204,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
             audio.loop = true;
             audio.volume = 0.5;
             audio.muted = getSettings().muted;
+            bendAudio(audio, difficultyOf(getSettings().difficulty).dread);
             audioRef.current = audio;
             await audio.play();
         } catch {
@@ -246,11 +275,17 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     }, [showButton, handleStartGame]);
 
     // The title track is a detached Audio element, so the global Phaser mute
-    // never reaches it. Muting while it is playing has to mute it too.
+    // never reaches it. Muting while it is playing has to mute it too — and so
+    // does choosing nightmare, which bends this track flat without restarting
+    // it. That immediacy is the point: the setting answers back on the same
+    // screen it was chosen on, while the player still has the panel open.
     useEffect(
         () =>
-            subscribe(({ muted }) => {
-                if (audioRef.current) audioRef.current.muted = muted;
+            subscribe(({ muted, difficulty }) => {
+                const audio = audioRef.current;
+                if (!audio) return;
+                audio.muted = muted;
+                bendAudio(audio, difficultyOf(difficulty).dread);
             }),
         []
     );
@@ -306,7 +341,20 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         <img
                             src="sources/main.png"
                             alt="Background"
-                            style={{ width: '100%', height: 'auto', display: 'block' }}
+                            className={dread ? 'mw-dread-sway' : undefined}
+                            style={{
+                                width: '100%',
+                                height: 'auto',
+                                display: 'block',
+                                // Graded rather than covered: the city itself
+                                // goes wrong, instead of a purple sheet being
+                                // held up in front of an ordinary one.
+                                filter: dread
+                                    ? 'hue-rotate(-38deg) saturate(1.5) contrast(1.12) brightness(0.82)'
+                                    : undefined,
+                                animation: dread ? 'mw-dread-sway 3.1s ease-in-out infinite' : undefined,
+                                willChange: dread ? 'transform, filter' : undefined
+                            }}
                         />
                     </motion.div>
                 )}
@@ -334,6 +382,44 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                                 'linear-gradient(180deg, rgba(255,250,238,0.34) 0%, rgba(255,247,232,0.22) 55%, rgba(255,244,226,0.30) 100%)'
                         }}
                     />
+                )}
+
+                {/*
+                    Nightmare, laid over the menu.
+                  *
+                  * The violet throbs on one cycle and the tear fires on a much
+                  * longer one, so the two never line up and the screen never
+                  * settles into a pattern. Both sit under the title and the
+                  * buttons: the menu has to stay readable, because the player
+                  * still has to be able to turn this back off.
+                */}
+                {dread && (
+                    <>
+                        <div
+                            style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 1,
+                                pointerEvents: 'none',
+                                mixBlendMode: 'multiply',
+                                background:
+                                    'radial-gradient(120% 90% at 50% 40%, rgba(150,92,255,0.55) 0%, rgba(78,26,140,0.82) 65%, rgba(24,6,44,0.95) 100%)',
+                                animation: 'mw-dread-throb 2.3s ease-in-out infinite'
+                            }}
+                        />
+                        <div
+                            className="mw-dread-tear"
+                            style={{
+                                position: 'absolute',
+                                inset: 0,
+                                zIndex: 1,
+                                pointerEvents: 'none',
+                                background:
+                                    'repeating-linear-gradient(180deg, rgba(180,123,255,0.5) 0px, rgba(180,123,255,0.5) 3px, transparent 3px, transparent 26px, rgba(45,225,194,0.35) 26px, rgba(45,225,194,0.35) 30px, transparent 30px, transparent 74px)',
+                                animation: 'mw-dread-tear 6.5s steps(1, end) infinite'
+                            }}
+                        />
+                    </>
                 )}
 
                 {/* 타이틀 */}

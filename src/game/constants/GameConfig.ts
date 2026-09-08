@@ -681,6 +681,46 @@ export const GameConfig = {
      */
     FOG: { SIGHT_CELLS: 5 },
 
+    /**
+     * Nightmare's presentation. See systems/Dread.
+     *
+     * Tuned to be unmistakable within a second and still playable for five
+     * minutes — every number here was pushed until it was distracting and then
+     * brought back. The tint multiplies, so it stains the city violet rather
+     * than laying a purple fog in front of it.
+     */
+    DREAD: {
+        TINT: 0x9b5cff,
+        TINT_ALPHA: 0.42,
+        /** How far the wash breathes either side of that. */
+        TINT_SWING: 0.1,
+        /** Lens warp above 1. Small: past about 0.06 it reads as a fisheye toy. */
+        WARP: 0.035,
+        /** Period of the slower of the two breaths. */
+        BREATH_MS: 900,
+        GLITCH: {
+            GAP_MIN_MS: 1800,
+            GAP_MAX_MS: 5200,
+            HOLD_MIN_MS: 70,
+            HOLD_MAX_MS: 160,
+            BANDS: 5,
+            BAND_MIN: 3,
+            BAND_MAX: 22,
+            /** How far a band slides sideways from the frame. */
+            SHIFT: 26,
+            ALPHA: 0.5,
+            COLORS: [0xb47bff, 0x2de1c2, 0xff4d6d],
+            SHAKE: 0.004,
+            SHAKE_MS: 120
+        },
+        AUDIO: {
+            /** Cents. A semitone and a half flat. */
+            DETUNE: -150,
+            /** Playback speed, dragged just under. */
+            RATE: 0.92
+        }
+    },
+
     /** Phaser does not cull plain sprites, so the scene does it here. */
     CULLING: { INTERVAL_MS: 220, PADDING: 260 },
 

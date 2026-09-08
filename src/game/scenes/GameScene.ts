@@ -14,6 +14,7 @@ import { GameStateMachine } from '../core/GameState';
 import { DebugOverlay } from '../core/DebugOverlay';
 import { isDebugEnabled } from '../core/debug';
 import { OcclusionSystem } from '../systems/OcclusionSystem';
+import { Dread, bendSound } from '../systems/Dread';
 import { Vignette } from '../systems/Vignette';
 import { InputManager, isMobileDevice } from '../systems/InputManager';
 import { CameraDirector } from '../systems/CameraDirector';
@@ -196,6 +197,7 @@ export class GameScene extends Phaser.Scene {
     private debugOverlay: DebugOverlay | null = null;
     private occlusion: OcclusionSystem | null = null;
     private vignette: Vignette | null = null;
+    private dread: Dread | null = null;
     /** Public so world-space overlays can keep clear of it. */
     public hud: HudOverlay | null = null;
     private atmosphere: Atmosphere | null = null;
@@ -377,6 +379,11 @@ export class GameScene extends Phaser.Scene {
             currentDifficulty().visionTightness
         );
         this.atmosphere = new Atmosphere(this, this.vignette);
+
+        // Built after the vignette so it stacks over it, and only on a setting
+        // that asks for it — there is nothing to switch off mid-run, because
+        // the difficulty cannot be changed mid-run either.
+        if (currentDifficulty().dread) this.dread = new Dread(this);
         this.hud = new HudOverlay(this);
 
         this.statusBar = new PlayerStatusBar(this);
@@ -779,6 +786,8 @@ export class GameScene extends Phaser.Scene {
             this.playedMs += Math.min(delta, 100);
         }
 
+        this.dread?.update(Math.min(delta, 100));
+
         this.debugOverlay?.update();
 
         // The on-screen stick and buttons are DOM elements stacked over the
@@ -999,6 +1008,8 @@ export class GameScene extends Phaser.Scene {
 
         this.vignette?.destroy();
         this.vignette = null;
+        this.dread?.destroy();
+        this.dread = null;
 
         this.hud?.destroy();
         this.hud = null;

@@ -49,6 +49,21 @@ export interface Difficulty {
     fogOfWar: boolean;
 
     /**
+     * Whether the game presents itself as something that has gone wrong.
+     *
+     * Not a rule — nothing about it changes what happens, and a player who
+     * turned it off would score exactly the same. It is the setting saying
+     * what it is: the music sags a semitone and a half flat, the light goes
+     * violet, the picture breathes and occasionally tears. A nightmare is not
+     * a harder version of a place, it is the same place remembered wrong.
+     *
+     * It starts on the menu, the moment the setting is chosen, because that is
+     * where the player decides — and a warning that arrives after they have
+     * committed is not a warning.
+     */
+    dread: boolean;
+
+    /**
      * How tightly the dark closes in, 0 for the ordinary frame.
      *
      * The vignette is normally atmosphere — it gives a flat top-down grid a
@@ -97,6 +112,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1,
         enemyJumpScale: 1,
         fogOfWar: false,
+        dread: false,
         visionTightness: 0,
         rankWeight: 1
     },
@@ -110,6 +126,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.25,
         enemyJumpScale: 0.6,
         fogOfWar: false,
+        dread: false,
         visionTightness: 0,
         rankWeight: 1.3
     },
@@ -123,6 +140,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.55,
         enemyJumpScale: 0.34,
         fogOfWar: false,
+        dread: false,
         visionTightness: 0,
         rankWeight: 1.7
     },
@@ -150,6 +168,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.8,
         enemyJumpScale: 0.28,
         fogOfWar: true,
+        dread: true,
         visionTightness: 1,
         rankWeight: 2.3
     }

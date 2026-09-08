@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
+import { bendSound } from './systems/Dread';
+import { currentDifficulty } from './core/difficulty';
 
 interface SoundMap {
     mainBGM?: Phaser.Sound.BaseSound;
@@ -161,6 +163,8 @@ export class SoundManager {
                 }
 
                 this.sounds.mainBGM.play();
+                // Nightmare hears the same tune played wrong.
+                bendSound(this.sounds.mainBGM, currentDifficulty().dread);
                 console.log('Main BGM started playing');
             } catch (error) {
                 console.error('Error playing mainBGM:', error);
