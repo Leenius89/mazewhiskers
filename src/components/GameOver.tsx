@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RotateCcw, Trophy } from 'lucide-react';
+import { Home, RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { getSettings } from '../settings';
 import { useTranslation } from '../i18n';
@@ -27,6 +27,7 @@ import {
 
 interface GameOverProps {
     onRetry: () => void;
+    onMainMenu: () => void;
     onShowLeaderboard: () => void;
     reason: GameOverPayload['reason'];
     milkCount?: number;
@@ -57,6 +58,7 @@ const MotionButton = motion.div as React.ElementType;
 
 const GameOver: React.FC<GameOverProps> = ({
     onRetry,
+    onMainMenu,
     onShowLeaderboard,
     reason,
     milkCount = 0,
@@ -231,6 +233,26 @@ const GameOver: React.FC<GameOverProps> = ({
                         {t('over.ranking')}
                     </MotionButton>
                 </div>
+
+                {/*
+                    On its own row, and quiet.
+
+                    Losing left three ways forward and none of them was out:
+                    try again, look at the board, or close the tab. The victory
+                    screen has had a way back to the menu since it was written,
+                    and there is no reason the losing one should be the screen
+                    that traps you — least of all in a gallery, where the next
+                    person needs the menu and not somebody else's death.
+                */}
+                <MotionButton
+                    style={button('quiet')}
+                    onClick={onMainMenu}
+                    whileHover={{ y: -1 }}
+                    whileTap={{ y: 0 }}
+                >
+                    <Home size={13} />
+                    {t('over.mainMenu')}
+                </MotionButton>
 
                 {/* There is no space bar on a phone, and the line was pointing
                     at a key the player does not have. */}

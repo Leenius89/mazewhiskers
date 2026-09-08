@@ -30,7 +30,7 @@ import { sortDepth } from '../core/depth';
 import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
-import { playEnemyEntrance, runTutorial } from '../systems/TutorialSequence';
+import { playEnemyEntrance, runNightmareOpening, runTutorial } from '../systems/TutorialSequence';
 import { currentDifficulty } from '../core/difficulty';
 import { districtPressure, resolveMode } from '../core/modes';
 import type { ModeSettings } from '../core/modes';
@@ -435,7 +435,8 @@ export class GameScene extends Phaser.Scene {
         this.soundManager?.loadDeferredSounds();
 
         if (this.district === 1 && this.tutorialEnabled) {
-            await runTutorial(this);
+            // Nightmare is taunted at rather than taught. See runNightmareOpening.
+            await (currentDifficulty().dread ? runNightmareOpening(this) : runTutorial(this));
             if (this.state.hasEnded()) return;
         }
 

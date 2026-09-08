@@ -503,6 +503,10 @@ function App() {
             {isGameOver && (
                 <GameOver
                     onRetry={restartGame}
+                    onMainMenu={() => {
+                        setIsGameOver(false);
+                        setShowGame(false);
+                    }}
                     onShowLeaderboard={() => handleShowLeaderboard('survived')}
                     milkCount={milkCount}
                     fishCount={fishCount}

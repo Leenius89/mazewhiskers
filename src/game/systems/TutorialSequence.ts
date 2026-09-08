@@ -202,17 +202,54 @@ const rehearseRedevelopment = (scene: GameScene, at: Cell): Rehearsal => {
  * The enemy is deliberately absent. Meeting it should be an event, not an item
  * in a list, so it gets its own entrance later.
  */
+/**
+ * Nightmare's opening: one line, and it is not teaching anything.
+ *
+ * The tutorial exists to name things before the player meets them, and every
+ * beat of it is the game being helpful. Nightmare is not helpful. Anyone
+ * picking it has either played already or is about to find out the hard way,
+ * and seven lines of instruction in front of a setting whose entire premise is
+ * that you cannot see would be the game contradicting itself.
+ *
+ * So it gets one beat, from whatever is out there in the dark, and then the
+ * run starts. It auto-advances rather than waiting on a click: making the
+ * player acknowledge a taunt is asking them to agree with it.
+ */
+const runNightmareOpening = async (scene: GameScene): Promise<void> => {
+    const narrative = scene.narrative;
+    const player = scene.player;
+    if (!narrative || !player) return;
+
+    await narrative.play(t('tut.nightmare'), {
+        speaker: t('tut.nightmare.speaker'),
+        lookAt: { x: player.x, y: player.y },
+        spotlight: spotOnSprite(player, 1.8),
+        subject: player,
+        autoAdvanceMs: GameConfig.NIGHTMARE_OPENING_MS
+    });
+
+    // Hands the world back. Without this the overlay stays up and the run
+    // never starts: `narrativeActive` is only ever cleared here, and every
+    // cost in the game is gated on it being false.
+    narrative.finish();
+};
+
+/** The spotlight rectangle for a sprite, lifted out so both openings can use it. */
+const spotOnSprite = (sprite: Phaser.GameObjects.Sprite, pad = 1.2) => ({
+    x: sprite.x,
+    y: sprite.y - sprite.displayHeight * (1 - sprite.originY) * 0.5,
+    width: sprite.displayWidth * pad,
+    height: sprite.displayHeight * pad
+});
+
+export { runNightmareOpening };
+
 export const runTutorial = async (scene: GameScene): Promise<void> => {
     const narrative = scene.narrative;
     const player = scene.player;
     if (!narrative || !player) return;
 
-    const spotOn = (sprite: Phaser.GameObjects.Sprite, pad = 1.2) => ({
-        x: sprite.x,
-        y: sprite.y - sprite.displayHeight * (1 - sprite.originY) * 0.5,
-        width: sprite.displayWidth * pad,
-        height: sprite.displayHeight * pad
-    });
+    const spotOn = spotOnSprite;
 
     // A phone has no arrow keys, and the line that named them was the
     // first thing a visitor read.

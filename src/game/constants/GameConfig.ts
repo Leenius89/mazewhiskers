@@ -204,6 +204,9 @@ export const GameConfig = {
         }
     },
 
+    /** How long nightmare's one line of welcome stays up before the run starts. */
+    NIGHTMARE_OPENING_MS: 2600,
+
     /** Guided tutorial and story beats. */
     NARRATIVE: {
         /** Milliseconds per character. Fast enough to read, slow enough to feel spoken. */

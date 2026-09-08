@@ -137,3 +137,32 @@ code {
 @media (prefers-reduced-motion: reduce) {
   .mw-dread-sway, .mw-dread-tear { animation: none !important; }
 }
+
+/*
+ * The black cat crossing the menu.
+ *
+ * One pass left to right, then it turns and comes back — done by flipping the
+ * sprite at the halfway point of the same animation rather than by running two,
+ * so the turn always happens exactly where the travel reverses.
+ */
+@keyframes mw-prowl {
+  0%   { transform: translateX(-90px); }
+  49%  { transform: translateX(calc(100vw + 20px)); }
+  50%  { transform: translateX(calc(100vw + 20px)); }
+  99%  { transform: translateX(-90px); }
+  100% { transform: translateX(-90px); }
+}
+
+@keyframes mw-prowl-face {
+  0%, 49%   { transform: scaleX(1); }
+  50%, 100% { transform: scaleX(-1); }
+}
+
+.mw-prowl-cat {
+  animation: mw-prowl-face 22000ms steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-prowl { animation: none !important; transform: translateX(12vw) !important; }
+  .mw-prowl-cat { animation: none !important; }
+}
