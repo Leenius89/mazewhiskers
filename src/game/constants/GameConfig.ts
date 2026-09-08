@@ -655,6 +655,16 @@ export const GameConfig = {
         SATURATION: { FROM: 0, TO: -0.55 }
     },
 
+    /**
+     * What the cat remembers, on the settings that make it remember.
+     *
+     * Five cells is a little under half the screen at the ordinary zoom, and
+     * roughly where the tightened vignette has gone fully dark — so the map
+     * fills in with what was actually visible rather than with more than the
+     * player was shown.
+     */
+    FOG: { SIGHT_CELLS: 5 },
+
     /** Phaser does not cull plain sprites, so the scene does it here. */
     CULLING: { INTERVAL_MS: 220, PADDING: 260 },
 

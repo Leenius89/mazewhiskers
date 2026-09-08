@@ -1,6 +1,6 @@
 import { getSettings } from '../../settings';
 
-export type DifficultyKey = 'easy' | 'normal' | 'hard';
+export type DifficultyKey = 'easy' | 'normal' | 'hard' | 'nightmare';
 
 export interface Difficulty {
     key: DifficultyKey;
@@ -35,6 +35,27 @@ export interface Difficulty {
      * just hit sooner, so a corner buys less time.
      */
     enemyJumpScale: number;
+
+    /**
+     * Whether the map is a map, or only a record of where this cat has been.
+     *
+     * The minimap is normally the one place the whole city is legible — from
+     * inside an alley you cannot see the towers arriving three streets over.
+     * Taking it away is the single largest thing that can be done to this
+     * game's difficulty, which is why it belongs to one setting and not to a
+     * slider. Home still shows: everybody knows the middle of the city is
+     * where they are trying to get to.
+     */
+    fogOfWar: boolean;
+
+    /**
+     * How tightly the dark closes in, 0 for the ordinary frame.
+     *
+     * The vignette is normally atmosphere — it gives a flat top-down grid a
+     * centre. Pulled in far enough it becomes a rule instead: the street two
+     * corners away is not dim, it is gone.
+     */
+    visionTightness: number;
 
     /**
      * What a run on this setting is worth on the boards.
@@ -75,6 +96,8 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1,
         enemyVisionScale: 1,
         enemyJumpScale: 1,
+        fogOfWar: false,
+        visionTightness: 0,
         rankWeight: 1
     },
     normal: {
@@ -86,6 +109,8 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1.14,
         enemyVisionScale: 1.25,
         enemyJumpScale: 0.6,
+        fogOfWar: false,
+        visionTightness: 0,
         rankWeight: 1.3
     },
     hard: {
@@ -97,11 +122,40 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1.3,
         enemyVisionScale: 1.55,
         enemyJumpScale: 0.34,
+        fogOfWar: false,
+        visionTightness: 0,
         rankWeight: 1.7
+    },
+    /**
+     * Hard, plus not being able to see.
+     *
+     * Everything else here is a small step past hard — the rent, the chase,
+     * how fast the towers come. Those are not what makes this setting what
+     * it is, and they are deliberately restrained, because the difficulty is
+     * meant to come from one change and not from five.
+     *
+     * That change is the map. It stops showing the city and starts showing
+     * only where this cat has actually been, and the dark closes to about
+     * two streets. The run becomes what the game is about from the ground
+     * rather than from above: you do not learn a tower has taken your route
+     * until you are standing in front of it.
+     */
+    nightmare: {
+        key: 'nightmare',
+        label: 'NIGHTMARE',
+        color: '#a06cd5',
+        apartmentScale: 0.3,
+        costScale: 1.95,
+        enemySpeedScale: 1.38,
+        enemyVisionScale: 1.8,
+        enemyJumpScale: 0.28,
+        fogOfWar: true,
+        visionTightness: 1,
+        rankWeight: 2.3
     }
 };
 
-export const DIFFICULTY_ORDER: DifficultyKey[] = ['easy', 'normal', 'hard'];
+export const DIFFICULTY_ORDER: DifficultyKey[] = ['easy', 'normal', 'hard', 'nightmare'];
 
 /** The setting this run is being played on. */
 export const currentDifficulty = (): Difficulty => difficultyOf(getSettings().difficulty);

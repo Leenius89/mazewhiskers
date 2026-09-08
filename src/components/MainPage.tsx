@@ -345,11 +345,18 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         // 1150x720 screen, and further in on anything shorter.
                         // Flexbox does the centring so the idle wobble below can
                         // keep the transform to itself.
+                        //
+                        // Desktop sits higher than the phone does. A phone has
+                        // the title and the buttons filling one narrow column
+                        // with nothing to spare; a desktop window is mostly sky,
+                        // and 42% left the title floating in the middle of it
+                        // rather than sitting up in the part of the picture that
+                        // is actually empty.
                         position: 'fixed',
                         top: 0,
                         left: 0,
                         right: 0,
-                        bottom: '42%',
+                        bottom: isMobile ? '42%' : '48%',
                         zIndex: 2,
                         display: 'flex',
                         justifyContent: 'center',
@@ -430,7 +437,12 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                 {showButton && (
                     <div style={{
                         position: 'fixed',
-                        bottom: isMobile ? '9%' : '12%',
+                        // Lifted a long way on desktop. At 12% the buttons sat
+                        // on the floor of a tall window with 29% of the screen
+                        // of empty city between them and the title — the two
+                        // halves of the screen read as unrelated. They belong
+                        // under the logo, not at the bottom of the frame.
+                        bottom: isMobile ? '9%' : '26%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,

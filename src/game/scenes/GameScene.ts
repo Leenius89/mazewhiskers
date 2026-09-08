@@ -23,7 +23,7 @@ import { BarkSystem } from '../systems/BarkSystem';
 import { SweatDrops } from '../systems/SweatDrops';
 import { CullingSystem } from '../systems/CullingSystem';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
-import { cellOf, openNeighbours } from '../core/grid';
+import { cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
 import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
@@ -170,6 +170,19 @@ export class GameScene extends Phaser.Scene {
      */
     public readonly occluders = new Map<string, Phaser.GameObjects.Sprite>();
 
+    /**
+     * Every cell this run has actually seen, as `gx,gy`.
+     *
+     * Only filled on a setting with fog, and only read by the minimap. It is
+     * what the cat knows rather than what is true: a tower can go up inside
+     * a remembered street and the map will go on showing the street until
+     * the cat comes back and finds out.
+     */
+    public readonly visited = new Set<string>();
+
+    /** Where the last reveal was run from, so it runs once per cell. */
+    private revealedFrom = '';
+
     private debugOverlay: DebugOverlay | null = null;
     private occlusion: OcclusionSystem | null = null;
     private vignette: Vignette | null = null;
@@ -249,6 +262,8 @@ export class GameScene extends Phaser.Scene {
         this.pausedAtMs = 0;
         this.health = GameConfig.HEALTH.MAX;
         this.occluders.clear();
+        this.visited.clear();
+        this.revealedFrom = '';
         this.rentTimer = null;
 
         const player = new Player(this, 100, 100);
@@ -345,7 +360,11 @@ export class GameScene extends Phaser.Scene {
         this.events.once('introComplete', () => this.beginPlay());
 
         this.occlusion = new OcclusionSystem(this);
-        this.vignette = new Vignette(this, GameConfig.ATMOSPHERE.VIGNETTE.FROM);
+        this.vignette = new Vignette(
+            this,
+            GameConfig.ATMOSPHERE.VIGNETTE.FROM,
+            currentDifficulty().visionTightness
+        );
         this.atmosphere = new Atmosphere(this, this.vignette);
         this.hud = new HudOverlay(this);
 
@@ -800,6 +819,62 @@ export class GameScene extends Phaser.Scene {
         this.narrative?.update(now);
         this.threat?.update(now);
         this.checkTrapped(now);
+        this.rememberSurroundings();
+    }
+
+    // ------------------------------------------------------------------ fog
+
+    /**
+     * Writes down what the cat can see from where it is standing.
+     *
+     * Only on a setting with fog, and only when it has changed cell — a line
+     * of sight test against every cell in reach, every frame, for a map that
+     * cannot have changed, is work for nothing.
+     *
+     * Sight, not touch. Revealing only the cell underfoot drew a one-cell
+     * thread through the city and called it a map; an alley you walked past
+     * the mouth of is an alley you have seen. Line of sight is what the enemy
+     * cone already uses, so the two agree about what counts as visible.
+     */
+    private rememberSurroundings(): void {
+        if (!this.fogOfWar || !this.player || !this.maze) return;
+
+        const from = cellOf(this.player.x, this.player.groundY);
+        const key = `${from.gx},${from.gy}`;
+        if (key === this.revealedFrom) return;
+        this.revealedFrom = key;
+
+        const reach = GameConfig.FOG.SIGHT_CELLS;
+        const here = worldOf(from);
+        const size = this.maze.length;
+        let added = false;
+
+        for (let gy = from.gy - reach; gy <= from.gy + reach; gy++) {
+            for (let gx = from.gx - reach; gx <= from.gx + reach; gx++) {
+                if (gx < 0 || gy < 0 || gx >= size || gy >= size) continue;
+
+                const cell = `${gx},${gy}`;
+                if (this.visited.has(cell)) continue;
+
+                const there = worldOf({ gx, gy });
+                // The cell underfoot is always known; a wall you are pressed
+                // against fails its own line of sight test.
+                const seen =
+                    (gx === from.gx && gy === from.gy) ||
+                    hasLineOfSight(this.maze, here.x, here.y, there.x, there.y);
+                if (!seen) continue;
+
+                this.visited.add(cell);
+                added = true;
+            }
+        }
+
+        if (added) this.hud?.invalidateMap();
+    }
+
+    /** Whether this run hides the parts of the city it has not been to. */
+    get fogOfWar(): boolean {
+        return currentDifficulty().fogOfWar;
     }
 
     // ------------------------------------------------------------- game over

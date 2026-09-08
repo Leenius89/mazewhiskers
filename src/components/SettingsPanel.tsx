@@ -89,11 +89,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                                 onClick={() => update({ difficulty: key })}
                                 whileTap={{ y: 1 }}
                                 style={{
-                                    flex: '1 1 0',
+                                    // Two by two rather than four across: at a
+                                    // quarter of the panel NIGHTMARE is wider
+                                    // than the button holding it.
+                                    flex: '1 1 44%',
+                                    minWidth: 0,
                                     padding: '9px 8px',
                                     borderRadius: '5px',
                                     textAlign: 'center',
                                     cursor: 'pointer',
+                                    whiteSpace: 'nowrap',
                                     fontFamily: theme.display,
                                     fontSize: '0.56rem',
                                     letterSpacing: '0.06em',
@@ -130,7 +135,7 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
         >
             {label}
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>{children}</div>
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>{children}</div>
     </div>
 );
 

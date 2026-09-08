@@ -125,6 +125,7 @@ export class HudOverlay {
         const cfg = GameConfig.HUD.MINIMAP;
         const cell = cfg.CELL;
         const size = GameConfig.MAZE_SIZE * cell;
+        const fog = this.scene.fogOfWar;
 
         this.mapLayer.clear();
         this.mapLayer.fillStyle(cfg.BACKGROUND, cfg.ALPHA);
@@ -132,6 +133,11 @@ export class HudOverlay {
 
         for (let gy = 0; gy < GameConfig.MAZE_SIZE; gy++) {
             for (let gx = 0; gx < GameConfig.MAZE_SIZE; gx++) {
+                // Unvisited ground is left as the backdrop rather than drawn
+                // in an "unknown" colour. A shape drawn in the dark is still a
+                // shape, and the point is that there is nothing there to read.
+                if (fog && !this.scene.visited.has(`${gx},${gy}`)) continue;
+
                 const built = this.scene.occluders.get(`${gx},${gy}`);
                 const isTower = built?.texture.key.startsWith('apt');
 
@@ -153,6 +159,12 @@ export class HudOverlay {
     private drawMarkers(time: number): void {
         const cfg = GameConfig.HUD.MINIMAP;
         const cell = cfg.CELL;
+        const fog = this.scene.fogOfWar;
+        const known = (worldX: number, worldY: number): boolean => {
+            if (!fog) return true;
+            const unit = GameConfig.TILE_SIZE * GameConfig.SPACING;
+            return this.scene.visited.has(`${Math.round(worldX / unit)},${Math.round(worldY / unit)}`);
+        };
         this.markerLayer.clear();
 
         const plot = (worldX: number, worldY: number, color: number, scale = 1) => {
@@ -168,18 +180,31 @@ export class HudOverlay {
             );
         };
 
-        // Hazard tape, pulsing in step with the world markers.
+        // Hazard tape, pulsing in step with the world markers. Under fog it
+        // only shows where the map does: a warning three streets into the dark
+        // would draw the city for free, which is the whole thing being taken
+        // away on that setting.
         const pending = this.scene.apartmentSystem?.pending;
         if (pending && pending.size > 0) {
             const pulse = 0.5 + 0.5 * Math.sin((time / GameConfig.APARTMENT.WARNING.PULSE_MS) * Math.PI * 2);
             this.markerLayer.fillStyle(cfg.WARNING, 0.35 + 0.5 * pulse);
             pending.forEach((c) => {
+                if (fog && !this.scene.visited.has(`${c.gx},${c.gy}`)) return;
                 this.markerLayer.fillRect(this.origin.x + c.gx * cell, this.origin.y + c.gy * cell, cell, cell);
             });
         }
 
+        // Home always shows. Everybody knows the middle of the city is where
+        // they are trying to get to; not knowing the way there is the setting,
+        // not knowing where it is would just be unfair.
         if (this.scene.goal) plot(this.scene.goal.x, this.scene.goal.y, cfg.GOAL, 2);
-        if (this.scene.enemy?.active) plot(this.scene.enemy.x, this.scene.enemy.y, cfg.ENEMY, 2);
+
+        // The black cat is only on the map where the map is. Elsewhere it is
+        // something you hear coming.
+        if (this.scene.enemy?.active && known(this.scene.enemy.x, this.scene.enemy.y)) {
+            plot(this.scene.enemy.x, this.scene.enemy.y, cfg.ENEMY, 2);
+        }
+
         if (this.scene.player?.active) plot(this.scene.player.x, this.scene.player.groundY, cfg.PLAYER, 2.4);
     }
 
