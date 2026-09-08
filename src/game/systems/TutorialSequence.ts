@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { t } from '../../i18n';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH, sortDepth } from '../core/depth';
-import { TILE_UNIT, cellOf, hasLineOfSight, isOpen, worldOf } from '../core/grid';
+import { TILE_UNIT, cellOf, hasLineOfSight, worldOf } from '../core/grid';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 import { isMobileDevice } from './InputManager';
@@ -82,17 +82,21 @@ const rehearseRedevelopment = (scene: GameScene, at: Cell): Rehearsal => {
     const cfg = GameConfig.APARTMENT.WARNING;
     const half = TILE_UNIT / 2;
 
-    // The ring around the cat, minus the cell it is standing in: the city
-    // closing in on it, rather than landing on top of it. A tower dropped on
-    // the cat with no consequence would teach the opposite of the rule.
+    // The whole ring around the cat, minus the cell it is standing in: the
+    // city closing in on it, rather than landing on top of it. A tower dropped
+    // on the cat with no consequence would teach the opposite of the rule.
+    //
+    // Walls and the edge of the map are included on purpose. Only open cells
+    // qualified at first, which is what the real thing does — but the cat
+    // starts in a corner where two of the eight are open, so the lesson was
+    // two towers in an alley rather than a street closing. None of this is
+    // real: nothing is built, nothing collides, and it is all taken away a
+    // moment later, so there is nothing for the grid to have an opinion about.
     const ring: Cell[] = [];
     for (let dy = -1; dy <= 1; dy++) {
         for (let dx = -1; dx <= 1; dx++) {
             if (dx === 0 && dy === 0) continue;
-            const gx = at.gx + dx;
-            const gy = at.gy + dy;
-            if (!isOpen(scene.maze, gx, gy)) continue;
-            ring.push({ gx, gy });
+            ring.push({ gx: at.gx + dx, gy: at.gy + dy });
         }
     }
 
