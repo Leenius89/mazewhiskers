@@ -191,21 +191,34 @@ const derive = (): Record<string, CSSProperties> => ({
     },
     panel: {
         width: '100%',
-        maxWidth: '440px',
+        /*
+         * Wider and taller than it was.
+         *
+         * 440 across with 28 of padding is a dialogue box, and these are not
+         * dialogue boxes — the settings panel is a list of four rows of
+         * choices and the board is a table of ten. Both were being squeezed
+         * into a column narrower than the text they hold. The extra eighty
+         * pixels and the looser gaps cost nothing on any screen that was
+         * already showing this, and `hazardEdge` below tracks the padding so
+         * the stripe still reaches the corners.
+         */
+        maxWidth: '520px',
         background: theme.surface,
         border: `1px solid ${theme.rule}`,
         borderRadius: '10px',
-        padding: '28px 26px',
+        padding: '34px 32px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
+        gap: '26px',
         fontFamily: theme.body,
         color: theme.ink,
         boxShadow: theme.panelShadow
     },
     hazardEdge: {
         height: '4px',
-        margin: '-28px -26px 0',
+        // Matched to the panel's padding above, so the stripe spans the full
+        // width and sits flush with the top edge.
+        margin: '-34px -32px 0',
         borderRadius: '10px 10px 0 0',
         background: `repeating-linear-gradient(115deg, ${theme.accent} 0 10px, ${theme.ground} 10px 20px)`
     },

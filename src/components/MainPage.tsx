@@ -6,6 +6,7 @@ import { useTranslation } from '../i18n';
 import { difficultyOf } from '../game/core/difficulty';
 import { theme } from './theme';
 import MenuCats from './MenuCats';
+import { VERSION_LABEL } from '../version';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
@@ -530,6 +531,33 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     wandering through a shot.
                 */}
                 {showButton && <MenuCats size={76} />}
+
+                {/*
+                    The build, in the corner.
+
+                    Bottom right and quiet: it is for the person setting the
+                    machine up in the morning, not for the person playing it.
+                    Above the cats' layer so a passing cat cannot sit on it,
+                    and it takes no clicks.
+                */}
+                {showButton && (
+                    <span
+                        style={{
+                            position: 'fixed',
+                            right: '14px',
+                            bottom: '10px',
+                            zIndex: 3,
+                            pointerEvents: 'none',
+                            fontFamily: theme.display,
+                            fontSize: '0.5rem',
+                            letterSpacing: '0.08em',
+                            color: 'rgba(244,238,226,0.42)',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.6)'
+                        }}
+                    >
+                        {VERSION_LABEL}
+                    </span>
+                )}
 
                 {/* GAME START 버튼 */}
                 {showButton && (

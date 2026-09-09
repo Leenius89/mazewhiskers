@@ -5,7 +5,8 @@ import { useSettings } from '../settings';
 import type { Appearance, Language } from '../settings';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
-import { button, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
+import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
+import { VERSION_LABEL } from '../version';
 
 interface SettingsPanelProps {
     onClose: () => void;
@@ -94,7 +95,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                                     // than the button holding it.
                                     flex: '1 1 44%',
                                     minWidth: 0,
-                                    padding: '9px 8px',
+                                    padding: '12px 10px',
                                     borderRadius: '5px',
                                     textAlign: 'center',
                                     cursor: 'pointer',
@@ -118,13 +119,23 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                     <X size={13} />
                     {t('settings.close')}
                 </MotionButton>
+
+                {/*
+                    The build, at the bottom where a build number belongs.
+
+                    An exhibition runs whatever was on the machine that morning,
+                    and "which version is this one" is otherwise a question only
+                    the git log can answer — by which point the machine is in a
+                    gallery and nobody can see the git log.
+                */}
+                <p style={{ ...hint, margin: 0, textAlign: 'center' }}>{VERSION_LABEL}</p>
             </motion.div>
         </div>
     );
 };
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <span
             style={{
                 fontFamily: theme.display,
@@ -135,7 +146,7 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
         >
             {label}
         </span>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>{children}</div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>{children}</div>
     </div>
 );
 

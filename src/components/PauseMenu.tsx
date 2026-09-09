@@ -114,7 +114,7 @@ const PauseMenu: React.FC<PauseMenuProps> = ({ onResume, onRestart, onMainMenu }
 };
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         <span
             style={{
                 fontFamily: theme.display,
@@ -125,7 +125,7 @@ const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, ch
         >
             {label}
         </span>
-        <div style={{ display: 'flex', gap: '6px' }}>{children}</div>
+        <div style={{ display: 'flex', gap: '8px' }}>{children}</div>
     </div>
 );
 
@@ -142,8 +142,8 @@ const Choice: React.FC<{ on: boolean; onClick: () => void; children: React.React
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
-            padding: '9px 10px',
+            gap: '7px',
+            padding: '12px 12px',
             borderRadius: '5px',
             cursor: 'pointer',
             whiteSpace: 'nowrap',

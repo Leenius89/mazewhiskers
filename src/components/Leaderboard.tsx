@@ -20,7 +20,16 @@ interface Score {
 
 /** How many places every board shows, and the height it is held at. */
 const ROWS = 10;
-const ROW_HEIGHT = 34;
+/**
+ * Taller than the 34 it was, and not as tall as it wanted to be.
+ *
+ * At 42 the ten rows plus the panel's new padding came to 814 pixels, which
+ * on a 812-pixel phone put the close button two pixels below the fold. The
+ * backdrop scrolls, so it was usable — but a panel you have to scroll to
+ * dismiss is a panel that looks broken. 38 keeps most of the room and lands
+ * inside the shortest screen this runs on.
+ */
+const ROW_HEIGHT = 38;
 
 export type BoardKey = 'fastest' | 'survived' | 'fed' | 'closest';
 
@@ -218,7 +227,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
             <motion.div
                 // Wider than a results panel: four tabs have to sit on one line,
                 // and a table of ten is a different shape from a paragraph.
-                style={{ ...panel, maxWidth: '620px' }}
+                style={{ ...panel, maxWidth: '720px' }}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
@@ -276,7 +285,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                     style={{
                         display: 'flex',
                         flexDirection: 'column',
-                        gap: '2px',
+                        gap: '3px',
                         height: `${ROWS * ROW_HEIGHT}px`,
                         overflow: 'hidden'
                     }}
