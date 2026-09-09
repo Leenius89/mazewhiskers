@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { mazeSize as currentMazeSize } from '../core/grid';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
 import { TEXT, fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
@@ -101,7 +102,7 @@ export class HudOverlay {
         }
 
         const cell = minimapCell(camera);
-        const size = GameConfig.MAZE_SIZE * cell;
+        const size = currentMazeSize() * cell;
         const margin = ui(GameConfig.HUD.MARGIN, camera);
 
         this.origin = { x: viewport.width - margin - size, y: margin };
@@ -124,7 +125,7 @@ export class HudOverlay {
 
         const cfg = GameConfig.HUD.MINIMAP;
         const cell = cfg.CELL;
-        const size = GameConfig.MAZE_SIZE * cell;
+        const size = currentMazeSize() * cell;
         const fog = this.scene.fogOfWar;
 
         this.mapLayer.clear();
@@ -133,8 +134,8 @@ export class HudOverlay {
         this.mapLayer.fillStyle(fog ? cfg.UNKNOWN : cfg.BACKGROUND, fog ? 1 : cfg.ALPHA);
         this.mapLayer.fillRect(this.origin.x - 2, this.origin.y - 2, size + 4, size + 4);
 
-        for (let gy = 0; gy < GameConfig.MAZE_SIZE; gy++) {
-            for (let gx = 0; gx < GameConfig.MAZE_SIZE; gx++) {
+        for (let gy = 0; gy < currentMazeSize(); gy++) {
+            for (let gx = 0; gx < currentMazeSize(); gx++) {
                 const key = `${gx},${gy}`;
 
                 // Three states under fog, and the difference between the last
@@ -224,7 +225,7 @@ export class HudOverlay {
     /** Time-to-rent bar under the minimap, turning amber as the deadline nears. */
     private drawRentBar(): void {
         const cell = minimapCell(this.scene.cameras.main);
-        const width = GameConfig.MAZE_SIZE * cell;
+        const width = currentMazeSize() * cell;
         const y = this.readoutOffset.y + this.readout.height + ui(6, this.scene.cameras.main);
         const rent = GameConfig.HEALTH.RENT;
 

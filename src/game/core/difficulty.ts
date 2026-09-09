@@ -59,6 +59,20 @@ export interface Difficulty {
     jumpCells: number;
 
     /**
+     * How much bigger the city is than the one everyone else plays.
+     *
+     * One for every setting but nightmare. Nightmare's fog already takes the
+     * map away; making the map larger as well means there is more of it to
+     * not know, and the walk home — which the player cannot see — is longer
+     * in a way they cannot measure either. Applied to the maze's side, so
+     * 1.5 is more than twice the city by area.
+     *
+     * The generator carves at odd coordinates, so the result is rounded to
+     * the nearest odd number.
+     */
+    mapScale: number;
+
+    /**
      * Whether the map is a map, or only a record of where this cat has been.
      *
      * The minimap is normally the one place the whole city is legible — from
@@ -134,6 +148,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1,
         enemyJumpScale: 1,
         jumpCells: 2,
+        mapScale: 1,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -149,6 +164,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.25,
         enemyJumpScale: 0.6,
         jumpCells: 2,
+        mapScale: 1,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -164,6 +180,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.55,
         enemyJumpScale: 0.34,
         jumpCells: 6,
+        mapScale: 1,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -199,6 +216,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemyVisionScale: 1.8,
         enemyJumpScale: 0.28,
         jumpCells: 8,
+        mapScale: 1.5,
         fogOfWar: true,
         dread: true,
         visionTightness: 1,

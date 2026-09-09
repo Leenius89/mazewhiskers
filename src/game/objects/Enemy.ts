@@ -4,7 +4,7 @@ import { currentDifficulty, difficultyOf } from '../core/difficulty';
 import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
-import { cellOf, hasLineOfSight, isOpen, worldOf } from '../core/grid';
+import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -62,6 +62,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
      * moving and is not, and it is the reason a fourth cause would not need a
      * fourth report.
      */
+    /** When it was last put somewhere by hand. See `settling`. */
+    private placedAt = -Infinity;
+
+    /**
+     * True for a moment after a rescue, while nobody may rescue it again.
+     *
+     * Belt and braces over the body sync in placeAt: even with the body
+     * brought up to date immediately, the frame a cat is placed on is not a
+     * frame to judge it on. A rescue that fires on consecutive frames is the
+     * loop that pinned it in place.
+     */
+    get settling(): boolean {
+        return this.scene.runNow - this.placedAt < GameConfig.ENEMY.STUCK.PLACE_SETTLE_MS;
+    }
+
     private anchorAt = 0;
     private anchor = { x: 0, y: 0 };
     /** 0 nothing tried, 1 jumped, 2 asked to be rehomed. Reset by real progress. */
@@ -187,7 +202,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     placeAt(x: number, y: number): void {
         this.setPosition(x, y);
         this.groundY = y;
-        this.body?.reset(x, y);
+
+        const body = this.body as Phaser.Physics.Arcade.Body | null;
+        body?.reset(x, y);
+        // Bring the body up to date now rather than on the next physics step.
+        // For the one frame in between, its centre was a cell off the sprite,
+        // and the trap test that runs every frame read that stale centre as
+        // "inside a wall" and called this again — which staled it again. A
+        // cat could be rescued to the cell it was already standing in, over
+        // and over, pinned in place by its own rescue.
+        body?.updateFromGameObject();
+        this.placedAt = this.scene.runNow;
+
         this.setVelocity(0, 0);
         this.syncGroundVisuals();
 
@@ -340,13 +366,18 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // single wrong answer from hasLineOfSight left the cat with nothing to
         // fall back on, walking into a corner with no memory of the way round.
         // Now the shortcut can be wrong and the next frame still has a route.
-        if (hasLineOfSight(this.maze, this.x, this.groundY, target.x, target.y)) {
+        if (hasClearWalk(this.maze, this.x, this.groundY, target.x, target.y)) {
             this.steerTo(target, speed);
             return;
         }
 
-        const from = cellOf(this.x, this.groundY);
-        const to = cellOf(target.x, target.y);
+        // Judged from the bodies, both ends. The ground point rounds into the
+        // wall's row for anything leaning on one, and a route to the wrong
+        // cell is a route to the wrong side of the wall: the black cat would
+        // walk all the way round a building to reach a player standing
+        // against the near face of it, and set off from the wrong side too.
+        const from = bodyCell(this);
+        const to = bodyCell(this.player);
         this.ensurePath(from, to);
 
         const next = this.path[0];
@@ -359,10 +390,43 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        const step = worldOf(next);
+        const cfg = GameConfig.ENEMY.PATH;
+
+        // The route is the long way round, and a wall is the short way.
+        //
+        // The hop was only ever the answer when there was no route at all,
+        // which meant a player one thin wall away got a fifty-cell walk
+        // instead of a two-cell jump — the player's own move, the one the
+        // maze is built around. When the walk is several times the distance
+        // as the crow flies, the jump is tried first. On easy and normal it
+        // clears exactly what the player can; on hard and nightmare, more.
+        const straight = Math.hypot(to.gx - from.gx, to.gy - from.gy);
+        if (this.path.length > straight * cfg.DETOUR_RATIO + cfg.DETOUR_SLACK) {
+            if (this.tryJumpToward(target.x, target.y)) return;
+        }
+
+        // Aim at the furthest waypoint it can see, not the next one.
+        //
+        // Following cell centres one at a time has two faults. A route along
+        // a diagonal is a staircase of right angles, which the cat walked as
+        // a staircase. And a waypoint it had slid past — cutting a corner, or
+        // shoved off it by a landing tower — was still the next one, so it
+        // turned round and went back for it. Both look like a cat that has
+        // lost its mind. Skipping to the furthest waypoint in clear sight
+        // straightens the staircase and makes going back impossible.
+        for (let i = Math.min(this.path.length - 1, cfg.LOOKAHEAD); i > 0; i--) {
+            const ahead = worldOf(this.path[i]);
+            if (hasClearWalk(this.maze, this.x, this.groundY, ahead.x, ahead.y)) {
+                this.path.splice(0, i);
+                this.waypointSince = 0;
+                break;
+            }
+        }
+
+        const step = worldOf(this.path[0]);
         const gap = Phaser.Math.Distance.Between(this.x, this.groundY, step.x, step.y);
 
-        if (gap <= GameConfig.ENEMY.PATH.ARRIVE) {
+        if (gap <= cfg.ARRIVE) {
             this.path.shift();
             this.waypointSince = 0;
         } else {
@@ -370,7 +434,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             // arriving was the only way to leave one. Give up on it and let the
             // next be tried instead.
             if (!this.waypointSince) this.waypointSince = this.scene.runNow;
-            else if (this.scene.runNow - this.waypointSince > GameConfig.ENEMY.PATH.WAYPOINT_MS) {
+            else if (this.scene.runNow - this.waypointSince > cfg.WAYPOINT_MS) {
                 this.waypointSince = 0;
                 this.path.shift();
             }
@@ -533,7 +597,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const dy = Math.abs(sin) > cfg.DIRECTION_THRESHOLD ? Math.sign(sin) : 0;
         if (dx === 0 && dy === 0) return false;
 
-        const here = cellOf(this.x, this.groundY);
+        const here = bodyCell(this);
 
         /*
          * Look for somewhere to land, rather than testing one cell and giving up.

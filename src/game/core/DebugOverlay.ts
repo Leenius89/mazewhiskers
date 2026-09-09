@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { mazeSize as currentMazeSize } from './grid';
 import type { GameScene } from '../scenes/GameScene';
 
 type AnyBody = Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody;
@@ -71,10 +72,10 @@ export class DebugOverlay {
         if (!maze) return;
 
         const unit = GameConfig.TILE_SIZE * GameConfig.SPACING;
-        const span = GameConfig.MAZE_SIZE * unit;
+        const span = currentMazeSize() * unit;
 
         this.grid.lineStyle(1, 0x3399ff, 0.16);
-        for (let i = 0; i <= GameConfig.MAZE_SIZE; i++) {
+        for (let i = 0; i <= currentMazeSize(); i++) {
             const at = i * unit - unit / 2;
             this.grid.lineBetween(at, -unit / 2, at, span - unit / 2);
             this.grid.lineBetween(-unit / 2, at, span - unit / 2, at);

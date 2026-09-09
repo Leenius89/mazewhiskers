@@ -1,8 +1,25 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { currentDifficulty } from './difficulty';
 
 /** World pixels per grid cell. */
 export const TILE_UNIT = GameConfig.TILE_SIZE * GameConfig.SPACING;
+
+/**
+ * How many cells the city is on a side, for the setting being played.
+ *
+ * `GameConfig.MAZE_SIZE` is the base; nightmare multiplies it. Always odd,
+ * because the generator carves passages at odd coordinates and an even side
+ * leaves a solid row along two edges. Read at scene creation, so a run keeps
+ * the city it started with even if the setting changes underneath it.
+ */
+export const mazeSize = (): number => {
+    const scaled = GameConfig.MAZE_SIZE * currentDifficulty().mapScale;
+    // Nearest odd, not "round then bump if even": 41 x 1.5 is 61.5, which
+    // rounds to 62 and bumped to 63 — a size and a half became more than
+    // that. The nearest odd number to 61.5 is 61.
+    return 2 * Math.round((scaled - 1) / 2) + 1;
+};
 
 export interface Cell {
     gx: number;
@@ -32,12 +49,30 @@ export const isOpen = (maze: number[][] | undefined, gx: number, gy: number): bo
  * step rather than sampling at a fixed interval, so a thin wall can never be
  * skipped over.
  */
-export const hasLineOfSight = (
+/** Whether a body could walk the straight line: sight, with strict corners. */
+export const hasClearWalk = (
     maze: number[][] | undefined,
     fromX: number,
     fromY: number,
     toX: number,
     toY: number
+): boolean => hasLineOfSight(maze, fromX, fromY, toX, toY, true);
+
+export const hasLineOfSight = (
+    maze: number[][] | undefined,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    /**
+     * Whether a diagonal step needs BOTH neighbouring cells open.
+     *
+     * For sight, one is enough: an eye slips past a corner. For a body it is
+     * not — a cat forty-eight pixels wide cannot round a convex corner on the
+     * diagonal, so steering it that way jams it against the corner. Walking
+     * decisions ask for the strict version.
+     */
+    forBody = false
 ): boolean => {
     if (!maze) return true;
 
@@ -86,7 +121,7 @@ export const hasLineOfSight = (
         if (stepsX && stepsY) {
             const sideA = maze[gy]?.[gx + stepX];
             const sideB = maze[gy + stepY]?.[gx];
-            if (sideA !== 0 && sideB !== 0) return false;
+            if (forBody ? sideA !== 0 || sideB !== 0 : sideA !== 0 && sideB !== 0) return false;
         }
 
         if (stepsX) {

@@ -4,7 +4,7 @@ import { currentDifficulty, difficultyOf } from './core/difficulty';
 import { getSettings } from '../settings';
 import { setStaticFootBody } from './core/bodies';
 import { DEPTH, sortDepth } from './core/depth';
-import { TILE_UNIT, bodyCell, cellOf, isOpen, worldOf } from './core/grid';
+import { TILE_UNIT, bodyCell, cellOf, isOpen, mazeSize as currentMazeSize, worldOf } from './core/grid';
 import type { Cell } from './core/grid';
 import type { GameOverReason, GameScene } from './scenes/GameScene';
 
@@ -47,7 +47,7 @@ export class ApartmentSystem {
     private readonly goal: Phaser.Physics.Arcade.Sprite | null;
     private readonly apartments: Phaser.Physics.Arcade.StaticGroup;
 
-    private readonly mazeSize = GameConfig.MAZE_SIZE;
+    private readonly mazeSize = currentMazeSize();
     private readonly tileUnit = TILE_UNIT;
 
     private readonly occupiedPositions = new Set<string>();
@@ -413,7 +413,15 @@ export class ApartmentSystem {
      */
     private freeTrappedEnemies(): void {
         this.scene.enemies.forEach((enemy) => {
-            if (!enemy.active) return;
+            if (!enemy.active || enemy.settling) return;
+
+            // Mid-jump its body passes over the very walls it is clearing, so
+            // for those frames the body centre is inside a building on
+            // purpose. Judging it then put it back on the ground it had left,
+            // while the jump's tween kept lifting it: two or three rescues a
+            // jump, the cat flickering between the two, and every one of them
+            // a reversal of direction. It is judged when it lands.
+            if (enemy.isJumping) return;
 
             // Judged from the body, not the ground point.
             //
@@ -456,10 +464,10 @@ export class ApartmentSystem {
      * being rescued into the player's lap is a worse bug than being stuck —
      * the cat should reappear somewhere in the city, not on top of anybody.
      */
-    rehomeEnemy(enemy: Phaser.GameObjects.Sprite & { placeAt: (x: number, y: number) => void }): void {
+    rehomeEnemy(enemy: Phaser.GameObjects.Sprite & { placeAt: (x: number, y: number) => void; settling: boolean; isJumping: boolean }): void {
         const maze = this.scene.maze;
         const player = this.scene.player;
-        if (!maze || !player) return;
+        if (!maze || !player || enemy.settling || enemy.isJumping) return;
 
         // Both judged from the body. Asking `cellOf` about the ground point
         // reports the wall's row for anything leaning on one, which made the
@@ -632,7 +640,7 @@ export class ApartmentSystem {
         }
 
         this.scene.enemies.forEach((enemy) => {
-            if (!enemy.active) return;
+            if (!enemy.active || enemy.isJumping) return;
 
             if (inside(enemy)) {
                 const from = cellOf(enemy.x, enemy.groundY);

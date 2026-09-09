@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
+import { mazeSize as currentMazeSize } from './core/grid';
 import { setCircleBody, setStaticFootBody } from './core/bodies';
 import { sortDepth } from './core/depth';
 import { resolveSeed } from './core/modes';
@@ -120,7 +121,8 @@ const walkLength = (
 };
 
 export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprite): MazeData => {
-    const { TILE_SIZE: tileSize, MAZE_SIZE: mazeSize, SPACING: spacing } = GameConfig;
+    const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
+    const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
     const start = GameConfig.PLAYER.START_TILE;
 
@@ -147,7 +149,15 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
      * A seeded run keeps drawing from the same seeded generator, so it stays
      * reproducible — it simply arrives at the layout that qualified.
      */
-    const bounds = GameConfig.MAZE.WALK_LENGTH;
+    // The band was measured on the base city. A bigger one has longer walks
+    // in proportion, so the band grows with it; otherwise every attempt on
+    // nightmare would fail the ceiling and the last one would be kept blind.
+    const scale = mazeSize / GameConfig.MAZE_SIZE;
+    const bounds = {
+        MIN: Math.round(GameConfig.MAZE.WALK_LENGTH.MIN * scale),
+        MAX: Math.round(GameConfig.MAZE.WALK_LENGTH.MAX * scale),
+        ATTEMPTS: GameConfig.MAZE.WALK_LENGTH.ATTEMPTS
+    };
     let maze: number[][] = [];
     for (let attempt = 0; attempt < bounds.ATTEMPTS; attempt++) {
         maze = generateGrid(mazeSize, centerX, centerY, rng);
@@ -254,7 +264,8 @@ const buildWorld = (
         rng: Phaser.Math.RandomDataGenerator;
     }
 ): MazeData => {
-    const { TILE_SIZE: tileSize, MAZE_SIZE: mazeSize, SPACING: spacing } = GameConfig;
+    const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
+    const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
     const start = GameConfig.PLAYER.START_TILE;
 

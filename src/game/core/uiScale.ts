@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { mazeSize as currentMazeSize } from './grid';
 import { RENDER_SCALE } from './renderScale';
 import { isMobileDevice } from '../systems/InputManager';
 
@@ -120,7 +121,7 @@ export const TEXT = {
  */
 export const minimapCell = (camera: Phaser.Cameras.Scene2D.Camera): number => {
     const cfg = GameConfig.HUD.MINIMAP;
-    const capped = (camera.width * cfg.MAX_WIDTH_FRACTION) / GameConfig.MAZE_SIZE;
+    const capped = (camera.width * cfg.MAX_WIDTH_FRACTION) / currentMazeSize();
     return Math.min(ui(cfg.CELL, camera), capped);
 };
 

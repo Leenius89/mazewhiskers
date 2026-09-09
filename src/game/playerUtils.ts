@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
+import { mazeSize as currentMazeSize } from './core/grid';
 import { setCircleBody } from './core/bodies';
 import { sortDepth } from './core/depth';
 import type { GameScene } from './scenes/GameScene';
@@ -12,7 +13,8 @@ export const createMilkItems = (
     rng: Phaser.Math.RandomDataGenerator
 ): Phaser.Physics.Arcade.Group => {
     const milks = scene.physics.add.group();
-    const { MAZE_SIZE: mazeSize, TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
+    const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
+    const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
 
     if (!scene.anims.exists('milkFloat')) {

@@ -516,7 +516,24 @@ export const GameConfig = {
              * Without it an unreachable player meant a whole-grid flood fill
              * every frame, every result discarded.
              */
-            NO_ROUTE_BACKOFF_MS: 900
+            NO_ROUTE_BACKOFF_MS: 900,
+            /**
+             * How many waypoints ahead it may skip to, when it can see them.
+             *
+             * Six cells is about a screen at the ordinary zoom. Further than
+             * that and the line of sight test is doing most of the routing,
+             * which is the thing the route exists to avoid.
+             */
+            LOOKAHEAD: 6,
+            /**
+             * When the walk is this many times the straight-line distance,
+             * plus the slack, a wall is the short way and the hop is tried
+             * before the walk. Three keeps a genuine corner a walk — two cells
+             * across, five around — and catches the wall-between-us case,
+             * where it is two across and fifty around.
+             */
+            DETOUR_RATIO: 3,
+            DETOUR_SLACK: 4
         },
 
         /**
@@ -551,7 +568,9 @@ export const GameConfig = {
              */
             REHOME_MIN_CELLS: 6,
             /** And roughly how far it should land, in cells: a walk, not a journey. */
-            REHOME_IDEAL_CELLS: 14
+            REHOME_IDEAL_CELLS: 14,
+            /** After a rescue, how long before it may be judged again. */
+            PLACE_SETTLE_MS: 250
         },
 
 
