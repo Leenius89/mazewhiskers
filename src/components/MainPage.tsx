@@ -5,7 +5,7 @@ import type { Appearance } from '../settings';
 import { useTranslation } from '../i18n';
 import { difficultyOf } from '../game/core/difficulty';
 import { theme } from './theme';
-import ProwlingCat from './ProwlingCat';
+import MenuCats from './MenuCats';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
@@ -529,7 +529,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     fly-over is a shot, and a cat wandering through it is a cat
                     wandering through a shot.
                 */}
-                {showButton && <ProwlingCat size={76} />}
+                {showButton && <MenuCats size={76} />}
 
                 {/* GAME START 버튼 */}
                 {showButton && (

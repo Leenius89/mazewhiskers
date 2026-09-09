@@ -945,9 +945,9 @@ export class GameScene extends Phaser.Scene {
      * the second, and two copies of the same falloff would have drifted apart
      * the first time either was tuned.
      */
-    get enemyNearness(): number {
+    get nearestEnemyPx(): number {
         const player = this.player;
-        if (!player || this.enemies.length === 0) return 0;
+        if (!player || this.enemies.length === 0) return Infinity;
 
         let closest = Infinity;
         for (const enemy of this.enemies) {
@@ -958,10 +958,31 @@ export class GameScene extends Phaser.Scene {
             );
         }
 
+        return closest;
+    }
+
+    /** That distance as 0 to 1 across a band. */
+    private nearnessAcross(far: number): number {
+        const closest = this.nearestEnemyPx;
         if (!Number.isFinite(closest)) return 0;
 
-        const cfg = GameConfig.THREAT;
-        return 1 - Phaser.Math.Clamp((closest - cfg.NEAR) / (cfg.FAR - cfg.NEAR), 0, 1);
+        const near = GameConfig.THREAT.NEAR;
+        return 1 - Phaser.Math.Clamp((closest - near) / (far - near), 0, 1);
+    }
+
+    /** What the red wash and nightmare's warp answer to. */
+    get enemyNearness(): number {
+        return this.nearnessAcross(GameConfig.THREAT.FAR);
+    }
+
+    /**
+     * What the chase music answers to, over a wider band.
+     *
+     * Sound carries round the corners the wash cannot, so the track starts
+     * winding up well before there is anything on screen to explain it.
+     */
+    get enemyAudioNearness(): number {
+        return this.nearnessAcross(GameConfig.THREAT.AUDIO.FAR);
     }
 
     /** Whether this run hides the parts of the city it has not been to. */

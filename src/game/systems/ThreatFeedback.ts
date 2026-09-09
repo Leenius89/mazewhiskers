@@ -81,8 +81,9 @@ export class ThreatFeedback {
         const nearness = this.scene.enemyNearness;
 
         // The chase music hears about this whether or not anything is drawn,
-        // so it can wind back down as the enemy loses the player.
-        this.scene.soundManager?.setChaseUrgency(nearness);
+        // so it can wind back down as the enemy loses the player — and it
+        // hears over a wider band than the wash is drawn across.
+        this.scene.soundManager?.setChaseUrgency(this.scene.enemyAudioNearness);
 
         const delta = this.lastTime ? Math.min(time - this.lastTime, 100) : 0;
         this.lastTime = time;

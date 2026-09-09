@@ -150,8 +150,16 @@ export const GameConfig = {
      * who has asked their system for reduced motion.
      */
     THREAT: {
-        /** Distance at which the player starts feeling it, and where it peaks. */
-        FAR: 700,
+        /**
+         * Distance at which the player starts feeling it, and where it peaks.
+         *
+         * FAR was 700 — seven cells, which at a chase speed of 110 to 160 is
+         * four seconds of warning for something that then arrives. The whole
+         * point of putting the threat in the music and the light is that a
+         * maze hides the thing chasing you, and a warning that starts four
+         * seconds out is not a warning, it is an announcement.
+         */
+        FAR: 980,
         NEAR: 190,
         PULSE_HZ: 1.5,
         /**
@@ -197,6 +205,17 @@ export const GameConfig = {
          * of something arriving rather than something approaching.
          */
         AUDIO: {
+            /**
+             * The chase track hears further than the red wash sees.
+             *
+             * Sound is the sense that works round a corner, and it is the one
+             * that can rise for ten seconds without ever being distracting —
+             * a wash that started this far out would sit on the screen for
+             * most of a run. Sixteen cells: the music starts leaning before
+             * there is anything to see, which is the ordinary experience of
+             * being followed.
+             */
+            FAR: 1600,
             DETUNE_NEAR: 220,
             RATE_NEAR: 1.2,
             /** How quickly the track follows a change in distance, 0 to 1. */
