@@ -33,6 +33,15 @@ interface Palette {
 
     /** Behind a panel. Nearly opaque: a panel is a place to stop and read. */
     scrim: string;
+    /**
+     * A thinner scrim, for a panel that has something behind it worth seeing.
+     *
+     * The ordinary one is all but opaque, which is right when the panel is
+     * the only thing that matters. On the results screen it is not: the
+     * black cat is out there walking about, and against a 95% black wash a
+     * black cat is a rumour.
+     */
+    scrimSoft: string;
     panelShadow: string;
 
     display: string;
@@ -71,6 +80,7 @@ const DARK: Palette = {
     bad: '#E8635A',
 
     scrim: 'rgba(6, 8, 12, 0.955)',
+    scrimSoft: 'rgba(6, 8, 12, 0.80)',
     panelShadow: '0 18px 50px rgba(0,0,0,0.45)',
 
     ...FACES
@@ -107,6 +117,7 @@ const LIGHT: Palette = {
     bad: '#AC3226',
 
     scrim: 'rgba(216, 210, 195, 0.96)',
+    scrimSoft: 'rgba(216, 210, 195, 0.86)',
     panelShadow: '0 18px 50px rgba(46,40,28,0.22)',
 
     ...FACES
@@ -133,6 +144,8 @@ export const theme: Palette = { ...PALETTES[getSettings().appearance] };
  * competing with the frozen game underneath it.
  */
 export const overlayBackdrop: CSSProperties = {} as CSSProperties;
+/** The same, thinner, for panels with something behind them worth seeing. */
+export const overlayBackdropSoft: CSSProperties = {} as CSSProperties;
 export const panel: CSSProperties = {} as CSSProperties;
 /** Diagonal hazard stripe, used once per panel as its top edge. */
 export const hazardEdge: CSSProperties = {} as CSSProperties;
@@ -158,6 +171,17 @@ const derive = (): Record<string, CSSProperties> => ({
         position: 'fixed',
         inset: 0,
         background: theme.scrim,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        zIndex: 1000,
+        overflowY: 'auto'
+    },
+    overlayBackdropSoft: {
+        position: 'fixed',
+        inset: 0,
+        background: theme.scrimSoft,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -266,6 +290,7 @@ const derive = (): Record<string, CSSProperties> => ({
 
 const TARGETS: Record<string, CSSProperties> = {
     overlayBackdrop,
+    overlayBackdropSoft,
     panel,
     hazardEdge,
     eyebrow,

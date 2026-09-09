@@ -14,7 +14,7 @@ import {
     hazardEdge,
     headline,
     hint,
-    overlayBackdrop,
+    overlayBackdropSoft,
     panel,
     statCell,
     statGrid,
@@ -147,7 +147,7 @@ const GameOver: React.FC<GameOverProps> = ({
     const canSubmit = !isSubmitting && username.trim().length > 0;
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={overlayBackdropSoft}>
             <motion.div
                 // Named so the cat can find its top edge and sit on it.
                 data-mw-perch=""

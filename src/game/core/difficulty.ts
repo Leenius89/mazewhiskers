@@ -37,6 +37,28 @@ export interface Difficulty {
     enemyJumpScale: number;
 
     /**
+     * How far, in cells, the black cat can clear in one bound.
+     *
+     * Two is the player's own reach, and against the original maze — walls one
+     * cell thick — it is enough. Against the towers it is nothing: a block is
+     * four to nine cells on a side, so a two-cell hop always lands inside one
+     * and is refused. The enemy could not cross a single apartment at any
+     * setting, which is most of the map by the end of a run.
+     *
+     * Easy and normal keep the player's reach, because a chase you can lose by
+     * putting a building between you and it is the whole shape of those
+     * settings. Hard and nightmare do not grant you that: the thing comes over
+     * the top.
+     *
+     * Clearing a block N cells thick from the kerb beside it needs N+1, since
+     * the landing has to be the far pavement and not the last row of the
+     * building. Six covers a five-thick block, which is most of them; the
+     * nine-cell monsters still have to be walked around by anything, and that
+     * is what the route is for.
+     */
+    jumpCells: number;
+
+    /**
      * Whether the map is a map, or only a record of where this cat has been.
      *
      * The minimap is normally the one place the whole city is legible — from
@@ -111,6 +133,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1,
         enemyVisionScale: 1,
         enemyJumpScale: 1,
+        jumpCells: 2,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -125,6 +148,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1.14,
         enemyVisionScale: 1.25,
         enemyJumpScale: 0.6,
+        jumpCells: 2,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -139,6 +163,7 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         enemySpeedScale: 1.3,
         enemyVisionScale: 1.55,
         enemyJumpScale: 0.34,
+        jumpCells: 6,
         fogOfWar: false,
         dread: false,
         visionTightness: 0,
@@ -164,9 +189,16 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         color: '#a06cd5',
         apartmentScale: 0.3,
         costScale: 1.95,
-        enemySpeedScale: 1.38,
+        // 1.45 of 110 is 159.5, against the player's 160. Deliberately just
+        // under and not over: at equal speed a sighting is a death sentence
+        // with no counterplay, and the escape has to stay a thing you do —
+        // break the line of sight, take a corner it has to walk around, drink
+        // milk and clear a wall it cannot. Half a pixel a second of margin is
+        // the whole of nightmare's mercy.
+        enemySpeedScale: 1.45,
         enemyVisionScale: 1.8,
         enemyJumpScale: 0.28,
+        jumpCells: 8,
         fogOfWar: true,
         dread: true,
         visionTightness: 1,

@@ -4,7 +4,7 @@ import { currentDifficulty, difficultyOf } from './core/difficulty';
 import { getSettings } from '../settings';
 import { setStaticFootBody } from './core/bodies';
 import { DEPTH, sortDepth } from './core/depth';
-import { TILE_UNIT, cellOf, isOpen, worldOf } from './core/grid';
+import { TILE_UNIT, bodyCell, cellOf, isOpen, worldOf } from './core/grid';
 import type { Cell } from './core/grid';
 import type { GameOverReason, GameScene } from './scenes/GameScene';
 
@@ -377,7 +377,9 @@ export class ApartmentSystem {
         // run this way — that loss belongs to the towers, not to the black cat.
         if (player.isInvulnerable) return;
 
-        const cell = cellOf(player.x, player.groundY);
+        // Same rounding, same reason: leaning on a tower's north face put the
+        // player's ground point inside it and shoved them for standing there.
+        const cell = bodyCell(player);
         if (!this.isCellBuilt(cell.gx, cell.gy)) return;
 
         const here = worldOf(cell);
@@ -413,12 +415,16 @@ export class ApartmentSystem {
         this.scene.enemies.forEach((enemy) => {
             if (!enemy.active) return;
 
-            const cell = cellOf(enemy.x, enemy.groundY);
-
-            // Any solid cell, not only a tower. `isCellBuilt` counts what this
-            // system put there and nothing else, so a cat shoved into one of
-            // the city's original buildings — which is most of the map — was
-            // never seen as stuck and stayed there for the rest of the run.
+            // Judged from the body, not the ground point.
+            //
+            // Widening this test to every solid cell was right, and on its own
+            // it was also a disaster: `cellOf(x, groundY)` reports the wall's
+            // row whenever the cat merely leans on the north face of one, so
+            // the cat was declared trapped and teleported backwards on every
+            // frame of contact with any building in the city. It could not
+            // slide along a wall, which is the only way a steering agent gets
+            // round one. `bodyCell` asks where the body actually is.
+            const cell = bodyCell(enemy);
             if (isOpen(this.scene.maze, cell.gx, cell.gy)) return;
 
             const here = worldOf(cell);
@@ -428,6 +434,74 @@ export class ApartmentSystem {
 
             if (exit) enemy.placeAt(exit.x, exit.y);
         });
+    }
+
+    /**
+     * Puts a stuck black cat back into the city the player is actually in.
+     *
+     * Every earlier fix for this asked "is the cat inside something solid" and
+     * moved it out if so. That question has a blind spot the size of the
+     * problem: a cat standing in a perfectly open cell of a pocket the towers
+     * have sealed off is not inside anything, and no guard in the game ever
+     * looked at it again. It would walk its little region for the rest of the
+     * run while the player it is supposed to be hunting is three walls away.
+     *
+     * The pocket is not an accident either. `wouldSeverRoute` is the only thing
+     * that stops a block cutting the map in two, and it is switched off above
+     * GOAL_SAFE_UNTIL — which is to say it is off exactly when the city is
+     * mostly towers, which is exactly when this was reported.
+     *
+     * So the test here is reachability, not occupancy: flood out from the
+     * player and drop the cat on the far side of that region. Far, because
+     * being rescued into the player's lap is a worse bug than being stuck —
+     * the cat should reappear somewhere in the city, not on top of anybody.
+     */
+    rehomeEnemy(enemy: Phaser.GameObjects.Sprite & { placeAt: (x: number, y: number) => void }): void {
+        const maze = this.scene.maze;
+        const player = this.scene.player;
+        if (!maze || !player) return;
+
+        // Both judged from the body. Asking `cellOf` about the ground point
+        // reports the wall's row for anything leaning on one, which made the
+        // guard below fail for a cat that was standing right next to the
+        // player — and flung it to the far side of the city for it.
+        const from = bodyCell(player);
+        const reachable = this.reachableFrom(from, new Set());
+        if (reachable.size === 0) return;
+
+        const here = bodyCell(enemy);
+
+        // Already able to reach the player: whatever is wrong is not this, and
+        // teleporting a cat that simply needs a moment is its own bug.
+        if (reachable.has(this.cellKey(here.gx, here.gy))) return;
+
+        const cfg = GameConfig.ENEMY.STUCK;
+        let best: Cell | null = null;
+        let bestScore = Infinity;
+
+        // `forEach` rather than `for...of`: ES5 target, no downlevelIteration.
+        reachable.forEach((key) => {
+            const parts = key.split(',');
+            const gx = Number(parts[0]);
+            const gy = Number(parts[1]);
+            const gap = Math.hypot(gx - from.gx, gy - from.gy);
+            if (gap < cfg.REHOME_MIN_CELLS) return;
+
+            // Nearest to a sensible distance rather than the furthest cell
+            // available. The far corner of a big map is a different postcode:
+            // the cat vanishes and the chase is over, which is the same
+            // failure as being stuck, only harder to notice.
+            const score = Math.abs(gap - cfg.REHOME_IDEAL_CELLS);
+            if (score < bestScore) {
+                bestScore = score;
+                best = { gx, gy };
+            }
+        });
+
+        if (!best) return;
+
+        const spot = worldOf(best);
+        enemy.placeAt(spot.x, spot.y);
     }
 
     /**
@@ -536,14 +610,14 @@ export class ApartmentSystem {
 
         const blocked = new Set(cells.map((cell) => this.cellKey(cell.gx, cell.gy)));
         const centre = this.blockCentre(cells);
-        const inside = (x: number, y: number): boolean => {
-            const cell = cellOf(x, y);
+        const inside = (sprite: { x: number; groundY: number; body?: unknown }): boolean => {
+            const cell = bodyCell(sprite as unknown as Phaser.GameObjects.Sprite & { body?: unknown });
             return blocked.has(this.cellKey(cell.gx, cell.gy));
         };
 
         const player = this.scene.player;
         if (player) {
-            if (inside(player.x, player.groundY)) {
+            if (inside(player)) {
                 const from = cellOf(player.x, player.groundY);
                 const exit = this.exitCell(from, this.outward(centre, player.x, player.groundY), blocked);
 
@@ -560,7 +634,7 @@ export class ApartmentSystem {
         this.scene.enemies.forEach((enemy) => {
             if (!enemy.active) return;
 
-            if (inside(enemy.x, enemy.groundY)) {
+            if (inside(enemy)) {
                 const from = cellOf(enemy.x, enemy.groundY);
                 const exit =
                     this.exitCell(from, this.outward(centre, enemy.x, enemy.groundY), blocked) ??

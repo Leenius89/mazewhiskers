@@ -285,7 +285,13 @@ const ProwlingCat: React.FC<Props> = ({ perchSelector, mood = 'idle', size = 92 
                         display: 'block',
                         imageRendering: 'pixelated',
                         transform: `scaleX(${facing})`,
-                        filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.55))',
+                        // A pale rim first, then the usual drop shadow. A black
+                        // cat on a dark street lit by a dark shadow is a black
+                        // rectangle; the rim is what gives it an outline to read.
+                        filter:
+                            'drop-shadow(0 0 2px rgba(236,228,214,0.55)) ' +
+                            'drop-shadow(0 0 7px rgba(236,228,214,0.22)) ' +
+                            'drop-shadow(0 5px 7px rgba(0,0,0,0.6))',
                         // Matched to the travel, so the arc peaks in mid-flight
                         // rather than finishing before the cat has landed.
                         animation: pose === 'air' ? `mw-cat-hop ${Math.round(travelMs)}ms ease-out 1` : undefined,

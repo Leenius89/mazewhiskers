@@ -500,7 +500,60 @@ export const GameConfig = {
          * redrawn immediately whenever the player changes cell or a tower
          * lands on the next step, so this only has to be a backstop.
          */
-        PATH: { ARRIVE: 34, REFRESH_MS: 700 },
+        PATH: {
+            ARRIVE: 34,
+            REFRESH_MS: 700,
+            /**
+             * How long to keep aiming at one waypoint before writing it off.
+             *
+             * Arriving was the only way to leave a waypoint, so one the body
+             * could not physically stand on held the cat against it forever.
+             */
+            WAYPOINT_MS: 1400,
+            /**
+             * How long to wait before asking again for a route that does not exist.
+             *
+             * Without it an unreachable player meant a whole-grid flood fill
+             * every frame, every result discarded.
+             */
+            NO_ROUTE_BACKOFF_MS: 900
+        },
+
+        /**
+         * The watchdog. See Enemy.watchProgress.
+         *
+         * PROGRESS_PX is per SAMPLE_MS: at the slowest chase speed of 110 a
+         * moving cat covers about 44px in 400ms, so 12 is comfortably below
+         * anything that is actually walking and comfortably above jitter from
+         * a body resting against a wall.
+         */
+        STUCK: {
+            /**
+             * How far it must get from where it was to count as going somewhere.
+             *
+             * Comfortably more than one tile. A cell is 96px and the body 48,
+             * so a cat sealed inside a single cell can rattle across about
+             * forty pixels indefinitely; anything under a tile would read that
+             * as walking. A real chase at the slowest speed covers 110px a
+             * second and clears this in one.
+             */
+            PROGRESS_PX: 110,
+            /** Stalled this long: forget the route and try to jump. */
+            JUMP_MS: 1600,
+            /** Still stalled this long: have the apartment system rehome it. */
+            RESCUE_MS: 3600,
+            /**
+             * How far from the player a rehomed cat must land, in cells.
+             *
+             * Being rescued into the player's lap is a worse bug than being
+             * stuck. If the player's own region is smaller than this there is
+             * nowhere fair to put it, so it is left where it is.
+             */
+            REHOME_MIN_CELLS: 6,
+            /** And roughly how far it should land, in cells: a walk, not a journey. */
+            REHOME_IDEAL_CELLS: 14
+        },
+
 
         PATROL: { SPEED: 55, REPICK_MS: 2600 },
         /** Heard something: walks to where the player was last seen. */

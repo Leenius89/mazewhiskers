@@ -46,6 +46,27 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** When it was worked out, on the run clock. */
     private pathAt = 0;
 
+    /** When a failed route may be attempted again. Stops a per-frame flood fill. */
+    private routeRetryAt = 0;
+
+    /** When the current waypoint was first aimed at, so a hopeless one is dropped. */
+    private waypointSince = 0;
+
+    /**
+     * Where it was when the watchdog last looked, and when that was.
+     *
+     * Every previous fix for "the black cat is stuck" repaired one specific way
+     * of getting stuck: inside a tower, then inside an original building, then
+     * without a route. Each time another way turned up. This does not care how
+     * it happened — it watches for the symptom, which is a cat that means to be
+     * moving and is not, and it is the reason a fourth cause would not need a
+     * fourth report.
+     */
+    private anchorAt = 0;
+    private anchor = { x: 0, y: 0 };
+    /** 0 nothing tried, 1 jumped, 2 asked to be rehomed. Reset by real progress. */
+    private escalated = 0;
+
     public scene: GameScene;
 
     constructor(
@@ -169,6 +190,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.body?.reset(x, y);
         this.setVelocity(0, 0);
         this.syncGroundVisuals();
+
+        // The route was worked out from where it used to be. Keeping it meant
+        // that for up to PATH.REFRESH_MS after every rescue the cat walked
+        // towards a waypoint chosen for a different part of the city.
+        this.forgetRoute();
+    }
+
+    /** Drops the cached route so the next frame works out a fresh one. */
+    forgetRoute(): void {
+        this.path = [];
+        this.pathTo = '';
+        this.pathAt = 0;
+        this.routeRetryAt = 0;
     }
 
     /** Holds still for a beat, so its arrival registers before it moves. */
@@ -195,9 +229,85 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             this.pursue();
         }
 
+        this.watchProgress(now);
+
         this.groundY = this.y;
         this.syncGroundVisuals();
         this.drawCone(now);
+    }
+
+    /**
+     * Notices that it is not getting anywhere, and does something about it.
+     *
+     * Intent is the test, not velocity alone: a cat holding still through its
+     * telegraph is not stuck, and neither is one mid-jump. What counts is
+     * asking to move and not moving — pressed into a corner the steering
+     * cannot round, standing on a waypoint it cannot leave, or in an open
+     * pocket with no way to the player at all.
+     *
+     * Two escalations, in order. First a jump, which is the answer when a wall
+     * is the only thing in the way and is what the harder settings can now
+     * actually clear. If it is still stuck after that, the apartment system is
+     * asked to put it somewhere it can walk — which is the only answer left
+     * when the cat is in a sealed pocket, because nothing it does on its own
+     * will ever get it out.
+     */
+    private watchProgress(now: number): void {
+        const cfg = GameConfig.ENEMY.STUCK;
+
+        // Not trying to move is not being stuck: a cat holding still through
+        // its telegraph, mid-jump, or staggered by a shove is behaving.
+        const trying = this.awareness === 'chase' && !this.isJumping && now >= this.staggerUntil;
+        if (!trying) {
+            this.anchorAt = now;
+            this.anchor = { x: this.x, y: this.groundY };
+            return;
+        }
+
+        /*
+         * Measured against an anchor it has to get AWAY from, not frame to frame.
+         *
+         * The first version compared each sample to the last one and called any
+         * movement progress. A cat sealed into a single cell fails that test
+         * beautifully: the cell is 96px and the body 48, so it slides back and
+         * forth across forty-odd pixels forever, reports movement every sample,
+         * and never goes anywhere. Measured this way it has to actually leave
+         * the neighbourhood — a real chase covers a tile a second and clears
+         * this immediately, and no amount of rattling inside one ever will.
+         */
+        if (!this.anchorAt) {
+            this.anchorAt = now;
+            this.anchor = { x: this.x, y: this.groundY };
+            return;
+        }
+
+        const gone = Phaser.Math.Distance.Between(this.anchor.x, this.anchor.y, this.x, this.groundY);
+
+        if (gone >= cfg.PROGRESS_PX) {
+            this.anchorAt = now;
+            this.anchor = { x: this.x, y: this.groundY };
+            this.escalated = 0;
+            return;
+        }
+
+        const stalled = now - this.anchorAt;
+
+        if (stalled >= cfg.RESCUE_MS && this.escalated < 2) {
+            this.escalated = 2;
+            this.forgetRoute();
+            this.scene.apartmentSystem?.rehomeEnemy(this);
+            return;
+        }
+
+        if (stalled >= cfg.JUMP_MS && this.escalated < 1) {
+            this.escalated = 1;
+            // A fresh route first: the one it is following may be the problem.
+            this.forgetRoute();
+            this.tryJumpToward(
+                this.player.x,
+                (this.player as { groundY?: number }).groundY ?? this.player.y
+            );
+        }
     }
 
     /**
@@ -224,9 +334,13 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         // In the open, go straight. This is also what keeps the chase reading
         // as a chase in the parts of the map that have not been built over.
+        //
+        // The route is kept rather than deleted. Sight is a shortcut, not a
+        // decision: throwing the path away on every sighted frame meant a
+        // single wrong answer from hasLineOfSight left the cat with nothing to
+        // fall back on, walking into a corner with no memory of the way round.
+        // Now the shortcut can be wrong and the next frame still has a route.
         if (hasLineOfSight(this.maze, this.x, this.groundY, target.x, target.y)) {
-            this.path = [];
-            this.pathTo = '';
             this.steerTo(target, speed);
             return;
         }
@@ -238,15 +352,28 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const next = this.path[0];
         if (!next) {
             // No route at all: walled in, or the player is. The wall is the
-            // only way through, which is exactly what the hop is for.
+            // only way through, which is exactly what the hop is for. If that
+            // is refused too, the watchdog will have it rehomed shortly.
             if (this.tryJumpToward(target.x, target.y)) return;
             this.steerTo(target, speed);
             return;
         }
 
         const step = worldOf(next);
-        if (Phaser.Math.Distance.Between(this.x, this.groundY, step.x, step.y) <= GameConfig.ENEMY.PATH.ARRIVE) {
+        const gap = Phaser.Math.Distance.Between(this.x, this.groundY, step.x, step.y);
+
+        if (gap <= GameConfig.ENEMY.PATH.ARRIVE) {
             this.path.shift();
+            this.waypointSince = 0;
+        } else {
+            // A waypoint it cannot stand on used to be held forever, because
+            // arriving was the only way to leave one. Give up on it and let the
+            // next be tried instead.
+            if (!this.waypointSince) this.waypointSince = this.scene.runNow;
+            else if (this.scene.runNow - this.waypointSince > GameConfig.ENEMY.PATH.WAYPOINT_MS) {
+                this.waypointSince = 0;
+                this.path.shift();
+            }
         }
 
         this.steerTo(step, speed);
@@ -274,9 +401,21 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         if (!stale) return;
 
+        // An unreachable target is stale on every frame by definition — the
+        // route is empty, so the test above is always true — and the old code
+        // answered that by re-running a whole-grid flood fill sixty times a
+        // second, throwing each failure away. Once a route has failed, wait
+        // before asking again; the city has to change for the answer to.
+        if (this.path.length === 0 && now < this.routeRetryAt) return;
+
         this.pathTo = key;
         this.pathAt = now;
+        this.waypointSince = 0;
         this.path = this.route(from, to);
+
+        if (this.path.length === 0) {
+            this.routeRetryAt = now + GameConfig.ENEMY.PATH.NO_ROUTE_BACKOFF_MS;
+        }
     }
 
     /**
@@ -395,8 +534,34 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (dx === 0 && dy === 0) return false;
 
         const here = cellOf(this.x, this.groundY);
-        const landing = { gx: here.gx + dx * cfg.CELLS, gy: here.gy + dy * cfg.CELLS };
-        if (!isOpen(this.maze, landing.gx, landing.gy)) return false;
+
+        /*
+         * Look for somewhere to land, rather than testing one cell and giving up.
+         *
+         * The old version checked exactly `CELLS` cells ahead and refused if
+         * that square was solid. Against a maze wall one cell thick that
+         * works. Against an apartment block four to nine cells on a side the
+         * landing is always inside the block, so the hop was refused every
+         * time — the black cat could not cross a single tower at any setting,
+         * which by the end of a run is most of the city.
+         *
+         * It now walks outward along the chosen direction and takes the first
+         * open cell it finds, up to the reach its difficulty allows. Easy and
+         * normal reach two cells, exactly as before, so nothing about those
+         * settings changes; hard and nightmare reach far enough to come over
+         * the top of a block.
+         */
+        const reach = Math.max(cfg.CELLS, currentDifficulty().jumpCells);
+        let landing: { gx: number; gy: number } | null = null;
+
+        for (let step = cfg.CELLS; step <= reach; step++) {
+            const spot = { gx: here.gx + dx * step, gy: here.gy + dy * step };
+            if (!isOpen(this.maze, spot.gx, spot.gy)) continue;
+            landing = spot;
+            break;
+        }
+
+        if (!landing) return false;
 
         this.performJump(worldOf(landing));
         return true;
