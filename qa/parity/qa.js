@@ -201,6 +201,17 @@
         var sc = window.__MW__ && window.__MW__.scene;
         if (!sc) return { error: 'scene never created', bootFrames: bootFrames };
 
+        // Debug mode is only how the harness reaches the scene. Its drawing
+        // is taken off the screen for captures; it never touched the run.
+        if (params.get('qaClean') === '1') {
+            var world = sc.physics && sc.physics.world;
+            if (world) {
+                world.drawDebug = false;
+                if (world.debugGraphic) world.debugGraphic.clear().setVisible(false);
+            }
+            if (sc.debugOverlay) { try { sc.debugOverlay.destroy(); } catch (e) {} sc.debugOverlay = null; }
+        }
+
         var createdAt = {
             phaserSteps: qa.phaserSteps,
             loadedAtStep: loadedAtStep,

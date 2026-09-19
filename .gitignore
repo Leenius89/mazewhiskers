@@ -29,3 +29,6 @@ yarn-error.log*
 
 # parity test output
 qa/parity/traces/
+
+# GRAC executable upload is rebuilt, not versioned
+store-assets/grac/*.zip
