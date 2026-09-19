@@ -7,6 +7,10 @@ import { difficultyOf } from '../game/core/difficulty';
 import { theme } from './theme';
 import MenuCats from './MenuCats';
 import { VERSION_LABEL } from '../version';
+import { SEEN_INTRO_KEY } from '../platform/boot';
+import { isBackgrounded, onBackground } from '../platform/lifecycle';
+import { useRecords } from '../platform/records';
+import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 
 interface MainPageProps {
@@ -49,8 +53,22 @@ const bendAudio = (audio: HTMLAudioElement, bent: boolean): void => {
 
 const MotionClickable = motion.div as any;
 
-/** Set once the opening has been seen, so a return to the menu is instant. */
-const SEEN_INTRO = 'mazewhiskers.seenIntro';
+/**
+ * Whether the opening has been seen, on this device, ever.
+ *
+ * This was a per-session flag, which suits a web page: every visit is an
+ * arrival. Inside Toss every launch is a new session, so the same flag made
+ * a returning player sit through six and a half seconds of fly-over before
+ * each and every game. It is remembered for good here, and the first one can
+ * be cut short by touching the screen.
+ */
+const hasSeenIntro = (): boolean => {
+    try {
+        return window.localStorage.getItem(SEEN_INTRO_KEY) !== null;
+    } catch {
+        return false;
+    }
+};
 
 /**
  * The one button design this screen has.
@@ -131,6 +149,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
     // Re-renders the menu when the light changes, which is also what makes the
     // palette below read the new values.
     const [settings] = useSettings();
+    const records = useRecords();
 
     // The same subscription is what makes nightmare arrive the instant it is
     // picked, rather than when the run starts.
@@ -236,25 +255,57 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
          * believe anything will appear. After the first visit the menu is
          * simply there.
          */
-        const firstVisit = !sessionStorage.getItem(SEEN_INTRO);
-        try {
-            sessionStorage.setItem(SEEN_INTRO, '1');
-        } catch {
-            // Private mode. The opening plays every time; no harm done.
-        }
+        const firstVisit = !hasSeenIntro();
+        remember(SEEN_INTRO_KEY, '1');
 
         const titleAt = setTimeout(() => setShowTitle(true), firstVisit ? 4500 : 0);
         const buttonAt = setTimeout(() => setShowButton(true), firstVisit ? 6500 : 0);
 
+        // Nobody is made to wait for a camera move. The first touch brings the
+        // menu up; the shot carries on behind it.
+        const skip = () => {
+            setShowTitle(true);
+            setShowButton(true);
+        };
+        window.addEventListener('pointerdown', skip);
+        window.addEventListener('keydown', skip);
+
         return () => {
             clearTimeout(titleAt);
             clearTimeout(buttonAt);
+            window.removeEventListener('pointerdown', skip);
+            window.removeEventListener('keydown', skip);
         };
     }, [startMusic]);
 
+    /**
+     * The title track stops with the page and comes back with it.
+     *
+     * It is a bare Audio element, outside Phaser and outside anything that
+     * would notice the app being put away — left alone it plays on under the
+     * phone's home screen. Coming back, the browser may refuse to restart it
+     * without a touch; the unlock listener below covers that.
+     */
+    useEffect(
+        () =>
+            onBackground({
+                onHide: () => audioRef.current?.pause(),
+                onShow: () => {
+                    void audioRef.current?.play().catch(() => undefined);
+                }
+            }),
+        []
+    );
+
     // Whatever the player touches first also unblocks the audio.
     useEffect(() => {
-        const unlock = () => startMusic();
+        const unlock = () => {
+            startMusic();
+
+            // Paused by a trip to the background and refused on the way back.
+            const audio = audioRef.current;
+            if (audio && audio.paused && !isBackgrounded()) void audio.play().catch(() => undefined);
+        };
         window.addEventListener('pointerdown', unlock);
         window.addEventListener('keydown', unlock);
 
@@ -441,12 +492,15 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         // rather than sitting up in the part of the picture that
                         // is actually empty.
                         position: 'fixed',
-                        top: 0,
+                        // Under the status bar and Toss's buttons; zero in a browser.
+                        top: 'calc(var(--mw-top, 0px) + var(--mw-nav, 0px))',
                         left: 0,
                         right: 0,
                         bottom: isMobile ? '42%' : '48%',
                         zIndex: 2,
                         display: 'flex',
+                        flexDirection: 'column',
+                        gap: isMobile ? '12px' : '16px',
                         justifyContent: 'center',
                         alignItems: 'center',
                         // The sky is the backdrop, not a target.
@@ -519,6 +573,35 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     >
                         MAZE WHISKERS
                     </motion.h1>
+
+                    {/*
+                        The name the game is listed under.
+
+                        Toss shows this app as 메이즈 위스커스, and the rating
+                        certificate carries the same words. A title screen that
+                        only ever says it in English is a mismatch a reviewer is
+                        entitled to bounce, so the listed name is on the logo.
+                    */}
+                    <motion.p
+                        style={{
+                            margin: 0,
+                            fontFamily: theme.body,
+                            fontWeight: 700,
+                            fontSize: isMobile ? '1.05rem' : '1.3rem',
+                            letterSpacing: '0.42em',
+                            color: '#F4EEE2',
+                            // A plate behind it: the skyline is all windows, and
+                            // thin Hangul over windows is camouflage.
+                            background: 'rgba(12, 14, 18, 0.62)',
+                            padding: '5px 10px 5px calc(10px + 0.42em)',
+                            borderRadius: '3px'
+                        }}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: showTitle ? 0.92 : 0 }}
+                        transition={{ duration: 0.5, ease: 'easeInOut' }}
+                    >
+                        메이즈 위스커스
+                    </motion.p>
                 </motion.div>
 
                 {/*
@@ -544,8 +627,8 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     <span
                         style={{
                             position: 'fixed',
-                            right: '14px',
-                            bottom: '10px',
+                            right: 'calc(14px + var(--mw-right, 0px))',
+                            bottom: 'calc(10px + var(--mw-bottom, 0px))',
                             zIndex: 3,
                             pointerEvents: 'none',
                             fontFamily: theme.display,
@@ -559,6 +642,34 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                     </span>
                 )}
 
+                {/*
+                    The player's best, in the opposite corner.
+
+                    Proof that the game remembers them, which is half of what
+                    Toss's checklist asks of the player key, and the number a
+                    returning player is here to beat. Nothing until there is
+                    a run to show.
+                */}
+                {showButton && records.bestScore > 0 && (
+                    <span
+                        style={{
+                            position: 'fixed',
+                            left: 'calc(14px + var(--mw-left, 0px))',
+                            bottom: 'calc(10px + var(--mw-bottom, 0px))',
+                            zIndex: 3,
+                            pointerEvents: 'none',
+                            fontFamily: theme.display,
+                            fontSize: '0.5rem',
+                            letterSpacing: '0.08em',
+                            color: 'rgba(244,238,226,0.72)',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+                            fontVariantNumeric: 'tabular-nums'
+                        }}
+                    >
+                        BEST {records.bestScore.toLocaleString()}
+                    </span>
+                )}
+
                 {/* GAME START 버튼 */}
                 {showButton && (
                     <div style={{
@@ -568,7 +679,7 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         // of empty city between them and the title — the two
                         // halves of the screen read as unrelated. They belong
                         // under the logo, not at the bottom of the frame.
-                        bottom: isMobile ? '9%' : '26%',
+                        bottom: isMobile ? 'calc(9% + var(--mw-bottom, 0px))' : '26%',
                         left: '50%',
                         transform: 'translateX(-50%)',
                         width: typeof gameSize.width === 'number' ? `${gameSize.width}px` : gameSize.width,

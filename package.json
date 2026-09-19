@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@apps-in-toss/web-framework": "3.4.1",
     "@supabase/supabase-js": "^2.95.3",
     "framer-motion": "^11.11.9",
     "lucide-react": "^0.453.0",
@@ -26,6 +27,7 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "CI=false GENERATE_SOURCEMAP=false react-scripts build",
+    "build:toss": "npm run build && node scripts/strip-dynamic-code.js && ait build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "vercel-build": "CI=false GENERATE_SOURCEMAP=false npm run build"

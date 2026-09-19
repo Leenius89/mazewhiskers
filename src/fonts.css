@@ -1,0 +1,45 @@
+/*
+ * Both typefaces, shipped inside the bundle.
+ *
+ * They used to be @imported from Google Fonts and jsDelivr. That is two more
+ * hosts the first screen has to reach before it looks right, inside a review
+ * that times the first screen — and a game that arrives in its fallback font
+ * on a slow connection and then jumps is not the first impression to make.
+ *
+ * Pretendard is the KS X 1001 subset: the 2,350 Hangul syllables in common
+ * use plus Latin, a third the size of the full face. Every syllable the game
+ * prints has been checked against it. Three weights, because three are used.
+ *
+ * Both are SIL Open Font License; the licence texts sit next to the files.
+ */
+@font-face {
+  font-family: 'Press Start 2P';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/press-start-2p-latin-400-normal.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./assets/fonts/Pretendard-Regular.subset.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/Pretendard-SemiBold.subset.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./assets/fonts/Pretendard-Bold.subset.woff2') format('woff2');
+}

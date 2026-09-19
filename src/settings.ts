@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { DIFFICULTIES } from './game/core/difficulty';
 import type { DifficultyKey } from './game/core/difficulty';
+import { remember } from './platform/toss';
 
 export type Language = 'ko' | 'en';
 
@@ -21,6 +22,8 @@ export interface Settings {
 }
 
 const STORAGE_KEY = 'mazewhiskers.settings';
+/** Exported so the boot sequence can ask Toss for the same key. */
+export const SETTINGS_KEY = STORAGE_KEY;
 
 const DEFAULTS: Settings = {
     muted: false,
@@ -70,12 +73,22 @@ export const getSettings = (): Settings => current;
 export const setSettings = (patch: Partial<Settings>): void => {
     current = { ...current, ...patch };
 
-    try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(current));
-    } catch {
-        // A locked-down browser still gets the setting for this session.
-    }
+    // Both copies: the browser's, which is read synchronously at load, and
+    // the one Toss keeps, which is still there after iOS has cleared the
+    // first. A locked-down browser still gets the setting for this session.
+    remember(STORAGE_KEY, JSON.stringify(current));
 
+    listeners.forEach((listener) => listener(current));
+};
+
+/**
+ * Reads the stored settings again and tells everyone.
+ *
+ * The module loads them as it is imported, which is before the boot sequence
+ * has had the chance to put back what the browser threw away.
+ */
+export const reloadSettings = (): void => {
+    current = load();
     listeners.forEach((listener) => listener(current));
 };
 

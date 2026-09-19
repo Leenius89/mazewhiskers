@@ -1,0 +1,61 @@
+name: Toss bundle
+
+# Builds the Apps in Toss bundle (.ait) on Linux.
+#
+# Not on a developer's machine, because `ait build` on Windows writes the
+# files inside the bundle with backslashes in their paths
+# (static\js\main.js) and nothing says Toss's servers will unpick that.
+#
+#   push to `toss`        build, keep the .ait as a downloadable artifact
+#   push a `toss-*` tag   the same, then upload it to the Toss console,
+#                         where it appears as a new test version with a QR
+#
+# Uploading is not releasing: a version only reaches players after it has
+# been tested, sent for review and approved in the console by hand.
+#
+# Needs one repository secret, AIT_API_KEY — issued in the console under
+# the workspace's "키" menu.
+
+on:
+  push:
+    branches: [toss]
+    tags: ['toss-*']
+
+jobs:
+  bundle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # @apps-in-toss/ait-format declares node >= 24.
+          node-version: 24
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Build the game and pack it
+        run: npm run build:toss
+
+      - name: What went into the bundle
+        run: |
+          ls -la *.ait
+          unzip -l *.ait | tail -n 40 || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mazewhiskers-ait
+          path: '*.ait'
+          if-no-files-found: error
+
+      - name: Upload to the Toss console
+        if: startsWith(github.ref, 'refs/tags/toss-')
+        env:
+          AIT_API_KEY: ${{ secrets.AIT_API_KEY }}
+        run: |
+          if [ -z "$AIT_API_KEY" ]; then
+            echo "::error::AIT_API_KEY is not set. Add it under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+          npx ait deploy --api-key "$AIT_API_KEY" -m "${GITHUB_REF_NAME} (${GITHUB_SHA::7})"

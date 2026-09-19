@@ -142,12 +142,14 @@ export class InputManager {
         const controlsContainer = document.createElement('div');
         Object.assign(controlsContainer.style, {
             position: 'absolute',
-            bottom: '20px',
+            // Above the home indicator, where a thumb resting on the stick
+            // would otherwise be resting on the gesture bar.
+            bottom: 'calc(20px + var(--mw-bottom, 0px))',
             left: '0',
             right: '0',
             display: 'flex',
             justifyContent: 'space-between',
-            padding: '0 20px',
+            padding: '0 calc(20px + var(--mw-right, 0px)) 0 calc(20px + var(--mw-left, 0px))',
             pointerEvents: 'none',
             zIndex: '1000'
         });

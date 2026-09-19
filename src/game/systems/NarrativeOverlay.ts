@@ -4,6 +4,8 @@ import { canvasTheme, onCanvasThemeChange } from '../core/canvasTheme';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
 import { TEXT, fontPx, uiScale } from '../core/uiScale';
+import { RENDER_SCALE } from '../core/renderScale';
+import { getChrome } from '../../platform/chrome';
 import { t } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -556,7 +558,8 @@ export class NarrativeOverlay {
             cfg.BOX_MIN_HEIGHT * k,
             bodyTop + this.bodyHeightFor(wrapWidth) + cfg.HINT_ROOM * k
         );
-        const top = height - boxHeight - margin;
+        // Lifted clear of the home indicator; zero anywhere without one.
+        const top = height - boxHeight - margin - getChrome().bottom * RENDER_SCALE;
         this.boxTop = top;
 
         this.box.clear();

@@ -174,7 +174,10 @@ const derive = (): Record<string, CSSProperties> => ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        // Clear of the status bar and of Toss's two buttons at the top, and of
+        // the home indicator at the bottom. All three are zero in a browser.
+        padding:
+            'calc(24px + var(--mw-top, 0px) + var(--mw-nav, 0px)) 24px calc(24px + var(--mw-bottom, 0px))',
         zIndex: 1000,
         overflowY: 'auto'
     },
@@ -185,7 +188,10 @@ const derive = (): Record<string, CSSProperties> => ({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        // Clear of the status bar and of Toss's two buttons at the top, and of
+        // the home indicator at the bottom. All three are zero in a browser.
+        padding:
+            'calc(24px + var(--mw-top, 0px) + var(--mw-nav, 0px)) 24px calc(24px + var(--mw-bottom, 0px))',
         zIndex: 1000,
         overflowY: 'auto'
     },

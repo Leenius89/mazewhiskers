@@ -9,13 +9,14 @@ import Header from './components/Header';
 import MainPage from './components/MainPage';
 import GameOver from './components/GameOver';
 import Victory from './components/Victory';
-import Leaderboard from './components/Leaderboard';
 import SettingsPanel from './components/SettingsPanel';
 import PauseMenu from './components/PauseMenu';
+import RecordsPanel from './components/RecordsPanel';
+import LeaveConfirm from './components/LeaveConfirm';
+import TossChromeSim from './components/TossChromeSim';
 import { getSettings, subscribe, useSettings } from './settings';
 import { theme } from './components/theme';
 import { isMobileDevice } from './game/systems/InputManager';
-import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
 import { GameConfig } from './game/constants/GameConfig';
@@ -25,6 +26,13 @@ import { isDebugEnabled } from './game/core/debug';
 import { RENDER_SCALE } from './game/core/renderScale';
 
 import { resolveMode } from './game/core/modes';
+import { isSimulated, useChrome } from './platform/chrome';
+import type { Chrome } from './platform/chrome';
+import { onBackground, stepAside } from './platform/lifecycle';
+import { fileRun } from './platform/records';
+import { scoreRun } from './platform/score';
+import type { RunOutcome } from './platform/score';
+import { haptic, inToss, leave, onBack, openLeaderboard, submitScore } from './platform/toss';
 
 /**
  * How tall the run bar is. The canvas gets everything else.
@@ -34,6 +42,18 @@ import { resolveMode } from './game/core/modes';
  * ended up hanging past the bottom of a short window.
  */
 const HEADER_H = 42;
+
+/**
+ * The run bar, as tall as it has to be inside Toss.
+ *
+ * Toss floats its "more" and close buttons over the top right of the page,
+ * in a band just under the status bar. The run bar already lives there, so
+ * rather than push the game down to make an empty strip for them, the bar
+ * grows to the height of that band and keeps its right-hand end clear. The
+ * canvas — and the minimap in its top corner — then starts below both.
+ */
+export const headerHeight = (chrome: Chrome): number => chrome.top + Math.max(HEADER_H, chrome.navBand);
+
 /** Breathing room on a desktop, where the page is not the whole screen. */
 const DESKTOP_INSET = { X: 24, Y: 20 };
 
@@ -70,6 +90,7 @@ function App() {
     // palette itself is a module-level object that the change has already
     // updated by the time this render reads it.
     useSettings();
+    const chrome = useChrome();
 
     const gameRef = useRef<HTMLDivElement>(null);
     const game = useRef<Phaser.Game | null>(null);
@@ -90,7 +111,6 @@ function App() {
     /** Jumps spent this run — what the jump bonus is paid on. */
     const [jumpsUsed, setJumpsUsed] = useState(0);
     const [survivedMs, setSurvivedMs] = useState(0);
-    const [healthLeft, setHealthLeft] = useState(0);
 
     const [fishCount, setFishCount] = useState(0);
     const [milkCount, setMilkCount] = useState(0);
@@ -106,11 +126,20 @@ function App() {
         fishCount * GameConfig.SCORE.PER_FISH +
         jumpsUsed * GameConfig.SCORE.PER_JUMP;
 
-    const [showLeaderboard, setShowLeaderboard] = useState(false);
+    /** The player's own shelf — what RANKING shows where Toss has no board. */
+    const [showRecords, setShowRecords] = useState(false);
+    const [showLeave, setShowLeave] = useState(false);
+    const [outcome, setOutcome] = useState<RunOutcome | null>(null);
+    /**
+     * Jumps, readable from the game's event handlers.
+     *
+     * Those are created once with the game and close over the first render,
+     * so the state above is always zero by the time a run ends in them.
+     */
+    const jumpsUsedRef = useRef(0);
     /** The run bar's menu, which holds the game still while it is open. */
     const [showPause, setShowPause] = useState(false);
     const [showSettings, setShowSettings] = useState(false);
-    const [leaderboardMode, setLeaderboardMode] = useState<BoardKey>('survived');
     const [isShowingCredits, setIsShowingCredits] = useState(false);
     const [endReason, setEndReason] = useState<GameOverPayload['reason']>('health');
 
@@ -145,7 +174,7 @@ function App() {
 
             setGameSize({
                 width: Math.max(width - insetX, MIN_CANVAS.WIDTH),
-                height: Math.max(height - HEADER_H - insetY, MIN_CANVAS.HEIGHT)
+                height: Math.max(height - headerHeight(chrome) - insetY, MIN_CANVAS.HEIGHT)
             });
         };
 
@@ -162,7 +191,7 @@ function App() {
             window.visualViewport?.removeEventListener('resize', handleResize);
             window.visualViewport?.removeEventListener('scroll', handleResize);
         };
-    }, []);
+    }, [chrome]);
 
     const destroyGame = useCallback(() => {
         if (!game.current) return;
@@ -227,22 +256,64 @@ function App() {
 
         bus.current = createGameEventBus(game.current);
 
-        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs, healthLeft: left }) => {
+        /**
+         * Closes the books on a run: score it, shelve it, send it.
+         *
+         * Here rather than in a results panel because this fires once per run
+         * by construction, and because Toss only wants a score after play has
+         * finished — its game profile is still being created as the game
+         * opens, and a score sent into that comes back refused.
+         */
+        const settle = (milk: number, fish: number, lastedMs: number, clearedMs?: number) => {
+            const gathered =
+                milk * GameConfig.SCORE.PER_MILK +
+                fish * GameConfig.SCORE.PER_FISH +
+                jumpsUsedRef.current * GameConfig.SCORE.PER_JUMP;
+
+            const breakdown = scoreRun({ gathered, difficulty: getSettings().difficulty, clearedMs });
+            const broken = fileRun({ score: breakdown.total, lastedMs, clearedMs });
+
+            setOutcome({ breakdown, broken, sent: null });
+            void submitScore(breakdown.total).then((sent) =>
+                setOutcome((current) => (current && current.breakdown === breakdown ? { ...current, sent } : current))
+            );
+        };
+
+        bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs }) => {
             setMilkCount(milk);
             setFishCount(fish);
-            setHealthLeft(left ?? 0);
             setEndReason(reason);
             setSurvivedMs(survivedMs);
             setIsGameOver(true);
+
+            haptic('error');
+            settle(milk, fish, survivedMs);
         });
 
-        bus.current.on('victory', ({ timeMs, healthLeft: left }) => {
+        bus.current.on('victory', ({ timeMs, milkCount: milk, fishCount: fish }) => {
             setVictoryTime(timeMs);
-            setHealthLeft(left ?? 0);
+            // From the payload, like a loss: the panel and the score should be
+            // reading the same two numbers, not one from here and one from
+            // whatever the last pickup event left behind.
+            setMilkCount(milk);
+            setFishCount(fish);
             setIsVictory(true);
+
+            haptic('success');
+            settle(milk, fish, timeMs, timeMs);
         });
 
-        bus.current.on('jumpsUsedChanged', setJumpsUsed);
+        bus.current.on('jumpsUsedChanged', (used) => {
+            if (used > jumpsUsedRef.current) haptic('tap');
+            jumpsUsedRef.current = used;
+            setJumpsUsed(used);
+        });
+
+        // A hit, as opposed to the slow drain: the drain arrives in ones and
+        // twos every tick and would make the phone buzz continuously.
+        bus.current.on('healthChanged', ({ delta }) => {
+            if (delta <= -15) haptic('tickMedium');
+        });
 
         // Health is not mirrored here any more: the scene owns it and draws it
         // over the cat's head, so a second copy in React had nothing to render.
@@ -335,6 +406,8 @@ function App() {
         setMilkCount(0);
         setFishCount(0);
         setJumpsUsed(0);
+        jumpsUsedRef.current = 0;
+        setOutcome(null);
 
         // 3. Force Unmount -> Remount to ensure fresh DOM and Phaser instance
         setShowGame(false);
@@ -355,7 +428,7 @@ function App() {
         const timeout = mode.idleReturnMs;
         if (!timeout) return;
         if (!isGameOver && !isVictory) return;
-        if (isShowingCredits || showLeaderboard) return;
+        if (isShowingCredits || showRecords) return;
 
         let timer = window.setTimeout(() => {
             setIsGameOver(false);
@@ -379,7 +452,7 @@ function App() {
             window.clearTimeout(timer);
             events.forEach((event) => window.removeEventListener(event, postpone));
         };
-    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showLeaderboard]);
+    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showRecords]);
 
     // Global Event handlers (if any)
     useEffect(() => {
@@ -427,6 +500,8 @@ function App() {
         setMilkCount(0);
         setFishCount(0);
         setJumpsUsed(0);
+        jumpsUsedRef.current = 0;
+        setOutcome(null);
     };
 
     const restartFromPause = useCallback(() => {
@@ -441,10 +516,106 @@ function App() {
         setShowGame(false);
     }, []);
 
-    const handleShowLeaderboard = (mode: BoardKey) => {
-        setLeaderboardMode(mode);
-        setShowLeaderboard(true);
+    /**
+     * RANKING opens Toss's board, and the player's own shelf where there is
+     * none — a browser, or a Toss from before it had a game centre.
+     *
+     * The game goes quiet first. Toss's screen covers the page without
+     * necessarily telling it so, and the soundtrack carrying on under a
+     * ranking table is the first thing a reviewer would notice.
+     */
+    const handleShowLeaderboard = useCallback(() => {
+        if (!inToss()) {
+            setShowRecords(true);
+            return;
+        }
+
+        stepAside();
+        void openLeaderboard().then((opened) => {
+            if (!opened) setShowRecords(true);
+        });
+    }, []);
+
+    /**
+     * Silence in the background, and a held game to come back to.
+     *
+     * Phaser's own handling hangs off `window.onblur`, which a WebView being
+     * put away does not reliably fire. Calling the sound manager's blur path
+     * directly does what that event would have: it suspends the audio
+     * context, and — the part that matters — marks focus as lost, because
+     * the manager otherwise resumes a suspended context on its next update.
+     *
+     * A run in progress is paused as well as silenced. Returning from the
+     * home screen into the middle of a chase, with the black cat a second
+     * closer than when you left, is not a fair way to lose.
+     */
+    useEffect(
+        () =>
+            onBackground({
+                onHide: () => {
+                    openPause();
+                    (game.current?.sound as unknown as { onGameBlur?: () => void } | undefined)?.onGameBlur?.();
+                },
+                onShow: () => {
+                    const sound = game.current?.sound as unknown as
+                        | { onGameFocus?: () => void; context?: AudioContext }
+                        | undefined;
+                    if (!sound) return;
+
+                    sound.onGameFocus?.();
+
+                    // iOS can hand back a context it will only restart from a
+                    // touch. The next one the player makes is that touch.
+                    const context = sound.context;
+                    if (!context || context.state === 'running') return;
+
+                    const wake = () => {
+                        window.removeEventListener('pointerdown', wake, true);
+                        void context.resume().catch(() => undefined);
+                    };
+                    window.addEventListener('pointerdown', wake, true);
+                }
+            }),
+        [openPause]
+    );
+
+    /**
+     * The Android back button, which Toss hands over whole.
+     *
+     * Subscribing replaces the default — and the default, for a page with no
+     * history, is to close on the spot. So each press undoes one layer, the
+     * way back does everywhere else on the phone, and only the press with
+     * nothing left to undo asks about leaving. (Toss's own X has its own
+     * confirmation and cannot be intercepted; this is the other way out.)
+     */
+    const backRef = useRef<() => void>(() => undefined);
+    backRef.current = () => {
+        if (showLeave) return setShowLeave(false);
+        if (showSettings) return setShowSettings(false);
+        if (showRecords) return setShowRecords(false);
+        if (showPause) return closePause();
+
+        if (isGameOver || isVictory || isShowingCredits) {
+            setIsShowingCredits(false);
+            setIsGameOver(false);
+            setIsVictory(false);
+            setShowGame(false);
+            return;
+        }
+
+        if (showGame) return openPause();
+
+        setShowLeave(true);
     };
+
+    useEffect(() => {
+        const off = onBack(() => backRef.current());
+
+        // No Android under the simulator, so its back button is a function.
+        if (isSimulated()) (window as unknown as { __tossBack?: () => void }).__tossBack = () => backRef.current();
+
+        return off;
+    }, []);
 
     return (
         <div style={{
@@ -471,6 +642,7 @@ function App() {
                         fishCount={fishCount}
                         score={score}
                         gameSize={gameSize}
+                        chrome={chrome}
                     />
                     <div
                         id="game-container"
@@ -494,7 +666,7 @@ function App() {
             ) : (
                 <MainPage
                     onStartGame={startGame}
-                    onShowLeaderboard={() => handleShowLeaderboard('fastest')}
+                    onShowLeaderboard={handleShowLeaderboard}
                     onShowSettings={() => setShowSettings(true)}
                     gameSize={gameSize}
                 />
@@ -507,13 +679,12 @@ function App() {
                         setIsGameOver(false);
                         setShowGame(false);
                     }}
-                    onShowLeaderboard={() => handleShowLeaderboard('survived')}
+                    onShowLeaderboard={handleShowLeaderboard}
                     milkCount={milkCount}
                     fishCount={fishCount}
                     reason={endReason}
-                    score={score}
                     survivedMs={survivedMs}
-                    healthLeft={healthLeft}
+                    outcome={outcome}
                 />
             )}
 
@@ -526,7 +697,7 @@ function App() {
                         setIsVictory(false);
                         setShowGame(false);
                     }}
-                    onShowLeaderboard={() => handleShowLeaderboard('fastest')}
+                    onShowLeaderboard={handleShowLeaderboard}
                     onShowCredits={() => {
                         setIsShowingCredits(true);
                         bus.current?.emit('showCredits');
@@ -534,8 +705,7 @@ function App() {
                     timeMs={victoryTime}
                     milkCount={milkCount}
                     fishCount={fishCount}
-                    score={score}
-                    healthLeft={healthLeft}
+                    outcome={outcome}
                 />
             )}
 
@@ -549,12 +719,11 @@ function App() {
 
             {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
-            {showLeaderboard && (
-                <Leaderboard
-                    onClose={() => setShowLeaderboard(false)}
-                    mode={leaderboardMode}
-                />
-            )}
+            {showRecords && <RecordsPanel onClose={() => setShowRecords(false)} />}
+
+            {showLeave && <LeaveConfirm onStay={() => setShowLeave(false)} onLeave={leave} />}
+
+            <TossChromeSim />
         </div>
     );
 }
