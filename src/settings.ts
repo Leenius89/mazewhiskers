@@ -19,6 +19,10 @@ export interface Settings {
     language: Language;
     difficulty: DifficultyKey;
     appearance: Appearance;
+    /** Phone buzzes on hits, jumps and endings. */
+    haptics: boolean;
+    /** Less shake, no tearing, no pulsing red. See game/core/comfort. */
+    reducedEffects: boolean;
 }
 
 const STORAGE_KEY = 'mazewhiskers.settings';
@@ -30,7 +34,9 @@ const DEFAULTS: Settings = {
     language: 'ko',
     // The game as it already was.
     difficulty: 'easy',
-    appearance: 'dark'
+    appearance: 'dark',
+    haptics: true,
+    reducedEffects: false
 };
 
 /**
@@ -61,7 +67,10 @@ function load(): Settings {
                 parsed.difficulty && parsed.difficulty in DIFFICULTIES
                     ? parsed.difficulty
                     : DEFAULTS.difficulty,
-            appearance: parsed.appearance === 'light' ? 'light' : 'dark'
+            appearance: parsed.appearance === 'light' ? 'light' : 'dark',
+            haptics: typeof parsed.haptics === 'boolean' ? parsed.haptics : DEFAULTS.haptics,
+            reducedEffects:
+                typeof parsed.reducedEffects === 'boolean' ? parsed.reducedEffects : DEFAULTS.reducedEffects
         };
     } catch {
         return { ...DEFAULTS };

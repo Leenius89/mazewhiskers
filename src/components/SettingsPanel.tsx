@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Sun, Volume2, VolumeX, X } from 'lucide-react';
+import { Moon, Sparkles, Sun, Vibrate, Volume2, VolumeX, X } from 'lucide-react';
 import { useSettings } from '../settings';
 import type { Appearance, Language } from '../settings';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
@@ -65,6 +65,20 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
                             <Icon size={14} /> {label}
                         </Choice>
                     ))}
+                </Row>
+
+                {/* Two switches on one row: the panel is already as tall as
+                    a phone inside Toss will let it be. */}
+                <Row label={t('settings.comfort')}>
+                    <Choice on={settings.haptics} onClick={() => update({ haptics: !settings.haptics })}>
+                        <Vibrate size={14} /> {t('settings.haptics')}
+                    </Choice>
+                    <Choice
+                        on={settings.reducedEffects}
+                        onClick={() => update({ reducedEffects: !settings.reducedEffects })}
+                    >
+                        <Sparkles size={14} /> {t('settings.reducedEffects')}
+                    </Choice>
                 </Row>
 
                 <Row label={t('settings.language')}>

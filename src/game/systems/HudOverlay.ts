@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { calm, CALM_SCALE } from '../core/comfort';
 import { mazeSize as currentMazeSize } from '../core/grid';
 import { DEPTH } from '../core/depth';
 import { pinToScreen, viewportOf } from '../core/screenSpace';
@@ -243,7 +244,7 @@ export class HudOverlay {
     /** Red wash when the rent lands. */
     playRentFlash(): void {
         const rent = GameConfig.HEALTH.RENT;
-        this.flash.setAlpha(rent.FLASH_ALPHA);
+        this.flash.setAlpha(rent.FLASH_ALPHA * (calm() ? CALM_SCALE : 1));
         this.scene.tweens.add({
             targets: this.flash,
             alpha: 0,

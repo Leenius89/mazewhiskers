@@ -1,3 +1,5 @@
+import { dailySeed } from '../../platform/daily';
+
 export type GameMode = 'exhibition' | 'arcade';
 
 /**
@@ -104,7 +106,8 @@ export const resolveSeed = (mode: ModeSettings): string | null => {
     if (mode.seedStrategy === 'daily') {
         return `daily-${new Date().toISOString().slice(0, 10)}`;
     }
-    return readParam('seed');
+    // Toss build only: today's city outranks the address bar.
+    return dailySeed() ?? readParam('seed');
 };
 
 /** Pressure multiplier for a given district, 1-based. */

@@ -29,7 +29,10 @@ import { resolveMode } from './game/core/modes';
 import { isSimulated, useChrome } from './platform/chrome';
 import type { Chrome } from './platform/chrome';
 import { onBackground, stepAside } from './platform/lifecycle';
-import { fileRun } from './platform/records';
+import { fileRun, getRecords } from './platform/records';
+import { betweenRuns, noteRunFinished, warmAds, watchForMilk } from './platform/ads';
+import { armDaily, dailyDate, disarmDaily } from './platform/daily';
+import EndingsPanel from './components/EndingsPanel';
 import { scoreRun } from './platform/score';
 import type { RunOutcome } from './platform/score';
 import { haptic, inToss, leave, onBack, openLeaderboard, submitScore } from './platform/toss';
@@ -128,6 +131,7 @@ function App() {
 
     /** The player's own shelf — what RANKING shows where Toss has no board. */
     const [showRecords, setShowRecords] = useState(false);
+    const [showEndings, setShowEndings] = useState(false);
     const [showLeave, setShowLeave] = useState(false);
     const [outcome, setOutcome] = useState<RunOutcome | null>(null);
     /**
@@ -264,16 +268,25 @@ function App() {
          * finished — its game profile is still being created as the game
          * opens, and a score sent into that comes back refused.
          */
-        const settle = (milk: number, fish: number, lastedMs: number, clearedMs?: number) => {
+        const settle = (ending: string, milk: number, fish: number, lastedMs: number, clearedMs?: number) => {
             const gathered =
                 milk * GameConfig.SCORE.PER_MILK +
                 fish * GameConfig.SCORE.PER_FISH +
                 jumpsUsedRef.current * GameConfig.SCORE.PER_JUMP;
 
             const breakdown = scoreRun({ gathered, difficulty: getSettings().difficulty, clearedMs });
-            const broken = fileRun({ score: breakdown.total, lastedMs, clearedMs });
+            const day = dailyDate();
+            const broken = fileRun({ score: breakdown.total, lastedMs, clearedMs, ending, dailyDate: day });
+            noteRunFinished();
 
-            setOutcome({ breakdown, broken, sent: null });
+            const shelf = getRecords();
+            setOutcome({
+                breakdown,
+                broken,
+                sent: null,
+                endingsSeen: Object.keys(shelf.endings).length,
+                daily: day ? { ...shelf.daily } : null
+            });
             void submitScore(breakdown.total).then((sent) =>
                 setOutcome((current) => (current && current.breakdown === breakdown ? { ...current, sent } : current))
             );
@@ -287,7 +300,7 @@ function App() {
             setIsGameOver(true);
 
             haptic('error');
-            settle(milk, fish, survivedMs);
+            settle(reason, milk, fish, survivedMs);
         });
 
         bus.current.on('victory', ({ timeMs, milkCount: milk, fishCount: fish }) => {
@@ -300,7 +313,7 @@ function App() {
             setIsVictory(true);
 
             haptic('success');
-            settle(milk, fish, timeMs, timeMs);
+            settle('home', milk, fish, timeMs, timeMs);
         });
 
         bus.current.on('jumpsUsedChanged', (used) => {
@@ -498,7 +511,46 @@ function App() {
         bus.current?.emit('resumeGame');
     }, []);
 
-    const startGame = () => {
+    /**
+     * Ads make noise of their own, so the game's is stopped around them.
+     *
+     * Muting rather than pausing: a results screen has nothing running that
+     * needs to be paused, and mute is what comes back cleanly whatever the
+     * player's own sound setting is.
+     */
+    const quietForAd = useCallback(() => {
+        if (game.current) game.current.sound.mute = true;
+    }, []);
+    const resumeAfterAd = useCallback(() => {
+        if (game.current) game.current.sound.mute = getSettings().muted;
+    }, []);
+
+    /** One way out of a results screen at a time, however fast the taps come. */
+    const leavingRef = useRef(false);
+    const leaveResults = useCallback(
+        (next: () => void) => {
+            if (leavingRef.current) return;
+            leavingRef.current = true;
+
+            void betweenRuns(quietForAd, resumeAfterAd).then(() => {
+                leavingRef.current = false;
+                next();
+            });
+        },
+        [quietForAd, resumeAfterAd]
+    );
+
+    const watchAdForMilk = useCallback(
+        () => watchForMilk(quietForAd, resumeAfterAd),
+        [quietForAd, resumeAfterAd]
+    );
+
+    // Fetched once the menu is up, so the first results screen has them.
+    useEffect(() => {
+        warmAds();
+    }, []);
+
+    const beginRun = () => {
         setShowGame(true);
         setIsGameOver(false);
         setIsVictory(false);
@@ -508,6 +560,18 @@ function App() {
         setJumpsUsed(0);
         jumpsUsedRef.current = 0;
         setOutcome(null);
+    };
+
+    /** An ordinary run: a city nobody has seen before. */
+    const startGame = () => {
+        disarmDaily();
+        beginRun();
+    };
+
+    /** Today's city: the same streets for everyone, until midnight in Korea. */
+    const startDaily = () => {
+        armDaily();
+        beginRun();
     };
 
     const restartFromPause = useCallback(() => {
@@ -599,6 +663,7 @@ function App() {
         if (showLeave) return setShowLeave(false);
         if (showSettings) return setShowSettings(false);
         if (showRecords) return setShowRecords(false);
+        if (showEndings) return setShowEndings(false);
         if (showPause) return closePause();
 
         if (isGameOver || isVictory || isShowingCredits) {
@@ -672,6 +737,8 @@ function App() {
             ) : (
                 <MainPage
                     onStartGame={startGame}
+                    onStartDaily={startDaily}
+                    onShowEndings={() => setShowEndings(true)}
                     onShowLeaderboard={handleShowLeaderboard}
                     onShowSettings={() => setShowSettings(true)}
                     gameSize={gameSize}
@@ -680,11 +747,14 @@ function App() {
 
             {isGameOver && (
                 <GameOver
-                    onRetry={restartGame}
-                    onMainMenu={() => {
-                        setIsGameOver(false);
-                        setShowGame(false);
-                    }}
+                    onRetry={() => leaveResults(restartGame)}
+                    onMainMenu={() =>
+                        leaveResults(() => {
+                            setIsGameOver(false);
+                            setShowGame(false);
+                        })
+                    }
+                    onWatchAd={watchAdForMilk}
                     onShowLeaderboard={handleShowLeaderboard}
                     milkCount={milkCount}
                     fishCount={fishCount}
@@ -698,11 +768,14 @@ function App() {
                 the whole viewport, so it would cover the canvas they render on. */}
             {isVictory && !isShowingCredits && (
                 <Victory
-                    onRetry={restartGame}
-                    onMainMenu={() => {
-                        setIsVictory(false);
-                        setShowGame(false);
-                    }}
+                    onRetry={() => leaveResults(restartGame)}
+                    onMainMenu={() =>
+                        leaveResults(() => {
+                            setIsVictory(false);
+                            setShowGame(false);
+                        })
+                    }
+                    onWatchAd={watchAdForMilk}
                     onShowLeaderboard={handleShowLeaderboard}
                     onShowCredits={() => {
                         setIsShowingCredits(true);
@@ -726,6 +799,8 @@ function App() {
             {showSettings && <SettingsPanel onClose={() => setShowSettings(false)} />}
 
             {showRecords && <RecordsPanel onClose={() => setShowRecords(false)} />}
+
+            {showEndings && <EndingsPanel onClose={() => setShowEndings(false)} />}
 
             {showLeave && <LeaveConfirm onStay={() => setShowLeave(false)} onLeave={leave} />}
 

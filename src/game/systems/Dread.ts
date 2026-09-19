@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { calm } from '../core/comfort';
 import { DEPTH } from '../core/depth';
 import { viewportOf } from '../core/screenSpace';
 import type { GameScene } from '../scenes/GameScene';
@@ -103,7 +104,8 @@ export class Dread {
 
         const slow = Math.sin(this.breath);
         const fast = Math.sin(this.breath / 0.37);
-        const breath = (slow * 0.65 + fast * 0.35);
+        // Kept still on request: the violet stays, the heaving does not.
+        const breath = calm() ? 0 : (slow * 0.65 + fast * 0.35);
 
         const swing = cfg.TINT_SWING * (1 + panic * cfg.CLOSING.SWING_GAIN);
         this.wash.setAlpha(Math.min(1, cfg.TINT_ALPHA + panic * cfg.CLOSING.TINT_GAIN + breath * swing));
@@ -142,6 +144,13 @@ export class Dread {
     private updateGlitch(panic: number): void {
         const cfg = GameConfig.DREAD;
         const now = this.elapsed;
+
+        // Tearing is the one effect here that is a flicker and nothing else,
+        // so it goes entirely. The dark, the tint and the bent music carry on.
+        if (calm()) {
+            this.tear.clear();
+            return;
+        }
 
         if (now >= this.nextGlitchAt) {
             // The gap collapses as it closes: a fault every four seconds at

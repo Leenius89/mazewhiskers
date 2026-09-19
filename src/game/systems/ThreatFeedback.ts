@@ -1,18 +1,10 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
+import { calm } from '../core/comfort';
 import { currentDifficulty } from '../core/difficulty';
 import { DEPTH } from '../core/depth';
 import { viewportOf } from '../core/screenSpace';
 import type { GameScene } from '../scenes/GameScene';
-
-/** Honours a system-level request for less motion. */
-const prefersReducedMotion = (): boolean => {
-    try {
-        return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    } catch {
-        return false;
-    }
-};
 
 /**
  * How near the machine feels.
@@ -29,7 +21,6 @@ const prefersReducedMotion = (): boolean => {
 export class ThreatFeedback {
     private readonly scene: GameScene;
     private readonly wash: Phaser.GameObjects.Rectangle;
-    private readonly reducedMotion = prefersReducedMotion();
 
     private nextShakeAt = 0;
 
@@ -99,7 +90,7 @@ export class ThreatFeedback {
         // Reduced motion reduces motion — it does not remove the warning. How
         // close the machine is is information the player needs, so it still
         // arrives, just as a steady glow instead of a pulse, and with no shake.
-        if (this.reducedMotion) {
+        if (calm()) {
             this.wash.setAlpha(cfg.MAX_FLASH_ALPHA * cfg.REDUCED_MOTION_SCALE * intensity);
 
             return;

@@ -76,4 +76,8 @@ export interface RunOutcome {
     broken: RecordsBroken;
     /** Null while Toss has not answered yet. */
     sent: SubmitOutcome | null;
+    /** How many of the endings this player has now seen. */
+    endingsSeen: number;
+    /** Set for a run of today's city: the day, and where the player stands on it. */
+    daily: { date: string; best: number; tries: number; streak: number } | null;
 }

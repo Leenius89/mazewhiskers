@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n';
 import { isMobileDevice } from '../game/systems/InputManager';
 import ProwlingCat from './ProwlingCat';
 import ScoreSlip from './ScoreSlip';
+import MilkOffer from './MilkOffer';
 import type { RunOutcome } from '../platform/score';
 import { formatClockShort } from '../platform/format';
 import type { GameOverPayload } from '../game/core/GameEvents';
@@ -28,6 +29,8 @@ interface GameOverProps {
     onRetry: () => void;
     onMainMenu: () => void;
     onShowLeaderboard: () => void;
+    /** Shows the chosen ad; resolves true when the milk is earned. */
+    onWatchAd: () => Promise<boolean>;
     reason: GameOverPayload['reason'];
     milkCount?: number;
     fishCount?: number;
@@ -59,6 +62,7 @@ const GameOver: React.FC<GameOverProps> = ({
     onRetry,
     onMainMenu,
     onShowLeaderboard,
+    onWatchAd,
     reason,
     milkCount = 0,
     fishCount = 0,
@@ -139,6 +143,8 @@ const GameOver: React.FC<GameOverProps> = ({
                         </div>
                     </div>
                 </div>
+
+                <MilkOffer onWatch={onWatchAd} />
 
                 <div style={buttonRow}>
                     <MotionButton

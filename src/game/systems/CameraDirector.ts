@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { calm, CALM_SCALE } from '../core/comfort';
 import { GameConfig } from '../constants/GameConfig';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -77,6 +78,8 @@ export class CameraDirector {
         const falloff = Phaser.Math.Clamp(1 - distance / GameConfig.CAMERA.SHAKE_FALLOFF, 0, 1);
         if (falloff <= 0) return;
 
-        this.camera.shake(duration, intensity * falloff);
+        // Still felt, so a hit still reads as a hit; just not thrown about.
+        const scale = calm() ? CALM_SCALE : 1;
+        this.camera.shake(duration, intensity * falloff * scale);
     }
 }

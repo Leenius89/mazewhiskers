@@ -1,8 +1,8 @@
 import { startChrome } from './chrome';
 import { startLifecycle } from './lifecycle';
 import { openRecords } from './records';
-import { restore, settleScreen } from './toss';
-import { SETTINGS_KEY, reloadSettings } from '../settings';
+import { restore, setHaptics, settleScreen } from './toss';
+import { SETTINGS_KEY, getSettings, reloadSettings, subscribe } from '../settings';
 import { TUTORIAL_KEY } from './tutorial';
 
 /** Longest the first render will wait for Toss to hand back saved settings. */
@@ -49,6 +49,11 @@ export const bootPlatform = async (): Promise<void> => {
     void settleScreen();
     void openRecords();
     warmFonts();
+
+    // The vibration switch lives in the settings; the thing it switches lives
+    // in the Toss wrapper, which the settings module already depends on.
+    setHaptics(getSettings().haptics);
+    subscribe((settings) => setHaptics(settings.haptics));
 
     await Promise.race([
         restore([SETTINGS_KEY, SEEN_INTRO_KEY, TUTORIAL_KEY]).then(reloadSettings),

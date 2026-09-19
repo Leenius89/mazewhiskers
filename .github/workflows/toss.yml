@@ -36,7 +36,17 @@ jobs:
       - run: npm ci --no-audit --no-fund
 
       - name: Build the game and pack it
-        run: npm run build:toss
+        env:
+          # Ad group IDs from the Toss console (Settings > Secrets and variables
+          # > Actions > Variables). Left unset, the build uses the SDK's test
+          # ads: right for QR testing, and not something review will pass.
+          REACT_APP_AD_INTERSTITIAL: ${{ vars.AD_INTERSTITIAL_ID }}
+          REACT_APP_AD_REWARDED: ${{ vars.AD_REWARDED_ID }}
+        run: |
+          if [ -z "$REACT_APP_AD_INTERSTITIAL" ] || [ -z "$REACT_APP_AD_REWARDED" ]; then
+            echo "::warning::Ad group IDs are not set; this bundle shows TEST ads. Fine for QR testing, not for review."
+          fi
+          npm run build:toss
 
       - name: What went into the bundle
         run: |

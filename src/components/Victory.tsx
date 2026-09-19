@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, Home, RotateCcw, Trophy } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import ScoreSlip from './ScoreSlip';
+import MilkOffer from './MilkOffer';
 import type { RunOutcome } from '../platform/score';
 import { formatClock } from '../platform/format';
 import {
@@ -26,6 +27,8 @@ interface VictoryProps {
     onRetry: () => void;
     onMainMenu: () => void;
     onShowLeaderboard: () => void;
+    /** Shows the chosen ad; resolves true when the milk is earned. */
+    onWatchAd: () => Promise<boolean>;
     onShowCredits: () => void;
     timeMs: number;
     milkCount: number;
@@ -40,6 +43,7 @@ const Victory: React.FC<VictoryProps> = ({
     onRetry,
     onMainMenu,
     onShowLeaderboard,
+    onWatchAd,
     onShowCredits,
     timeMs,
     milkCount,
@@ -83,6 +87,8 @@ const Victory: React.FC<VictoryProps> = ({
                 </div>
 
                 <ScoreSlip outcome={outcome} color={theme.accent} />
+
+                <MilkOffer onWatch={onWatchAd} />
 
                 <div style={buttonRow}>
                     <MotionButton style={button('primary')} onClick={onRetry} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>

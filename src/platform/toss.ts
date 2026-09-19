@@ -6,9 +6,11 @@ import {
     getOperationalEnvironment,
     getUserKeyForGame,
     graniteEvent,
+    loadFullScreenAd,
     openGameCenterLeaderboard,
     setDeviceOrientation,
     setIosSwipeGestureEnabled,
+    showFullScreenAd,
     submitGameCenterLeaderBoardScore
 } from '@apps-in-toss/web-framework';
 
@@ -262,7 +264,124 @@ export const settleScreen = async (): Promise<void> => {
 
 export type Haptic = 'tap' | 'tickMedium' | 'success' | 'error';
 
-/** A nudge. Does nothing when the player has vibration switched off in Toss. */
+let hapticsOn = true;
+
+/** The game's own switch, on top of the one in Toss. Set from the settings at boot. */
+export const setHaptics = (on: boolean): void => {
+    hapticsOn = on;
+};
+
+/** A nudge. Does nothing when the player has vibration switched off, here or in Toss. */
 export const haptic = (type: Haptic): void => {
+    if (!hapticsOn) return;
     void attempt('generateHapticFeedback', () => generateHapticFeedback({ type }), undefined);
 };
+
+// ------------------------------------------------------------------------ ads
+
+/** Whether this Toss can show a full-screen ad at all (5.227.0 and later). */
+export const adsSupported = (): boolean => {
+    if (!inToss()) return false;
+
+    try {
+        return loadFullScreenAd.isSupported() && showFullScreenAd.isSupported();
+    } catch {
+        return false;
+    }
+};
+
+const AD_LOAD_TIMEOUT_MS = 15_000;
+/** If nothing has appeared by now, the run carries on without it. */
+const AD_APPEAR_TIMEOUT_MS = 6_000;
+
+/** Fetches an ad ahead of time. Resolves false rather than rejecting. */
+export const loadAd = (adGroupId: string): Promise<boolean> =>
+    new Promise((resolve) => {
+        if (!adsSupported()) return resolve(false);
+
+        let settled = false;
+        let unregister: (() => void) | undefined;
+        const finish = (ok: boolean): void => {
+            if (settled) return;
+            settled = true;
+            try {
+                unregister?.();
+            } catch {
+                // Already gone.
+            }
+            resolve(ok);
+        };
+
+        try {
+            unregister = loadFullScreenAd({
+                options: { adGroupId },
+                onEvent: (event) => {
+                    if (event.type === 'loaded') finish(true);
+                },
+                onError: (error) => {
+                    warn('loadFullScreenAd', error);
+                    finish(false);
+                }
+            });
+        } catch (error) {
+            warn('loadFullScreenAd', error);
+            finish(false);
+        }
+
+        window.setTimeout(() => finish(false), AD_LOAD_TIMEOUT_MS);
+    });
+
+export interface AdResult {
+    /** The ad reached the screen. */
+    shown: boolean;
+    /** A rewarded ad was watched to the point where the reward is owed. */
+    rewarded: boolean;
+}
+
+/**
+ * Shows an ad that `loadAd` has already fetched, and waits for it to close.
+ *
+ * The reward is only ever taken from `userEarnedReward` — closing an ad is not
+ * the same as having watched it, and the ad policy says so in as many words.
+ */
+export const showAd = (adGroupId: string): Promise<AdResult> =>
+    new Promise((resolve) => {
+        if (!adsSupported()) return resolve({ shown: false, rewarded: false });
+
+        let settled = false;
+        let shown = false;
+        let rewarded = false;
+        let unregister: (() => void) | undefined;
+        const finish = (): void => {
+            if (settled) return;
+            settled = true;
+            try {
+                unregister?.();
+            } catch {
+                // Already gone.
+            }
+            resolve({ shown, rewarded });
+        };
+
+        try {
+            unregister = showFullScreenAd({
+                options: { adGroupId },
+                onEvent: (event) => {
+                    if (event.type === 'show' || event.type === 'impression') shown = true;
+                    if (event.type === 'userEarnedReward') rewarded = true;
+                    if (event.type === 'dismissed' || event.type === 'failedToShow') finish();
+                },
+                onError: (error) => {
+                    warn('showFullScreenAd', error);
+                    finish();
+                }
+            });
+        } catch (error) {
+            warn('showFullScreenAd', error);
+            finish();
+        }
+
+        window.setTimeout(() => {
+            if (!shown) finish();
+        }, AD_APPEAR_TIMEOUT_MS);
+    });

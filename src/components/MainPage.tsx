@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings as SettingsIcon, Trophy } from 'lucide-react';
+import { BookOpen, CalendarDays, Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { getSettings, subscribe, useSettings } from '../settings';
 import type { Appearance } from '../settings';
 import { useTranslation } from '../i18n';
@@ -9,7 +9,8 @@ import MenuCats from './MenuCats';
 import { VERSION_LABEL } from '../version';
 import { SEEN_INTRO_KEY } from '../platform/boot';
 import { isBackgrounded, onBackground } from '../platform/lifecycle';
-import { useRecords } from '../platform/records';
+import { ENDING_KEYS, useRecords } from '../platform/records';
+import { shortDate, todayKey } from '../platform/daily';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 
@@ -17,6 +18,9 @@ interface MainPageProps {
     onShowLeaderboard: () => void;
     onShowSettings: () => void;
     onStartGame: () => void;
+    /** Today's city: the same seed for everyone until the day turns. */
+    onStartDaily: () => void;
+    onShowEndings: () => void;
     gameSize: { width: number | string; height: number | string };
 }
 
@@ -141,7 +145,25 @@ const pixelButton = (
     };
 };
 
-const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onShowSettings, gameSize }) => {
+/** Half of a row: the same button, smaller type, no fixed width. */
+const halfButton = (isMobile: boolean): React.CSSProperties => ({
+    flex: '1 1 0',
+    width: 'auto',
+    minWidth: 0,
+    maxWidth: 'none',
+    gap: '7px',
+    padding: isMobile ? '11px 6px' : '14px 10px',
+    fontSize: isMobile ? '0.72rem' : '0.95rem'
+});
+
+const MainPage: React.FC<MainPageProps> = ({
+    onStartGame,
+    onStartDaily,
+    onShowEndings,
+    onShowLeaderboard,
+    onShowSettings,
+    gameSize
+}) => {
     const [showButton, setShowButton] = useState(false);
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
@@ -240,6 +262,16 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
         stopMusic();
         onStartGame();
     }, [onStartGame, stopMusic]);
+
+    const handleStartDaily = useCallback(() => {
+        stopMusic();
+        onStartDaily();
+    }, [onStartDaily, stopMusic]);
+
+    // Only today's numbers belong on today's button.
+    const today = todayKey();
+    const dailyToday = records.daily.date === today ? records.daily : null;
+    const endingsSeen = ENDING_KEYS.filter((key) => records.endings[key]).length;
 
     // The fly-over runs the moment the page is up. No gate in front of it.
     useEffect(() => {
@@ -691,15 +723,36 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         gap: isMobile ? '10px' : '12px',
                         zIndex: 2
                     }}>
-                        <MotionClickable
-                            style={pixelButton(isMobile, 'ranking', settings.appearance)}
-                            onClick={onShowLeaderboard}
-                            whileHover={{ y: -2 }}
-                            whileTap={{ y: 3 }}
+                        {/* Two things to look at rather than do, sharing a row:
+                            a fifth full-width button would push the way in
+                            off the bottom of a phone inside Toss. */}
+                        <div
+                            style={{
+                                display: 'flex',
+                                gap: '10px',
+                                width: isMobile ? '260px' : '380px',
+                                maxWidth: '90%'
+                            }}
                         >
-                            <Trophy size={isMobile ? 13 : 15} />
-                            {t('menu.ranking')}
-                        </MotionClickable>
+                            <MotionClickable
+                                style={{ ...pixelButton(isMobile, 'ranking', settings.appearance), ...halfButton(isMobile) }}
+                                onClick={onShowLeaderboard}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ y: 3 }}
+                            >
+                                <Trophy size={isMobile ? 12 : 14} />
+                                {t('menu.rankingShort')}
+                            </MotionClickable>
+                            <MotionClickable
+                                style={{ ...pixelButton(isMobile, 'ranking', settings.appearance), ...halfButton(isMobile) }}
+                                onClick={onShowEndings}
+                                whileHover={{ y: -2 }}
+                                whileTap={{ y: 3 }}
+                            >
+                                <BookOpen size={isMobile ? 12 : 14} />
+                                {t('menu.endings')} {endingsSeen}/{ENDING_KEYS.length}
+                            </MotionClickable>
+                        </div>
 
                         <MotionClickable
                             style={pixelButton(isMobile, 'settings', settings.appearance)}
@@ -709,6 +762,43 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         >
                             <SettingsIcon size={isMobile ? 13 : 15} />
                             {t('menu.settings')}
+                        </MotionClickable>
+
+                        {/*
+                            Today's city. The day is on the button because the
+                            day is the point: it is this one, it is everybody's,
+                            and tomorrow it is gone.
+                        */}
+                        <MotionClickable
+                            style={{
+                                ...pixelButton(isMobile, 'settings', settings.appearance),
+                                flexDirection: 'column',
+                                gap: '6px'
+                            }}
+                            onClick={handleStartDaily}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 3 }}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <CalendarDays size={isMobile ? 13 : 15} />
+                                {t('menu.daily')} {shortDate(today)}
+                            </span>
+                            {dailyToday && (
+                                <span
+                                    style={{
+                                        fontFamily: "'Pretendard', sans-serif",
+                                        fontSize: isMobile ? '0.68rem' : '0.78rem',
+                                        fontWeight: 600,
+                                        opacity: 0.85,
+                                        fontVariantNumeric: 'tabular-nums'
+                                    }}
+                                >
+                                    {t('daily.best')} {dailyToday.best.toLocaleString()}
+                                    {dailyToday.streak > 1
+                                        ? ` · ${t('daily.streak').replace('{n}', String(dailyToday.streak))}`
+                                        : ''}
+                                </span>
+                            )}
                         </MotionClickable>
 
                         <MotionClickable

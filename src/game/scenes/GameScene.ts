@@ -32,6 +32,7 @@ import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
 import { playEnemyEntrance, runNightmareOpening, runTutorial } from '../systems/TutorialSequence';
 import { hasSeenTutorial, markTutorialSeen, tutorialForced } from '../../platform/tutorial';
+import { takeStartBonus } from '../../platform/startBonus';
 import { currentDifficulty } from '../core/difficulty';
 import { districtPressure, resolveMode } from '../core/modes';
 import type { ModeSettings } from '../core/modes';
@@ -288,6 +289,16 @@ export class GameScene extends Phaser.Scene {
 
         const player = new Player(this, 100, 100);
         this.player = player;
+
+        // Toss build only: a carton of milk earned between runs. Zero unless
+        // the player chose to watch an ad for it, so an ordinary run sets out
+        // exactly as it does on the web.
+        if (this.district === 1) {
+            player.jumpCount = Math.min(
+                GameConfig.PLAYER.JUMP.MAX_STOCK,
+                player.jumpCount + takeStartBonus()
+            );
+        }
 
         const { walls, fishes, worldWidth, worldHeight, centerX, centerY, maze, rng } = createMaze(this, player);
         this.walls = walls;
