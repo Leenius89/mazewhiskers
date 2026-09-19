@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
 import { mazeSize as currentMazeSize } from './core/grid';
+import { generateCity } from './core/mazeGrid';
 import { setCircleBody, setStaticFootBody } from './core/bodies';
 import { sortDepth } from './core/depth';
 import { resolveSeed } from './core/modes';
@@ -19,107 +20,6 @@ interface MazeData {
     rng: Phaser.Math.RandomDataGenerator;
 }
 
-/**
- * Opens a share of the dead ends into loops.
- *
- * A perfect maze is a tree: every chase ends against a wall. Braiding adds
- * cycles, which is what makes it possible to break line of sight and come
- * back around — the counterplay the enemy redesign depends on.
- */
-const braid = (maze: number[][], mazeSize: number, rng: Phaser.Math.RandomDataGenerator): void => {
-    const neighbours = [
-        [0, -1],
-        [1, 0],
-        [0, 1],
-        [-1, 0]
-    ];
-
-    for (let y = 1; y < mazeSize - 1; y += 2) {
-        for (let x = 1; x < mazeSize - 1; x += 2) {
-            if (maze[y][x] !== 0) continue;
-
-            const open = neighbours.filter(([dx, dy]) => maze[y + dy]?.[x + dx] === 0);
-            if (open.length !== 1) continue;
-            if (rng.frac() >= GameConfig.MAZE.BRAID_CHANCE) continue;
-
-            // Knock through a wall that leads somewhere new, never off the edge.
-            const walls = neighbours.filter(
-                ([dx, dy]) =>
-                    maze[y + dy]?.[x + dx] === 1 &&
-                    maze[y + dy * 2]?.[x + dx * 2] !== undefined
-            );
-            if (walls.length === 0) continue;
-
-            const [dx, dy] = walls[rng.integerInRange(0, walls.length - 1)];
-            maze[y + dy][x + dx] = 0;
-            maze[y + dy * 2][x + dx * 2] = 0;
-        }
-    }
-};
-
-/**
- * A handful of open squares.
- *
- * They read as somewhere to breathe and carry more to pick up, but they cost
- * the cover the alleys give — the terrain itself becomes a risk decision.
- */
-const carvePlazas = (maze: number[][], mazeSize: number, rng: Phaser.Math.RandomDataGenerator): void => {
-    const radius = GameConfig.MAZE.PLAZA_RADIUS;
-    const margin = radius + 3;
-
-    for (let i = 0; i < GameConfig.MAZE.PLAZAS; i++) {
-        const cx = rng.integerInRange(margin, mazeSize - 1 - margin);
-        const cy = rng.integerInRange(margin, mazeSize - 1 - margin);
-
-        for (let y = cy - radius; y <= cy + radius; y++) {
-            for (let x = cx - radius; x <= cx + radius; x++) {
-                if (maze[y]?.[x] !== undefined) maze[y][x] = 0;
-            }
-        }
-    }
-};
-
-/**
- * Steps along the shortest open walk between two cells, or -1 if there is none.
- *
- * Used to judge a layout before anything is built on it.
- */
-const walkLength = (
-    maze: number[][],
-    from: { x: number; y: number },
-    to: { x: number; y: number }
-): number => {
-    const size = maze.length;
-    const seen = new Set<string>([`${from.x},${from.y}`]);
-    let frontier = [from];
-    let steps = 0;
-
-    while (frontier.length) {
-        const next: { x: number; y: number }[] = [];
-
-        for (const cell of frontier) {
-            if (cell.x === to.x && cell.y === to.y) return steps;
-
-            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-                const x = cell.x + dx;
-                const y = cell.y + dy;
-                if (x < 0 || y < 0 || x >= size || y >= size) continue;
-                if (maze[y][x] !== 0) continue;
-
-                const key = `${x},${y}`;
-                if (seen.has(key)) continue;
-                seen.add(key);
-                next.push({ x, y });
-            }
-        }
-
-        frontier = next;
-        steps++;
-    }
-
-    return -1;
-};
-
 export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprite): MazeData => {
     const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
     const mazeSize = currentMazeSize();
@@ -135,37 +35,9 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
     const centerX = Math.floor(mazeSize / 2);
     const centerY = Math.floor(mazeSize / 2);
 
-    /**
-     * Layouts are drawn until one is a fair length, then kept.
-     *
-     * Measured across twenty-four generations, the walk from the doorstep to
-     * home ran from forty-five cells to two hundred and sixty-three — the
-     * same run, done equally well, taking half a minute or two and a half.
-     * One player in eight drew a maze three to five times longer than the
-     * median, which makes a race for the fastest time mostly a draw for it.
-     *
-     * Rejecting the outliers costs a few milliseconds of generation and
-     * nothing else; the maze is as varied as it ever was between the bounds.
-     * A seeded run keeps drawing from the same seeded generator, so it stays
-     * reproducible — it simply arrives at the layout that qualified.
-     */
-    // The band was measured on the base city. A bigger one has longer walks
-    // in proportion, so the band grows with it; otherwise every attempt on
-    // nightmare would fail the ceiling and the last one would be kept blind.
-    const scale = mazeSize / GameConfig.MAZE_SIZE;
-    const bounds = {
-        MIN: Math.round(GameConfig.MAZE.WALK_LENGTH.MIN * scale),
-        MAX: Math.round(GameConfig.MAZE.WALK_LENGTH.MAX * scale),
-        ATTEMPTS: GameConfig.MAZE.WALK_LENGTH.ATTEMPTS
-    };
-    let maze: number[][] = [];
-    for (let attempt = 0; attempt < bounds.ATTEMPTS; attempt++) {
-        maze = generateGrid(mazeSize, centerX, centerY, rng);
-
-        const start = GameConfig.PLAYER.START_TILE;
-        const steps = walkLength(maze, { x: start.X, y: start.Y }, { x: centerX, y: centerY });
-        if (steps >= bounds.MIN && steps <= bounds.MAX) break;
-    }
+    // Carved, braided and checked for a way home before anything stands on
+    // it. See core/mazeGrid for what is promised and how it is tested.
+    const { maze } = generateCity(mazeSize, rng);
 
     const walls = scene.physics.add.staticGroup();
     const fishes = scene.physics.add.group();
@@ -185,59 +57,6 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
     }
 
     return buildWorld(scene, player, { maze, walls, fishes, worldWidth, worldHeight, centerX, centerY, rng });
-};
-
-/** One candidate layout: carve, braid, open a few plazas. */
-const generateGrid = (
-    mazeSize: number,
-    centerX: number,
-    centerY: number,
-    rng: Phaser.Math.RandomDataGenerator
-): number[][] => {
-    const maze: number[][] = Array(mazeSize)
-        .fill(null)
-        .map(() => Array(mazeSize).fill(1));
-
-    // Clear the goal chamber.
-    maze[centerY][centerX] = 0;
-    maze[centerY - 1][centerX] = 0;
-    maze[centerY + 1][centerX] = 0;
-    maze[centerY][centerX - 1] = 0;
-    maze[centerY][centerX + 1] = 0;
-
-    // Clear the start pocket.
-    const start = GameConfig.PLAYER.START_TILE;
-    maze[start.Y][start.X] = 0;
-    maze[start.Y][start.X + 1] = 0;
-    maze[start.Y + 1][start.X] = 0;
-
-    // Depth-first carve. Produces a perfect maze — no loops, many dead ends.
-    // Phase 4 braids this so the player has somewhere to run.
-    const carve = (x: number, y: number) => {
-        const directions = [
-            [0, -1],
-            [1, 0],
-            [0, 1],
-            [-1, 0]
-        ];
-        directions.sort(() => rng.frac() - 0.5);
-
-        for (const [dx, dy] of directions) {
-            const nx = x + dx * 2;
-            const ny = y + dy * 2;
-            if (nx >= 0 && nx < mazeSize && ny >= 0 && ny < mazeSize && maze[ny][nx] === 1) {
-                maze[y + dy][x + dx] = 0;
-                maze[ny][nx] = 0;
-                carve(nx, ny);
-            }
-        }
-    };
-
-    carve(start.X, start.Y);
-    braid(maze, mazeSize, rng);
-    carvePlazas(maze, mazeSize, rng);
-
-    return maze;
 };
 
 /** Everything that stands on a finished grid: buildings, fish, the world box. */
