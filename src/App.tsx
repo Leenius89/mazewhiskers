@@ -423,9 +423,15 @@ function App() {
      * walked away, and the next visitor should find the attract screen rather
      * than someone else's game over. Only runs in exhibition mode, and only
      * while a results screen is up — never mid-play.
+     *
+     * Not in this build. The Toss game plays by exhibition's rules — one
+     * district, one cat, the gallery's damage and pace, checked frame for
+     * frame against the web build — but a phone is not an unattended kiosk,
+     * and a player reading their own score should not be sent to the menu
+     * for taking forty-five seconds over it.
      */
     useEffect(() => {
-        const timeout = mode.idleReturnMs;
+        const timeout: number | null = null;
         if (!timeout) return;
         if (!isGameOver && !isVictory) return;
         if (isShowingCredits || showRecords) return;

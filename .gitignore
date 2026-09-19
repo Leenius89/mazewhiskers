@@ -26,3 +26,6 @@ yarn-error.log*
 
 # Apps in Toss bundles
 *.ait
+
+# parity test output
+qa/parity/traces/

@@ -23,7 +23,13 @@ export default defineConfig({
     navigationBar: {
         // A game draws under the bar and keeps clear of its two buttons
         // itself; an opaque bar would take a strip off the top of the city.
-        transparentBackground: true
+        transparentBackground: true,
+        // Said outright rather than left to defaults: the packer fills these
+        // in as true, which is the non-game bar. A game's bar is "more" and
+        // close, and nothing that could land on top of the run bar.
+        withBackButton: false,
+        withHomeButton: false,
+        withTitle: false
     },
     webView: {
         // The joystick lives on the left edge. A thumb starting a drag there
