@@ -15,6 +15,12 @@
         localStorage.setItem('mazewhiskers.settings', JSON.stringify({ muted: true, language: 'ko', difficulty: diff, appearance: 'dark' }));
         localStorage.setItem('mazewhiskers.seenIntro', '1');
         sessionStorage.setItem('mazewhiskers.seenIntro', '1');
+        // A first-time player, as far as anything the game remembers goes.
+        // Without it the Toss build skips the tutorial the original shows.
+        if (params.get('qaFresh') !== '0') {
+            ['mazewhiskers.tutorialSeen', 'mazewhiskers.owner'].forEach(function (k) { localStorage.removeItem(k); });
+            Object.keys(localStorage).forEach(function (k) { if (k.indexOf('mazewhiskers.records.') === 0) localStorage.removeItem(k); });
+        }
     } catch (e) {}
 
     /*

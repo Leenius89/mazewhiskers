@@ -3,6 +3,7 @@ import { startLifecycle } from './lifecycle';
 import { openRecords } from './records';
 import { restore, settleScreen } from './toss';
 import { SETTINGS_KEY, reloadSettings } from '../settings';
+import { TUTORIAL_KEY } from './tutorial';
 
 /** Longest the first render will wait for Toss to hand back saved settings. */
 const RESTORE_BUDGET_MS = 600;
@@ -50,7 +51,7 @@ export const bootPlatform = async (): Promise<void> => {
     warmFonts();
 
     await Promise.race([
-        restore([SETTINGS_KEY, SEEN_INTRO_KEY]).then(reloadSettings),
+        restore([SETTINGS_KEY, SEEN_INTRO_KEY, TUTORIAL_KEY]).then(reloadSettings),
         new Promise<void>((resolve) => window.setTimeout(resolve, RESTORE_BUDGET_MS))
     ]);
 };
