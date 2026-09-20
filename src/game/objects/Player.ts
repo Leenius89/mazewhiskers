@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { setFootBody } from '../core/bodies';
+import { axisOf, iceTakes, slideVelocity } from '../core/ice';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -24,6 +25,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     /** Facing used when a jump is taken with no direction held. */
     private readonly facing = new Phaser.Math.Vector2(1, 0);
+
+    /**
+     * The way the ice is carrying the cat, or null when it is walking.
+     *
+     * Always one of the four axis directions: the alleys run on a grid, and a
+     * diagonal slide would put the cat into a corner it never steered for.
+     */
+    private slide: Phaser.Math.Vector2 | null = null;
+
+
 
     /**
      * Which way the cat is looking, in radians.
@@ -226,6 +237,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.dashDirection.copy(source).normalize();
         this.facing.copy(this.dashDirection);
 
+        this.slide = null;
         this.dashUntil = now + dash.DURATION_MS;
         this.dashReadyAt = now + dash.COOLDOWN_MS;
         this.invulnerableUntil = Math.max(this.invulnerableUntil, now + dash.INVULNERABLE_MS);
@@ -304,8 +316,18 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     private handleMovement(moveDirection: Phaser.Math.Vector2): void {
-        // Knockback owns velocity for its duration; do not fight it.
-        if (this.scene.runNow < this.recoveryUntil) return;
+        // Knockback owns velocity for its duration; do not fight it. A shove
+        // or a hit also takes the cat off whatever it was sliding along.
+        if (this.scene.runNow < this.recoveryUntil) {
+            this.slide = null;
+            return;
+        }
+
+        // The ice has the cat: input is read, and ignored, until it is over.
+        if (this.slide) {
+            this.keepSliding();
+            return;
+        }
 
         const moving = moveDirection.lengthSq() > 0;
 
@@ -326,6 +348,72 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.anims.stop();
             this.setTexture('cat1');
         }
+
+        // Standing on ice is not a thing the cat gets to do. Whether it
+        // walked on, drifted on as the player let go, or was dropped there by
+        // a jump, the street takes it as soon as there is anywhere to take it.
+        this.tryStartSlide(moveDirection);
+    }
+
+    /** True while the street, rather than the player, is choosing. */
+    get isSliding(): boolean {
+        return this.slide !== null;
+    }
+
+    /**
+     * Takes the cat's own direction and hands it to the ice.
+     *
+     * Quantised to the dominant axis: pressing up-left on a frozen alley
+     * sends the cat the way it was mostly going, and the lane it lands in is
+     * a lane the grid actually has.
+     */
+    private tryStartSlide(moveDirection: Phaser.Math.Vector2): void {
+        // Not while the game is talking: a beat that takes the controls away
+        // should not also take the cat away from where the player left it.
+        if (this.scene.narrativeActive) return;
+
+        // The direction being held, or the one the cat was already going.
+        const source = moveDirection.lengthSq() > 0 ? moveDirection : this.facing;
+        const dominant = axisOf(source.x, source.y);
+        if (!dominant || !iceTakes(this.scene, this, dominant)) return;
+
+        this.slide = dominant;
+        this.anims.stop();
+        this.setTexture('cat1');
+    }
+
+    /**
+     * Carried along until the ice runs out or something stops it.
+     *
+     * Two ends, and no third: the cat halts on the first ordinary cell it
+     * reaches, or against whatever it slides into. Nothing the player presses
+     * in between changes either — that is the whole of the mechanic — but a
+     * jump still lifts the cat off, which is what milk is for.
+     */
+    private keepSliding(): void {
+        const dir = this.slide;
+        if (!dir) return;
+
+        const carried = slideVelocity(this.scene, this, dir);
+        if (!carried) {
+            this.endSlide();
+            return;
+        }
+
+        this.setVelocity(carried.x, carried.y);
+        this.facing.copy(dir);
+        if (dir.x < 0) {
+            this.setFlipX(true);
+            this.lastDirection = 'left';
+        } else if (dir.x > 0) {
+            this.setFlipX(false);
+            this.lastDirection = 'right';
+        }
+    }
+
+    private endSlide(): void {
+        this.slide = null;
+        this.setVelocity(0);
     }
 
     /** Sorts by the feet and keeps the shadow on the ground under them. */
@@ -457,6 +545,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      * rise, turn over, and then simply stand up again in one piece.
      */
     beginDeath(): void {
+        this.slide = null;
         this.setVelocity(0, 0);
         if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
 
@@ -504,6 +593,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     }
 
     private performJump(direction: Phaser.Math.Vector2, target: Phaser.Math.Vector2): boolean {
+        // Off the ice, whatever it was doing with the cat.
+        this.slide = null;
         this.jumpCount--;
         this.scene.bus.emit('jumpCountChanged', this.jumpCount);
         this.scene.registerJumpUsed();

@@ -14,6 +14,7 @@ import { GameConfig } from '../constants/GameConfig';
 export interface GridRng {
     frac(): number;
     integerInRange(min: number, max: number): number;
+    realInRange(min: number, max: number): number;
 }
 
 export interface GridCell {
@@ -215,12 +216,104 @@ const forceRoute = (maze: number[][], from: GridCell, to: GridCell): void => {
     }
 };
 
+/** Cell key, as the scene and the renderer hold them. */
+export const iceKey = (x: number, y: number): string => `${x},${y}`;
+
+/**
+ * Freezes runs of street.
+ *
+ * Grown as random walks down the alleys rather than sprinkled cell by cell:
+ * the mechanic only exists in a run of two or more, because one frozen cell
+ * is a stumble and six in a row is somewhere you commit to.
+ *
+ * The doorstep and home are kept clear — a cat that starts the run already
+ * sliding has been deprived of the first decision, and home is a place you
+ * should be able to stop on.
+ *
+ * Draws nothing from the generator when no ice is asked for, so an ordinary
+ * city is bit for bit the city it was before this existed.
+ */
+const carveIce = (maze: number[][], rng: GridRng, share: number, centre: GridCell): string[] => {
+    if (share <= 0) return [];
+
+    const size = maze.length;
+    const start = GameConfig.PLAYER.START_TILE;
+    const safe = GameConfig.ICE.SAFE_RADIUS;
+    const near = (x: number, y: number, to: { x: number; y: number }): boolean =>
+        Math.abs(x - to.x) <= safe && Math.abs(y - to.y) <= safe;
+
+    const open: GridCell[] = [];
+    for (let y = 1; y < size - 1; y++) {
+        for (let x = 1; x < size - 1; x++) {
+            if (maze[y][x] !== 0) continue;
+            if (near(x, y, { x: start.X, y: start.Y }) || near(x, y, centre)) continue;
+            open.push({ x, y });
+        }
+    }
+    if (open.length === 0) return [];
+
+    const frozen = new Set<string>();
+    const target = Math.round(open.length * Math.min(share, 0.9));
+    const run = GameConfig.ICE.RUN;
+
+    // Bounded: a city whose alleys are all too short would otherwise spin here.
+    for (let attempt = 0; frozen.size < target && attempt < target * 4 + 40; attempt++) {
+        const from = open[rng.integerInRange(0, open.length - 1)];
+        let { x, y } = from;
+
+        // One direction per run, turning only where it must. A run that
+        // wandered cell by cell would fill a block instead of crossing it.
+        let dx = 0;
+        let dy = 0;
+        const length = rng.integerInRange(run.MIN, run.MAX);
+
+        for (let step = 0; step < length; step++) {
+            frozen.add(iceKey(x, y));
+
+            const ahead = dx !== 0 || dy !== 0 ? maze[y + dy]?.[x + dx] === 0 : false;
+            if (!ahead) {
+                // A plain loop rather than a filter: this one is inside the
+                // walk, and a closure here captures the cell it started from.
+                const ways: Step[] = [];
+                for (let i = 0; i < NEIGHBOURS.length; i++) {
+                    const [nx, ny] = NEIGHBOURS[i];
+                    if (maze[y + ny]?.[x + nx] === 0) ways.push(NEIGHBOURS[i]);
+                }
+                if (ways.length === 0) break;
+                const [px, py] = ways[rng.integerInRange(0, ways.length - 1)];
+                dx = px;
+                dy = py;
+            }
+
+            x += dx;
+            y += dy;
+            if (maze[y]?.[x] !== 0) break;
+            if (near(x, y, { x: start.X, y: start.Y }) || near(x, y, centre)) break;
+        }
+    }
+
+    const out: string[] = [];
+    frozen.forEach((key) => out.push(key));
+    // Set order follows insertion, which follows the seeded draws — but the
+    // scene hashes this list in the parity harness, so it is sorted to be
+    // certain two runs of one seed hand over the same string.
+    return out.sort();
+};
+
+/** What a city is asked for beyond its size. Absent fields mean the old city. */
+export interface CityPlan {
+    /** Share of walkable cells that freeze over. 0, or absent, for none. */
+    ice?: number;
+}
+
 export interface CityLayout {
     maze: number[][];
     /** Shortest walk from the doorstep to home, in cells. Never -1. */
     walk: number;
     /** Whether the walk landed inside the fair band. */
     inBand: boolean;
+    /** Frozen cells, as `x,y` keys. Empty for an ordinary city. */
+    ice: string[];
 }
 
 /**
@@ -239,7 +332,7 @@ export interface CityLayout {
  * seeded generator, so it stays reproducible: it simply arrives at the
  * layout that qualified.
  */
-export const generateCity = (mazeSize: number, rng: GridRng): CityLayout => {
+export const generateCity = (mazeSize: number, rng: GridRng, plan: CityPlan = {}): CityLayout => {
     const start = GameConfig.PLAYER.START_TILE;
     const from = { x: start.X, y: start.Y };
     const centre = { x: Math.floor(mazeSize / 2), y: Math.floor(mazeSize / 2) };
@@ -259,18 +352,20 @@ export const generateCity = (mazeSize: number, rng: GridRng): CityLayout => {
         const walk = walkLength(maze, from, centre);
         if (walk < 0) continue;
 
-        if (walk >= min && walk <= max) return { maze, walk, inBand: true };
+        if (walk >= min && walk <= max) {
+            return { maze, walk, inBand: true, ice: carveIce(maze, rng, plan.ice ?? 0, centre) };
+        }
 
         const miss = walk < min ? min - walk : walk - max;
         if (miss < bestMiss) {
             bestMiss = miss;
-            best = { maze, walk, inBand: false };
+            best = { maze, walk, inBand: false, ice: [] };
         }
     }
 
-    if (best) return best;
+    if (best) return { ...best, ice: carveIce(best.maze, rng, plan.ice ?? 0, centre) };
 
     const maze = generateGrid(mazeSize, centre, rng);
     forceRoute(maze, from, centre);
-    return { maze, walk: walkLength(maze, from, centre), inBand: false };
+    return { maze, walk: walkLength(maze, from, centre), inBand: false, ice: [] };
 };
