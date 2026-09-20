@@ -25,7 +25,6 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
     const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
     const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
-    const start = GameConfig.PLAYER.START_TILE;
 
     // Districts past the first must not reuse the same maze, so the district
     // number is folded into the seed.
