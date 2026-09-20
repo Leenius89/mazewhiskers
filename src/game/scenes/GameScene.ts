@@ -30,6 +30,7 @@ import { sortDepth } from '../core/depth';
 import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
+import { IceField } from '../systems/IceField';
 import { playEnemyEntrance, runNightmareOpening, runTutorial } from '../systems/TutorialSequence';
 import { hasSeenTutorial, markTutorialSeen, tutorialForced } from '../../platform/tutorial';
 import { takeStartBonus } from '../../platform/startBonus';
@@ -205,6 +206,15 @@ export class GameScene extends Phaser.Scene {
     private vignette: Vignette | null = null;
     private dread: Dread | null = null;
     private worldFog: WorldFog | null = null;
+    private iceField: IceField | null = null;
+
+    /**
+     * Frozen cells, as `x,y` keys. Empty unless the city asked for ice.
+     *
+     * Filled by `createMaze` before anything stands on the grid, so the
+     * renderer and the cat read the same set from the first frame.
+     */
+    public ice = new Set<string>();
     /** Public so world-space overlays can keep clear of it. */
     public hud: HudOverlay | null = null;
     private atmosphere: Atmosphere | null = null;
@@ -405,6 +415,7 @@ export class GameScene extends Phaser.Scene {
 
         // The city itself is hidden on a setting with fog. Built before the
         // first reveal runs, so the opening frame is fog rather than a map.
+        if (this.ice.size > 0) this.iceField = new IceField(this);
         if (this.fogOfWar) this.worldFog = new WorldFog(this);
         this.hud = new HudOverlay(this);
 
@@ -678,6 +689,18 @@ export class GameScene extends Phaser.Scene {
         return player.jumpCount > 0;
     }
 
+    /**
+     * Whether that cell is frozen.
+     *
+     * A built-over cell is a building, not a street, so it is never ice
+     * however it started: the slide has to stop at a tower like any wall.
+     */
+    isIce(gx: number, gy: number): boolean {
+        if (this.ice.size === 0) return false;
+        if (this.apartmentSystem?.isCellBuilt(gx, gy)) return false;
+        return this.ice.has(`${gx},${gy}`);
+    }
+
     /** Milliseconds until the next rent charge, for the HUD. */
     msUntilRent(): number {
         if (!this.rentTimer) return GameConfig.HEALTH.RENT.INTERVAL;
@@ -818,6 +841,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.dread?.update(Math.min(delta, 100));
+        this.iceField?.update();
         this.worldFog?.update();
 
         this.debugOverlay?.update();
@@ -1124,6 +1148,10 @@ export class GameScene extends Phaser.Scene {
         this.dread = null;
         this.worldFog?.destroy();
         this.worldFog = null;
+
+        this.iceField?.destroy();
+        this.iceField = null;
+        this.ice = new Set();
 
         this.hud?.destroy();
         this.hud = null;

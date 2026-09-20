@@ -48,6 +48,58 @@ describe('generateCity', () => {
         expect(other.maze).not.toEqual(one.maze);
     });
 
+    it('asks the generator for nothing when no ice is wanted', () => {
+        const plain = generateCity(41, seeded('ice-none#1'));
+        const same = generateCity(41, seeded('ice-none#1'), {});
+        const iced = generateCity(41, seeded('ice-none#1'), { ice: 0.3 });
+
+        expect(plain.ice).toEqual([]);
+        expect(same.maze).toEqual(plain.maze);
+        // The ice is drawn after the layout, so asking for it must not move a
+        // single wall: an ordinary city and an icy one of the same seed are
+        // the same city underneath.
+        expect(iced.maze).toEqual(plain.maze);
+        expect(iced.ice.length).toBeGreaterThan(0);
+    });
+
+    it('freezes open street, in runs, away from the doorstep and home', () => {
+        const size = 41;
+        const centre = centreOf(size);
+        const safe = GameConfig.ICE.SAFE_RADIUS;
+
+        for (let i = 0; i < 200; i++) {
+            const city = generateCity(size, seeded(`ice-${i}#1`), { ice: 0.3 });
+            const frozen = new Set(city.ice);
+            expect(frozen.size).toBe(city.ice.length);
+
+            let touching = 0;
+            city.ice.forEach((key) => {
+                const [x, y] = key.split(',').map(Number);
+
+                expect(city.maze[y][x]).toBe(0);
+                expect(Math.max(Math.abs(x - start.x), Math.abs(y - start.y))).toBeGreaterThan(safe);
+                expect(Math.max(Math.abs(x - centre.x), Math.abs(y - centre.y))).toBeGreaterThan(safe);
+
+                const neighbours = [`${x + 1},${y}`, `${x - 1},${y}`, `${x},${y + 1}`, `${x},${y - 1}`];
+                if (neighbours.some((n) => frozen.has(n))) touching++;
+            });
+
+            // One frozen cell on its own is a stumble; the mechanic is the run.
+            expect(touching / city.ice.length).toBeGreaterThan(0.85);
+            // Still walkable: ice is a surface, not a wall.
+            expect(walkLength(city.maze, start, centre)).toBeGreaterThan(0);
+        }
+    });
+
+    it('freezes the same streets from the same seed, and more of them when asked', () => {
+        const once = generateCity(41, seeded('ice-same#1'), { ice: 0.3 });
+        const twice = generateCity(41, seeded('ice-same#1'), { ice: 0.3 });
+        expect(twice.ice).toEqual(once.ice);
+
+        const heavy = generateCity(41, seeded('ice-same#1'), { ice: 0.55 });
+        expect(heavy.ice.length).toBeGreaterThan(once.ice.length);
+    });
+
     it('keeps the start pocket, the goal chamber and the outer wall', () => {
         const { maze } = generateCity(41, seeded('edges#1'));
         const c = centreOf(41);

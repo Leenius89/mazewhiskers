@@ -1,3 +1,6 @@
+import type { DailyPlan } from './cityPlans';
+import { planFor } from './cityPlans';
+
 /**
  * Today's city.
  *
@@ -40,6 +43,9 @@ export const disarmDaily = (): void => {
 };
 
 export const dailyDate = (): string | null => armed;
+
+/** What kind of city today's is, or null on an ordinary run. */
+export const dailyPlan = (): DailyPlan | null => (armed ? planFor(armed) : null);
 
 /** What the maze generator is seeded with. The district is folded in later. */
 export const dailySeed = (): string | null => (armed ? `daily-${armed}` : null);

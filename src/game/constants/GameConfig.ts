@@ -52,6 +52,49 @@ export const GameConfig = {
     },
 
     /**
+     * Black ice: the street decides where the cat goes.
+     *
+     * Steps onto a frozen cell and the cat keeps going the way it entered,
+     * cell after cell, until the ice runs out or it hits something. Control
+     * comes back the moment it is standing on ordinary road again.
+     *
+     * Laid in runs rather than scattered tiles, because a single frozen cell
+     * is a stumble and a corridor of them is a decision: the ice is a fast
+     * way across a block you would otherwise walk, and the price is that the
+     * far end is chosen by the layout rather than by you.
+     */
+    ICE: {
+        /** Slide speed, against a walk of 160. Fast enough to feel taken. */
+        SPEED: 250,
+        /**
+         * How hard the cat is pulled back to the middle of the lane it is
+         * sliding down: pixels of sideways speed per pixel off centre.
+         * Without it a slide entered off-centre grinds along a building for
+         * its whole length.
+         */
+        CENTRING: 6,
+        /** Milk breaks a slide: a jump is the way off the ice early. */
+        JUMP_BREAKS: true,
+        /** Patch shapes, in cells. A run is a random walk down the alleys. */
+        RUN: { MIN: 3, MAX: 9 },
+        /** Cells around the doorstep and home that never freeze. */
+        SAFE_RADIUS: 2,
+        LOOK: {
+            /** Pale blue, a little lighter than the road it replaces. */
+            FILL: 0x8fd4e8,
+            FILL_ALPHA: 0.85,
+            /** Second wash, so a run of tiles is not one flat colour. */
+            SHEEN: 0xdff4fb,
+            SHEEN_ALPHA: 0.5,
+            EDGE: 0x5fa9c4,
+            CRACK: 0xffffff,
+            CRACK_ALPHA: 0.38,
+            /** Cracks per tile. Drawn from the city's own seed, so they are stable. */
+            CRACKS: 2
+        }
+    },
+
+    /**
      * Collision boxes, in world pixels.
      *
      * The bias is deliberate and consistent: pickups are far larger than they
