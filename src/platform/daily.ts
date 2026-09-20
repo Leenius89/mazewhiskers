@@ -1,3 +1,4 @@
+import { setCityPlan } from '../game/core/cityPlan';
 import type { DailyPlan } from './cityPlans';
 import { planFor } from './cityPlans';
 
@@ -35,11 +36,16 @@ let armed: string | null = null;
 
 export const armDaily = (): string => {
     armed = todayKey();
+
+    // Everyone gets the same city, so the weather is not rolled for it: the
+    // day's plan is fixed and the generator is told to stop improvising.
+    setCityPlan(planFor(armed));
     return armed;
 };
 
 export const disarmDaily = (): void => {
     armed = null;
+    setCityPlan(null);
 };
 
 export const dailyDate = (): string | null => armed;

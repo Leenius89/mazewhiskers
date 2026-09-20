@@ -5,6 +5,7 @@ import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
 import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
+import { axisOf, iceTakes, slideVelocity } from '../core/ice';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -40,6 +41,16 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     private staggerUntil = 0;
 
     /** Cells still to walk, nearest first. Empty means going straight. */
+    /**
+     * The way the ice is carrying it, or null when it is walking.
+     *
+     * The same street, and the same rule, as the cat being chased: it is the
+     * one thing in this game that treats both animals alike, which is what
+     * makes a frozen alley somewhere to lead the black cat rather than only
+     * somewhere to be afraid of.
+     */
+    private slide: Phaser.Math.Vector2 | null = null;
+
     private path: Cell[] = [];
     /** The cell the current path was worked out to. */
     private pathTo = '';
@@ -192,6 +203,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     knockback(fromX: number, fromY: number, speed: number, durationMs: number): void {
         if (speed <= 0 || this.isJumping) return;
 
+        this.slide = null;
         this.staggerUntil = this.scene.runNow + durationMs;
 
         const angle = Phaser.Math.Angle.Between(fromX, fromY, this.x, this.groundY);
@@ -200,6 +212,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /** Teleported clear of somewhere it must not be. */
     placeAt(x: number, y: number): void {
+        this.slide = null;
         this.setPosition(x, y);
         this.groundY = y;
 
@@ -221,6 +234,52 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         // that for up to PATH.REFRESH_MS after every rescue the cat walked
         // towards a waypoint chosen for a different part of the city.
         this.forgetRoute();
+    }
+
+    /** True while the street, rather than the hunt, is choosing. */
+    get isSliding(): boolean {
+        return this.slide !== null;
+    }
+
+    /**
+     * Hands it to the ice, if the ice will have it.
+     *
+     * Direction comes from the velocity the steering just set, so it is taken
+     * the way it was already going. A cat holding still — through its
+     * telegraph, or with nowhere to go — is not taken: there is no momentum
+     * for the street to take, and being slid out of a wind-up would break the
+     * one warning the player gets before a charge.
+     */
+    private tryStartSlide(): void {
+        const body = this.body as Phaser.Physics.Arcade.Body | null;
+        if (!body) return;
+
+        const dominant = axisOf(body.velocity.x, body.velocity.y);
+        if (!dominant || !iceTakes(this.scene, this, dominant)) return;
+
+        this.slide = dominant;
+    }
+
+    /** Carried along until the ice runs out or it hits something. */
+    private keepSliding(): void {
+        const dir = this.slide;
+        if (!dir) return;
+
+        const carried = slideVelocity(this.scene, this, dir);
+        if (!carried) {
+            this.slide = null;
+            this.setVelocity(0, 0);
+            // Wherever the ice put it down is not where the route was worked
+            // out from, so it starts again from here.
+            this.forgetRoute();
+            return;
+        }
+
+        this.setVelocity(carried.x, carried.y);
+        this.facing = Phaser.Math.Angle.Between(0, 0, dir.x, dir.y);
+
+        if (dir.x < 0) this.setFlipX(true);
+        else if (dir.x > 0) this.setFlipX(false);
     }
 
     /** Drops the cached route so the next frame works out a fresh one. */
@@ -246,13 +305,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const now = this.scene.runNow;
 
-        if (this.awareness === 'telegraph') {
+        // A shove owns velocity for its duration, ice or no ice.
+        if (now < this.staggerUntil) this.slide = null;
+
+        if (this.slide) {
+            this.keepSliding();
+        } else if (this.awareness === 'telegraph') {
             this.setVelocity(0, 0);
             if (now >= this.telegraphUntil) this.awareness = 'chase';
         } else if (now >= this.staggerUntil) {
             // While staggered the knockback owns velocity; pursuing would
             // overwrite it on the very next frame and the shove would not read.
             this.pursue();
+            this.tryStartSlide();
         }
 
         this.watchProgress(now);

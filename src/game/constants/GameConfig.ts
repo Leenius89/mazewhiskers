@@ -67,6 +67,17 @@ export const GameConfig = {
         /** Slide speed, against a walk of 160. Fast enough to feel taken. */
         SPEED: 250,
         /**
+         * How often an ordinary city wakes up frozen.
+         *
+         * Weather, not a reward and not a difficulty: no streak, no unlock
+         * and nothing the player did decides it. One city in four has ice
+         * somewhere in it, and how much is drawn from the same range every
+         * time. Today's city overrides this with its own kind.
+         */
+        CHANCE: 0.25,
+        /** How much of an ordinary frozen city freezes. */
+        ORDINARY: { MIN: 0.08, MAX: 0.22 },
+        /**
          * How hard the cat is pulled back to the middle of the lane it is
          * sliding down: pixels of sideways speed per pixel off centre.
          * Without it a slide entered off-centre grinds along a building for

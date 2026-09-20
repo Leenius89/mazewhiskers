@@ -135,6 +135,12 @@
      * The script's own choices come from a generator separate from the game's,
      * so the key presses are the same in every build whatever the game does.
      */
+    var iceKeys = function (sc) {
+        var keys = [];
+        if (sc.ice && sc.ice.forEach) sc.ice.forEach(function (k) { keys.push(k); });
+        return keys.sort();
+    };
+
     qa.run = async function (o) {
         var findStart = function () {
             return Array.prototype.find.call(document.querySelectorAll('div'), function (d) {
@@ -216,6 +222,7 @@
             phaserSteps: qa.phaserSteps,
             loadedAtStep: loadedAtStep,
             randomCalls: qa.randomCalls(), time: r2(sc.time.now), maze: hash(JSON.stringify(sc.maze || [])),
+            ice: (sc.ice ? sc.ice.size : 0), iceHash: hash(JSON.stringify(iceKeys(sc))),
             mode: sc.mode && sc.mode.key, size: sc.maze ? sc.maze.length : 0, search: location.search,
             camera: [sc.cameras.main.width, sc.cameras.main.height, r2(sc.cameras.main.zoom)],
             player: sc.player ? [r2(sc.player.x), r2(sc.player.y)] : null

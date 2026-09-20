@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
 import { mazeSize as currentMazeSize } from './core/grid';
 import { generateCity } from './core/mazeGrid';
-import { dailyPlan } from '../platform/daily';
+import { resolveCityPlan } from './core/cityPlan';
 import { setCircleBody, setStaticFootBody } from './core/bodies';
 import { sortDepth } from './core/depth';
 import { resolveSeed } from './core/modes';
@@ -36,12 +36,9 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
     const centerY = Math.floor(mazeSize / 2);
 
     // Carved, braided and checked for a way home before anything stands on
-    // it. See core/mazeGrid for what is promised and how it is tested.
-    //
-    // Today's city may ask for more than a plain one — ice, for now. An
-    // ordinary run passes nothing and draws the city it always drew.
-    const plan = dailyPlan();
-    const { maze, ice } = generateCity(mazeSize, rng, plan ? { ice: plan.ice } : {});
+    // it. See core/mazeGrid for what is promised and how it is tested. The
+    // plan says what kind of city this is — for now, how much of it is ice.
+    const { maze, ice } = generateCity(mazeSize, rng, resolveCityPlan(rng));
     scene.ice = new Set(ice);
 
     const walls = scene.physics.add.staticGroup();

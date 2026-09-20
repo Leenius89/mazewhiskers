@@ -14,6 +14,7 @@ import { GameConfig } from '../constants/GameConfig';
 export interface GridRng {
     frac(): number;
     integerInRange(min: number, max: number): number;
+    realInRange(min: number, max: number): number;
 }
 
 export interface GridCell {

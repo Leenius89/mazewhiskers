@@ -212,7 +212,8 @@ export class GameScene extends Phaser.Scene {
      * Frozen cells, as `x,y` keys. Empty unless the city asked for ice.
      *
      * Filled by `createMaze` before anything stands on the grid, so the
-     * renderer and the cat read the same set from the first frame.
+     * renderer, the cat and the thing chasing it read the same set from the
+     * first frame.
      */
     public ice = new Set<string>();
     /** Public so world-space overlays can keep clear of it. */
@@ -693,7 +694,7 @@ export class GameScene extends Phaser.Scene {
      * Whether that cell is frozen.
      *
      * A built-over cell is a building, not a street, so it is never ice
-     * however it started: the slide has to stop at a tower like any wall.
+     * however it started: a slide has to stop at a tower like any wall.
      */
     isIce(gx: number, gy: number): boolean {
         if (this.ice.size === 0) return false;
