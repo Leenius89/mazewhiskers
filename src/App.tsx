@@ -15,6 +15,8 @@ import PauseMenu from './components/PauseMenu';
 import { getSettings, subscribe, useSettings } from './settings';
 import { theme } from './components/theme';
 import { isMobileDevice } from './game/systems/InputManager';
+import { armDaily, dailyDate, disarmDaily } from './game/core/daily';
+import { fileDailyRun } from './dailyRecord';
 import type { BoardKey } from './components/Leaderboard';
 import { GameScene } from './game/scenes/GameScene';
 import { VictoryScene } from './game/victory/victoryUtils';
@@ -89,6 +91,17 @@ function App() {
     const [victoryTime, setVictoryTime] = useState(0);
     /** Jumps spent this run — what the jump bonus is paid on. */
     const [jumpsUsed, setJumpsUsed] = useState(0);
+
+    /**
+     * What the run has gathered, for the listeners to read.
+     *
+     * The bus listeners are registered once and closed over the state as it
+     * was then, which is zero for the rest of the run. Today's city is scored
+     * from these instead.
+     */
+    const milkRef = useRef(0);
+    const fishRef = useRef(0);
+    const jumpsRef = useRef(0);
     const [survivedMs, setSurvivedMs] = useState(0);
     const [healthLeft, setHealthLeft] = useState(0);
 
@@ -227,6 +240,25 @@ function App() {
 
         bus.current = createGameEventBus(game.current);
 
+        /**
+         * Files a finished run of today's city, if that is what this was.
+         *
+         * Read from the refs rather than from React state: this runs inside a
+         * listener registered once, which closed over the state as it was when
+         * the game was built — which is to say, zero.
+         */
+        const fileDaily = () => {
+            const day = dailyDate();
+            if (!day) return;
+
+            fileDailyRun(
+                day,
+                milkRef.current * GameConfig.SCORE.PER_MILK +
+                    fishRef.current * GameConfig.SCORE.PER_FISH +
+                    jumpsRef.current * GameConfig.SCORE.PER_JUMP
+            );
+        };
+
         bus.current.on('gameOver', ({ milkCount: milk, fishCount: fish, reason, survivedMs, healthLeft: left }) => {
             setMilkCount(milk);
             setFishCount(fish);
@@ -234,21 +266,34 @@ function App() {
             setEndReason(reason);
             setSurvivedMs(survivedMs);
             setIsGameOver(true);
+            milkRef.current = milk;
+            fishRef.current = fish;
+            fileDaily();
         });
 
         bus.current.on('victory', ({ timeMs, healthLeft: left }) => {
             setVictoryTime(timeMs);
             setHealthLeft(left ?? 0);
             setIsVictory(true);
+            fileDaily();
         });
 
-        bus.current.on('jumpsUsedChanged', setJumpsUsed);
+        bus.current.on('jumpsUsedChanged', (used) => {
+            jumpsRef.current = used;
+            setJumpsUsed(used);
+        });
 
         // Health is not mirrored here any more: the scene owns it and draws it
         // over the cat's head, so a second copy in React had nothing to render.
 
-        bus.current.on('milkCollected', setMilkCount);
-        bus.current.on('fishCollected', setFishCount);
+        bus.current.on('milkCollected', (milk) => {
+            milkRef.current = milk;
+            setMilkCount(milk);
+        });
+        bus.current.on('fishCollected', (fish) => {
+            fishRef.current = fish;
+            setFishCount(fish);
+        });
 
         bus.current.on('creditsClosed', () => setIsShowingCredits(false));
     }, []);
@@ -419,7 +464,10 @@ function App() {
         bus.current?.emit('resumeGame');
     }, []);
 
-    const startGame = () => {
+    const beginRun = () => {
+        milkRef.current = 0;
+        fishRef.current = 0;
+        jumpsRef.current = 0;
         setShowGame(true);
         setIsGameOver(false);
         setIsVictory(false);
@@ -427,6 +475,18 @@ function App() {
         setMilkCount(0);
         setFishCount(0);
         setJumpsUsed(0);
+    };
+
+    /** An ordinary run: a city nobody has seen before. */
+    const startGame = () => {
+        disarmDaily();
+        beginRun();
+    };
+
+    /** Today's city: the same streets for everyone, until midnight in Korea. */
+    const startDaily = () => {
+        armDaily();
+        beginRun();
     };
 
     const restartFromPause = useCallback(() => {
@@ -494,6 +554,7 @@ function App() {
             ) : (
                 <MainPage
                     onStartGame={startGame}
+                    onStartDaily={startDaily}
                     onShowLeaderboard={() => handleShowLeaderboard('fastest')}
                     onShowSettings={() => setShowSettings(true)}
                     gameSize={gameSize}

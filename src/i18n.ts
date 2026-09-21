@@ -20,6 +20,9 @@ const ko: Dict = {
     'menu.start': 'GAME START',
     'menu.ranking': '랭킹 / RANKING',
     'menu.settings': '설정 / SETTINGS',
+    'menu.daily': '오늘의 도시',
+    'daily.best': '오늘 최고',
+    'daily.streak': '{n}일째',
 
     // ------------------------------------------------------------ settings
     'pause.eyebrow': 'PAUSED',
@@ -171,6 +174,9 @@ const en: Dict = {
     'menu.start': 'GAME START',
     'menu.ranking': 'RANKING',
     'menu.settings': 'SETTINGS',
+    'menu.daily': "TODAY'S CITY",
+    'daily.best': 'best today',
+    'daily.streak': 'day {n}',
 
     'pause.eyebrow': 'PAUSED',
     'pause.title': 'Paused',

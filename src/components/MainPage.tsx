@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings as SettingsIcon, Trophy } from 'lucide-react';
+import { CalendarDays, Settings as SettingsIcon, Trophy } from 'lucide-react';
 import { getSettings, subscribe, useSettings } from '../settings';
 import type { Appearance } from '../settings';
 import { useTranslation } from '../i18n';
+import { kindForDay, shortDate, todayKey } from '../game/core/daily';
+import { readDailyRecord } from '../dailyRecord';
 import { difficultyOf } from '../game/core/difficulty';
 import { theme } from './theme';
 import MenuCats from './MenuCats';
@@ -11,6 +13,8 @@ import { motion } from 'framer-motion';
 
 interface MainPageProps {
     onShowLeaderboard: () => void;
+    /** Today's city: the same seed for everyone until the day turns. */
+    onStartDaily: () => void;
     onShowSettings: () => void;
     onStartGame: () => void;
     gameSize: { width: number | string; height: number | string };
@@ -123,7 +127,13 @@ const pixelButton = (
     };
 };
 
-const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onShowSettings, gameSize }) => {
+const MainPage: React.FC<MainPageProps> = ({
+    onStartGame,
+    onStartDaily,
+    onShowLeaderboard,
+    onShowSettings,
+    gameSize
+}) => {
     const [showButton, setShowButton] = useState(false);
     const [showTitle, setShowTitle] = useState(false);
     const [isMobile] = useState(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
@@ -221,6 +231,17 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
         stopMusic();
         onStartGame();
     }, [onStartGame, stopMusic]);
+
+    const handleStartDaily = useCallback(() => {
+        stopMusic();
+        onStartDaily();
+    }, [onStartDaily, stopMusic]);
+
+    // Only today's numbers belong on today's button.
+    const today = todayKey();
+    const kind = kindForDay(today);
+    const record = readDailyRecord();
+    const dailyToday = record.date === today ? record : null;
 
     // The fly-over runs the moment the page is up. No gate in front of it.
     useEffect(() => {
@@ -598,6 +619,43 @@ const MainPage: React.FC<MainPageProps> = ({ onStartGame, onShowLeaderboard, onS
                         >
                             <SettingsIcon size={isMobile ? 13 : 15} />
                             {t('menu.settings')}
+                        </MotionClickable>
+
+                        {/*
+                            Today's city. The day is on the button because the
+                            day is the point: it is this one, it is everybody's,
+                            and tomorrow it is gone.
+                        */}
+                        <MotionClickable
+                            style={{
+                                ...pixelButton(isMobile, 'settings', settings.appearance),
+                                flexDirection: 'column',
+                                gap: '6px'
+                            }}
+                            onClick={handleStartDaily}
+                            whileHover={{ y: -2 }}
+                            whileTap={{ y: 3 }}
+                        >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <CalendarDays size={isMobile ? 13 : 15} />
+                                {t('menu.daily')} {shortDate(today)}
+                            </span>
+                            <span
+                                style={{
+                                    fontFamily: "'Pretendard', sans-serif",
+                                    fontSize: isMobile ? '0.72rem' : '0.82rem',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.02em'
+                                }}
+                            >
+                                {kind.label[settings.language]}
+                                {dailyToday
+                                    ? ` · ${t('daily.best')} ${dailyToday.best.toLocaleString()}`
+                                    : ''}
+                                {dailyToday && dailyToday.streak > 1
+                                    ? ` · ${t('daily.streak').replace('{n}', String(dailyToday.streak))}`
+                                    : ''}
+                            </span>
                         </MotionClickable>
 
                         <MotionClickable

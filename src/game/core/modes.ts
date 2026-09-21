@@ -1,3 +1,4 @@
+import { dailySeed } from './daily';
 export type GameMode = 'exhibition' | 'arcade';
 
 /**
@@ -101,6 +102,11 @@ export const getMode = (key: GameMode): ModeSettings => MODES[key];
  * maze — a leaderboard over different mazes compares nothing.
  */
 export const resolveSeed = (mode: ModeSettings): string | null => {
+    // Today's city outranks both: the player asked for the city everyone else
+    // is playing, and that is the one they get.
+    const daily = dailySeed();
+    if (daily) return daily;
+
     if (mode.seedStrategy === 'daily') {
         return `daily-${new Date().toISOString().slice(0, 10)}`;
     }
