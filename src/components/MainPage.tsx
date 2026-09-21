@@ -10,8 +10,7 @@ import { VERSION_LABEL } from '../version';
 import { SEEN_INTRO_KEY } from '../platform/boot';
 import { isBackgrounded, onBackground } from '../platform/lifecycle';
 import { ENDING_KEYS, useRecords } from '../platform/records';
-import { shortDate, todayKey } from '../platform/daily';
-import { planFor } from '../platform/cityPlans';
+import { planFor, shortDate, todayKey } from '../platform/daily';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 
