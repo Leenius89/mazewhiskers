@@ -31,6 +31,7 @@ import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
 import { IceField } from '../systems/IceField';
+import { clearCitySize } from '../core/grid';
 import { playEnemyEntrance, runNightmareOpening, runTutorial } from '../systems/TutorialSequence';
 import { currentDifficulty } from '../core/difficulty';
 import { districtPressure, resolveMode } from '../core/modes';
@@ -1133,6 +1134,7 @@ export class GameScene extends Phaser.Scene {
         this.iceField?.destroy();
         this.iceField = null;
         this.ice = new Set();
+        clearCitySize();
 
         this.hud?.destroy();
         this.hud = null;

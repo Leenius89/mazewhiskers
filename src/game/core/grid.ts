@@ -14,11 +14,31 @@ export const TILE_UNIT = GameConfig.TILE_SIZE * GameConfig.SPACING;
  * the city it started with even if the setting changes underneath it.
  */
 export const mazeSize = (): number => {
+    if (citySize > 0) return citySize;
+
     const scaled = GameConfig.MAZE_SIZE * currentDifficulty().mapScale;
     // Nearest odd, not "round then bump if even": 41 x 1.5 is 61.5, which
     // rounds to 62 and bumped to 63 — a size and a half became more than
     // that. The nearest odd number to 61.5 is 61.
     return 2 * Math.round((scaled - 1) / 2) + 1;
+};
+
+/**
+ * The size the city actually came out, when a plan asked for its own.
+ *
+ * Everything downstream — the minimap, the apartments, the world bounds —
+ * asks this module how big the city is, and all of them have to get the same
+ * answer as the grid that was really built. `createMaze` sets it the moment
+ * the layout exists and clears it when the scene shuts down.
+ */
+let citySize = 0;
+
+export const setCitySize = (size: number): void => {
+    citySize = size;
+};
+
+export const clearCitySize = (): void => {
+    citySize = 0;
 };
 
 export interface Cell {
