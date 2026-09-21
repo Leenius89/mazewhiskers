@@ -99,7 +99,10 @@ export const CITY_KINDS: CityKind[] = [
         key: 'spiral',
         label: { ko: '나선 도시', en: 'Spiral city' },
         note: { ko: '길은 하나, 멀기만 함', en: 'One street, and a long one' },
-        plan: { generator: 'spiral' }
+        // A smaller city: one street from the edge to the middle is a long
+        // walk however big the place is, and at full size it is a walk the
+        // rent outlives.
+        plan: { generator: 'spiral', size: 31 }
     },
     {
         key: 'grid',

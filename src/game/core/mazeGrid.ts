@@ -274,13 +274,24 @@ const carveBlocks = (maze: number[][], size: number, mask: Mask, rng: GridRng): 
         }
     }
 
+    // A sixth of the stretches between junctions are built over — the whole
+    // stretch, not a cell out of the middle of it, which would leave two
+    // stubs going nowhere and read as rubble rather than as housing.
     for (let y = 1; y <= size - 2; y++) {
         for (let x = 1; x <= size - 2; x++) {
-            if (maze[y][x] !== 0) continue;
+            if (maze[y][x] !== 0 || !(onGrid(x) || onGrid(y))) continue;
             if (onGrid(x) && onGrid(y)) continue;
-            if (rng.frac() >= 0.25) continue;
+            // Only from the junction end, so each stretch is considered once.
+            if (onGrid(y) && !onGrid(x - 1)) continue;
+            if (onGrid(x) && !onGrid(y - 1)) continue;
+            if (rng.frac() >= 0.16) continue;
 
-            maze[y][x] = 1;
+            const [dx, dy] = onGrid(y) ? [1, 0] : [0, 1];
+            for (let step = 0; step < SPACING - 1; step++) {
+                const cx = x + dx * step;
+                const cy = y + dy * step;
+                if (maze[cy]?.[cx] === 0) maze[cy][cx] = 1;
+            }
         }
     }
 };
@@ -296,7 +307,7 @@ const carveCaves = (maze: number[][], size: number, mask: Mask, rng: GridRng): v
     for (let y = 1; y <= size - 2; y++) {
         for (let x = 1; x <= size - 2; x++) {
             if (!carvable(x, y, size, mask)) continue;
-            maze[y][x] = rng.frac() < 0.45 ? 1 : 0;
+            maze[y][x] = rng.frac() < 0.48 ? 1 : 0;
         }
     }
 
@@ -314,7 +325,10 @@ const carveCaves = (maze: number[][], size: number, mask: Mask, rng: GridRng): v
                         if (maze[y + dy]?.[x + dx] !== 0) walls++;
                     }
                 }
-                next[y][x] = walls > 4 ? 1 : 0;
+                // Five neighbours or more and it builds up; three or fewer and
+                // it opens out; in between it stays as it is, which is what
+                // keeps the clumps from melting into one open field.
+                next[y][x] = walls >= 5 ? 1 : walls <= 3 ? 0 : maze[y][x];
             }
         }
 
@@ -383,10 +397,15 @@ const carveRadial = (maze: number[][], size: number, mask: Mask, rng: GridRng, c
 
         while (carvable(x, y, size, mask)) {
             maze[y][x] = 0;
-            // A diagonal avenue is cut a cell wide on the side as well: a
+
+            // Two cells wide, so an avenue reads as an avenue from the ground
+            // rather than as one more alley that happens to be straight. On a
+            // diagonal the second cell is what makes it walkable at all: a
             // strict diagonal is a line of corners, and a body cannot round a
             // corner on the diagonal.
-            if (dx !== 0 && dy !== 0 && carvable(x + dx, y, size, mask)) maze[y][x + dx] = 0;
+            const [ax, ay] = dx !== 0 && dy !== 0 ? [dx, 0] : [dy, dx];
+            if (carvable(x + ax, y + ay, size, mask)) maze[y + ay][x + ax] = 0;
+
             x += dx;
             y += dy;
         }
