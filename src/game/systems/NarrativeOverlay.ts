@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { canvasTheme, onCanvasThemeChange } from '../core/canvasTheme';
 import { DEPTH } from '../core/depth';
-import { pinToScreen, viewportOf } from '../core/screenSpace';
+import { pinToScreen, placeOnScreen, viewportOf } from '../core/screenSpace';
+import type { Viewport } from '../core/screenSpace';
 import { TEXT, fontPx, uiScale } from '../core/uiScale';
 import { t } from '../../i18n';
 import type { GameScene } from '../scenes/GameScene';
@@ -429,7 +430,7 @@ export class NarrativeOverlay {
         const height = viewport.height;
 
         this.drawShade(camera, width, height, time);
-        this.drawBox(width, height, cfg);
+        this.drawBox(viewport, width, height, cfg);
     }
 
     /** Four rectangles around the hole, rather than a mask — cheap and exact. */
@@ -534,7 +535,7 @@ export class NarrativeOverlay {
         this.measureKey = '';
     }
 
-    private drawBox(width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
+    private drawBox(viewport: Viewport, width: number, height: number, cfg: typeof GameConfig.NARRATIVE): void {
         this.resizeText();
 
         // Every length here is a device pixel, so all of them ride the interface
@@ -565,13 +566,15 @@ export class NarrativeOverlay {
         this.box.lineStyle(2 * k, canvasTheme.highlight, 0.9);
         this.box.strokeRect(left, top, boxWidth, boxHeight);
 
-        this.speakerText.setPosition(left + padding, top + 12 * k);
-        this.bodyText.setPosition(left + padding, top + bodyTop);
+        // Through the viewport, like the box itself: these are points on the
+        // box, and the box is drawn in the pinned layer's own space.
+        placeOnScreen(this.speakerText, viewport, left + padding, top + 12 * k);
+        placeOnScreen(this.bodyText, viewport, left + padding, top + bodyTop);
 
-        this.hintText.setPosition(left + boxWidth - 12 * k, top + boxHeight - 8 * k);
+        placeOnScreen(this.hintText, viewport, left + boxWidth - 12 * k, top + boxHeight - 8 * k);
         this.hintText.setText(this.waitingForInput ? t('tut.hint') : '');
 
-        this.skipText.setPosition(left + boxWidth, top - cfg.SKIP_GAP * k);
+        placeOnScreen(this.skipText, viewport, left + boxWidth, top - cfg.SKIP_GAP * k);
     }
 
     destroy(): void {

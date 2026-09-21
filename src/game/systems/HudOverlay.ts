@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { mazeSize as currentMazeSize } from '../core/grid';
 import { DEPTH } from '../core/depth';
-import { pinToScreen, viewportOf } from '../core/screenSpace';
+import { pinToScreen, placeOnScreen, viewportOf } from '../core/screenSpace';
+import type { Viewport } from '../core/screenSpace';
 import { TEXT, fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -31,6 +32,8 @@ export class HudOverlay {
     private mapDirty = true;
     private lastOpenCount = -1;
     private origin = { x: 0, y: 0 };
+    /** The last viewport the layout was measured against. */
+    private viewport: Viewport | null = null;
     private readoutOffset = { x: 0, y: 0 };
     private appliedScale = 0;
 
@@ -89,6 +92,7 @@ export class HudOverlay {
         if (!camera) return;
 
         const viewport = viewportOf(camera);
+        this.viewport = viewport;
         pinToScreen(this.mapLayer, viewport);
         pinToScreen(this.markerLayer, viewport);
         pinToScreen(this.rentBar, viewport);
@@ -262,7 +266,7 @@ export class HudOverlay {
         if (!maze) return;
 
         this.layout();
-        this.readout.setPosition(this.readoutOffset.x, this.readoutOffset.y);
+        if (this.viewport) placeOnScreen(this.readout, this.viewport, this.readoutOffset.x, this.readoutOffset.y);
 
         // Cheap dirty check: the grid only ever gains walls.
         const openCount = this.scene.apartmentSystem?.alleysRemaining ?? 1;

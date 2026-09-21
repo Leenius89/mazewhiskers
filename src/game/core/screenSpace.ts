@@ -38,6 +38,30 @@ export const viewportOf = (camera: Phaser.Cameras.Scene2D.Camera): Viewport => {
     };
 };
 
+/**
+ * Puts a pinned object at a point measured in viewport pixels.
+ *
+ * `pinToScreen` puts an object at the viewport's own origin, which is what a
+ * Graphics wants: everything it draws afterwards is in viewport pixels, and
+ * the pin carries the lot. An object positioned individually — a Text, which
+ * has nowhere to draw into — has to be told where that point *is*, and the
+ * answer is not the number itself whenever the camera is zoomed.
+ *
+ * Writing the raw number worked at zoom 1 and quietly put the dialogue text
+ * a few hundred pixels away from the dialogue box everywhere else, which is
+ * to say on every desktop screen the game has ever been opened on.
+ */
+export const placeOnScreen = (
+    target: Phaser.GameObjects.Components.Transform & Phaser.GameObjects.Components.ScrollFactor,
+    viewport: Viewport,
+    x: number,
+    y: number
+): void => {
+    target.setScrollFactor(0);
+    target.setPosition(viewport.x + x * viewport.scale, viewport.y + y * viewport.scale);
+    target.setScale(viewport.scale);
+};
+
 /** Pins a UI object to the viewport so it renders 1:1 in screen pixels. */
 export const pinToScreen = (
     target: Phaser.GameObjects.Components.Transform & Phaser.GameObjects.Components.ScrollFactor,
