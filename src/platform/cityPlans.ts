@@ -1,45 +1,62 @@
-import type { CityPlan } from '../game/core/mazeGrid';
+import { CITY_KINDS, kindOf } from '../game/core/cityKinds';
+import type { CityKind } from '../game/core/cityKinds';
 
 /**
- * What kind of city today is.
+ * Which kind of city today is.
  *
- * Today's city is not a fixed list of maps that runs out: the layout is drawn
- * from the day's seed, so there are as many cities as there are days. What
- * this file adds is the other half of the variety — what *kind* of city it is
- * — so two days running do not feel like the same place with the walls moved.
+ * Today's city is not a map taken off a shelf: the layout comes from the
+ * day's seed, so there are as many cities as there are days. What this file
+ * settles is what *kind* of place today is — the twenty kinds live in the
+ * game itself (`game/core/cityKinds`), since they are the generator's
+ * business rather than Toss's.
  *
- * Each plan is a set of dials on the generator, and the day chooses one. The
- * full set of twenty is a design document (store-assets/plan/오늘의-도시-20종.md);
- * what is implemented here is the dial that exists today, which is the ice.
+ * Twenty days is one turn of the wheel: every kind appears exactly once
+ * before any of them appears twice, and the order is reshuffled each time
+ * round, so nobody can say "it is Tuesday, so it is the ring city".
  */
-export interface DailyPlan extends CityPlan {
-    /** Stable id, so a plan can be named in records and in a screenshot. */
-    key: string;
-    /** Shown on the menu button and the results screen. */
-    label: { ko: string; en: string };
-}
+export type DailyPlan = CityKind;
 
-export const DAILY_PLANS: DailyPlan[] = [
-    { key: 'plain', label: { ko: '보통 도시', en: 'Ordinary city' } },
-    { key: 'frost', label: { ko: '서리 낀 골목', en: 'Frosted alleys' }, ice: 0.1 },
-    { key: 'blackice', label: { ko: '빙판 도시', en: 'Black ice' }, ice: 0.3 },
-    { key: 'glacier', label: { ko: '얼어붙은 도시', en: 'Frozen over' }, ice: 0.55 }
-];
+export const DAILY_PLANS = CITY_KINDS;
+
+/** Day zero. Only its distance from a date matters, never the date itself. */
+const EPOCH = Date.UTC(2026, 0, 1);
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
- * The same day gives the same plan to everybody.
+ * A shuffle that depends on nothing but the number it is given.
  *
- * A cheap string hash rather than the seeded generator: the plan has to be
- * known before the city is drawn (the menu names it), and it must not consume
- * draws the layout is going to need.
+ * Its own little generator rather than the city's: the kind has to be known
+ * before the city is drawn (the menu names it), and it must not spend draws
+ * the layout is going to need.
  */
+const orderFor = (block: number): number[] => {
+    let state = (block * 2654435761 + 1013904223) >>> 0;
+    const next = (): number => {
+        state = (state * 1664525 + 1013904223) >>> 0;
+        return state / 4294967296;
+    };
+
+    const order = CITY_KINDS.map((_, index) => index);
+    for (let i = order.length - 1; i > 0; i--) {
+        const j = Math.floor(next() * (i + 1));
+        const held = order[i];
+        order[i] = order[j];
+        order[j] = held;
+    }
+    return order;
+};
+
 export const planFor = (date: string): DailyPlan => {
     const forced = forcedPlan();
     if (forced) return forced;
 
-    let hash = 0;
-    for (let i = 0; i < date.length; i++) hash = (hash * 31 + date.charCodeAt(i)) >>> 0;
-    return DAILY_PLANS[hash % DAILY_PLANS.length];
+    const day = Math.floor((Date.parse(`${date}T00:00:00Z`) - EPOCH) / DAY_MS);
+    // Days before the epoch would index backwards; this only matters to a
+    // device with its clock set wrong, which still deserves a city.
+    const turn = ((day % CITY_KINDS.length) + CITY_KINDS.length) % CITY_KINDS.length;
+    const block = Math.floor(day / CITY_KINDS.length);
+
+    return CITY_KINDS[orderFor(block)[turn]];
 };
 
 /**
@@ -53,7 +70,7 @@ const forcedPlan = (): DailyPlan | null => {
 
     try {
         const asked = new URLSearchParams(window.location.search).get('plan');
-        return DAILY_PLANS.find((plan) => plan.key === asked) ?? null;
+        return asked ? kindOf(asked) ?? null : null;
     } catch {
         return null;
     }

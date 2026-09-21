@@ -11,6 +11,7 @@ import { SEEN_INTRO_KEY } from '../platform/boot';
 import { isBackgrounded, onBackground } from '../platform/lifecycle';
 import { ENDING_KEYS, useRecords } from '../platform/records';
 import { shortDate, todayKey } from '../platform/daily';
+import { planFor } from '../platform/cityPlans';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 
@@ -270,6 +271,7 @@ const MainPage: React.FC<MainPageProps> = ({
 
     // Only today's numbers belong on today's button.
     const today = todayKey();
+    const kind = planFor(today);
     const dailyToday = records.daily.date === today ? records.daily : null;
     const endingsSeen = ENDING_KEYS.filter((key) => records.endings[key]).length;
 
@@ -782,6 +784,16 @@ const MainPage: React.FC<MainPageProps> = ({
                             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                                 <CalendarDays size={isMobile ? 13 : 15} />
                                 {t('menu.daily')} {shortDate(today)}
+                            </span>
+                            <span
+                                style={{
+                                    fontFamily: "'Pretendard', sans-serif",
+                                    fontSize: isMobile ? '0.72rem' : '0.82rem',
+                                    fontWeight: 700,
+                                    letterSpacing: '0.02em'
+                                }}
+                            >
+                                {kind.label[settings.language]}
                             </span>
                             {dailyToday && (
                                 <span

@@ -39,7 +39,7 @@ export const armDaily = (): string => {
 
     // Everyone gets the same city, so the weather is not rolled for it: the
     // day's plan is fixed and the generator is told to stop improvising.
-    setCityPlan(planFor(armed));
+    setCityPlan(planFor(armed).plan);
     return armed;
 };
 
