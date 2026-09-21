@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
-import { mazeSize as currentMazeSize } from './core/grid';
+import { clearCitySize, mazeSize as currentMazeSize, setCitySize } from './core/grid';
 import { generateCity } from './core/mazeGrid';
 import { resolveCityPlan } from './core/cityPlan';
 import { setCircleBody, setStaticFootBody } from './core/bodies';
@@ -23,8 +23,11 @@ interface MazeData {
 
 export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprite): MazeData => {
     const { TILE_SIZE: tileSize, SPACING: spacing } = GameConfig;
-    const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
+
+    // Whatever the last city was, this one is asked for from scratch.
+    clearCitySize();
+    const difficultySize = currentMazeSize();
 
     // Districts past the first must not reuse the same maze, so the district
     // number is folded into the seed.
@@ -32,14 +35,22 @@ export const createMaze = (scene: GameScene, player: Phaser.Physics.Arcade.Sprit
     const districtSeed = seed ? `${seed}#${scene.district}` : null;
     const rng = new Phaser.Math.RandomDataGenerator(districtSeed ? [districtSeed] : undefined);
 
-    const centerX = Math.floor(mazeSize / 2);
-    const centerY = Math.floor(mazeSize / 2);
-
     // Carved, braided and checked for a way home before anything stands on
     // it. See core/mazeGrid for what is promised and how it is tested. The
-    // plan says what kind of city this is — for now, how much of it is ice.
-    const { maze, ice } = generateCity(mazeSize, rng, resolveCityPlan(rng));
+    // plan says what kind of city this is: its shape, its size, how the
+    // alleys are cut, and how much of it is ice.
+    const layout = generateCity(difficultySize, rng, resolveCityPlan(rng));
+    const { maze, ice } = layout;
     scene.ice = new Set(ice);
+
+    // A plan may have asked for a city of its own size. Everything that asks
+    // how big the city is — the minimap, the towers, the world bounds — has
+    // to be told before it asks.
+    setCitySize(layout.size);
+    const mazeSize = layout.size;
+
+    const centerX = Math.floor(mazeSize / 2);
+    const centerY = Math.floor(mazeSize / 2);
 
     const walls = scene.physics.add.staticGroup();
     const fishes = scene.physics.add.group();
