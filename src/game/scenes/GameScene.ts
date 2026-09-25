@@ -14,7 +14,7 @@ import { GameStateMachine } from '../core/GameState';
 import { DebugOverlay } from '../core/DebugOverlay';
 import { isDebugEnabled } from '../core/debug';
 import { OcclusionSystem } from '../systems/OcclusionSystem';
-import { Dread, bendSound } from '../systems/Dread';
+import { Dread } from '../systems/Dread';
 import { Vignette } from '../systems/Vignette';
 import { WorldFog } from '../systems/WorldFog';
 import { InputManager, isMobileDevice } from '../systems/InputManager';
