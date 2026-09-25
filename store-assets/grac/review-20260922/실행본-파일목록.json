@@ -1,0 +1,353 @@
+{
+  "game": "Mazewhiskers(메이즈 위스커스)",
+  "package_version": "0.1.0",
+  "source_commit": "c7533e4e7e2f3d32a31ef4e9a4544ac3aa1bfe9f",
+  "source_branch": "toss",
+  "built_date_kst": "2026-09-22",
+  "build_type": "production browser review build, REACT_APP_TOSS_SIM=0, GENERATE_SOURCEMAP=false",
+  "status": "review candidate; not an approved GRAC submission or Toss release bundle",
+  "known_difference": "Toss SDK ads, leaderboard, user key and haptics unavailable in ordinary browser",
+  "additional_path": "?mode=arcade remains accessible; see content description",
+  "files": [
+    {
+      "path": "asset-manifest.json",
+      "bytes": 811,
+      "sha256": "761f6b31a05ad18bff15335fd9c51cd46198cec192aaa3cf90121c84fea8334f"
+    },
+    {
+      "path": "favicon.ico",
+      "bytes": 1150,
+      "sha256": "4201c7e9838a05d30da0b434c125f49e5d0e18b8f9fcbfeffba4a7d6ea8e9727"
+    },
+    {
+      "path": "favicon.png",
+      "bytes": 6684,
+      "sha256": "74b00cc7e400ac0fea27eb01067094d0745490a5741c210738448fcb96a01479"
+    },
+    {
+      "path": "icon/android-icon-144x144.png",
+      "bytes": 6787,
+      "sha256": "d5cbfcfbc42d232019a8d598feb012ffb41b2acb2a132671ba30b91dc2f5f98f"
+    },
+    {
+      "path": "icon/android-icon-192x192.png",
+      "bytes": 6684,
+      "sha256": "74b00cc7e400ac0fea27eb01067094d0745490a5741c210738448fcb96a01479"
+    },
+    {
+      "path": "icon/android-icon-36x36.png",
+      "bytes": 2655,
+      "sha256": "cabd8d8ab6d6099d5b1cd3dc9c1ae98a48ccfdf0e9f05378e65acac785a9180d"
+    },
+    {
+      "path": "icon/android-icon-48x48.png",
+      "bytes": 3217,
+      "sha256": "c5300d52fffa43507cefda301900a9cdc57991ed4ff3614200d48c04b628c18d"
+    },
+    {
+      "path": "icon/android-icon-72x72.png",
+      "bytes": 4512,
+      "sha256": "75aeb20be9db77d9932cb9bbe137793cbee0e68d5459b3e9fee5561ef467d2c1"
+    },
+    {
+      "path": "icon/android-icon-96x96.png",
+      "bytes": 5341,
+      "sha256": "2d115a434629acc0458c149806165665ef6359e0d455b7281e2f96c800927596"
+    },
+    {
+      "path": "icon/apple-icon-114x114.png",
+      "bytes": 6807,
+      "sha256": "c65813b8a1ff73c8db9e288a23d4ede6da932cfa508f8f8d4755a1020ea62d63"
+    },
+    {
+      "path": "icon/apple-icon-120x120.png",
+      "bytes": 6196,
+      "sha256": "55a343b72e62b471d5f966a0dbdb42d1195167499f910f5de2c9da5a29182c0b"
+    },
+    {
+      "path": "icon/apple-icon-144x144.png",
+      "bytes": 6787,
+      "sha256": "d5cbfcfbc42d232019a8d598feb012ffb41b2acb2a132671ba30b91dc2f5f98f"
+    },
+    {
+      "path": "icon/apple-icon-152x152.png",
+      "bytes": 8057,
+      "sha256": "5e89830235bdaa745f41ae2c8c48af0c69157b4c6b26ee3dbde86deccc2d70f8"
+    },
+    {
+      "path": "icon/apple-icon-180x180.png",
+      "bytes": 9198,
+      "sha256": "9ef5d4a97b74ffa9c6c6fbd458fe56bdb2be8673fd72a0b62eb724565e6c5b51"
+    },
+    {
+      "path": "icon/apple-icon-57x57.png",
+      "bytes": 4125,
+      "sha256": "c5cfdf2de68b66db13b222e48ea73ec382fa48072c73b417dd47e09cb4ac2620"
+    },
+    {
+      "path": "icon/apple-icon-60x60.png",
+      "bytes": 4089,
+      "sha256": "139cab036d5879a6ff83a6d6089fc22b780dbeb0ef39b67dccfd1c7927fa1c61"
+    },
+    {
+      "path": "icon/apple-icon-72x72.png",
+      "bytes": 4512,
+      "sha256": "75aeb20be9db77d9932cb9bbe137793cbee0e68d5459b3e9fee5561ef467d2c1"
+    },
+    {
+      "path": "icon/apple-icon-76x76.png",
+      "bytes": 5177,
+      "sha256": "5ec9d6ce7ac76962acbd6a2501cdb823a0cbcd53aac1d40c918fae385fcfa086"
+    },
+    {
+      "path": "icon/apple-icon-precomposed.png",
+      "bytes": 7228,
+      "sha256": "3d88820c98774d16a02a2088b05da6061c2b5be2ec8e1751d9d48e5dc1e64da5"
+    },
+    {
+      "path": "icon/apple-icon.png",
+      "bytes": 7228,
+      "sha256": "3d88820c98774d16a02a2088b05da6061c2b5be2ec8e1751d9d48e5dc1e64da5"
+    },
+    {
+      "path": "icon/browserconfig.xml",
+      "bytes": 282,
+      "sha256": "66704463cd361050b26b2a315b125047d8eed60df8cc275abbb0383e70d0d0e9"
+    },
+    {
+      "path": "icon/favicon-16x16.png",
+      "bytes": 1563,
+      "sha256": "2fce67df3c5b8fc4aaa0f81efa4f02a4215283cfe6fca4bf00b88aa953084882"
+    },
+    {
+      "path": "icon/favicon-32x32.png",
+      "bytes": 2317,
+      "sha256": "723992c6e4a62ae421788d195a5d1b225c7d5e32b589ff16b2fe0bd6b5b20c62"
+    },
+    {
+      "path": "icon/favicon-96x96.png",
+      "bytes": 5341,
+      "sha256": "6dfcdfdf81505e6dad175e51a9581be9cd843e65a3a09cf48e61201fdf6d9a2d"
+    },
+    {
+      "path": "icon/favicon.ico",
+      "bytes": 1150,
+      "sha256": "4201c7e9838a05d30da0b434c125f49e5d0e18b8f9fcbfeffba4a7d6ea8e9727"
+    },
+    {
+      "path": "icon/ms-icon-144x144.png",
+      "bytes": 6787,
+      "sha256": "d5cbfcfbc42d232019a8d598feb012ffb41b2acb2a132671ba30b91dc2f5f98f"
+    },
+    {
+      "path": "icon/ms-icon-150x150.png",
+      "bytes": 8091,
+      "sha256": "673913538bfcf72cd516bae02bae0a840ce395bd6d4b11ed80e749784846092a"
+    },
+    {
+      "path": "icon/ms-icon-310x310.png",
+      "bytes": 20355,
+      "sha256": "535be179eedd6a4aa1464bce39dcecf91ed5cbf0a133bb887b9d64ae5130a510"
+    },
+    {
+      "path": "icon/ms-icon-70x70.png",
+      "bytes": 4853,
+      "sha256": "9949123388871bb8fdd69bd546f6f5a750b4d0ecfb9eb626987fad20916db915"
+    },
+    {
+      "path": "index.html",
+      "bytes": 770,
+      "sha256": "7b541e4066936b3e75a13dbce6d6c67d4320a079c18c45aa7837816cbd45dce7"
+    },
+    {
+      "path": "manifest.json",
+      "bytes": 540,
+      "sha256": "f2b7085db4b23447d68f7be226a41b1dc75838b1d2e2f466f56d8c3e9c29678b"
+    },
+    {
+      "path": "robots.txt",
+      "bytes": 70,
+      "sha256": "e5ab0d231eeb01b4a982d1c79a6729cac9797ad15a69247e4f28ba6afc149b4c"
+    },
+    {
+      "path": "sources/apt1.png",
+      "bytes": 720892,
+      "sha256": "4c5ddaaa489f6f399e1c54dfdba94b5d528f4937a06c4d83b43d9f6336c21238"
+    },
+    {
+      "path": "sources/apt2.png",
+      "bytes": 754971,
+      "sha256": "ca1e8687b5bcd23946e44426c9f7e5f44310d9190e005164ab8355a4f61e6574"
+    },
+    {
+      "path": "sources/apt3.png",
+      "bytes": 889283,
+      "sha256": "41100e6c603daf8816bbebc342c39980b846fca33fae00db51239e452f0fad03"
+    },
+    {
+      "path": "sources/building1.png",
+      "bytes": 6552,
+      "sha256": "d06eaf56f67daa2cfb7e2d5196a283880f83670abe5a1e44bea7f5fc8f0eea51"
+    },
+    {
+      "path": "sources/building2.png",
+      "bytes": 6910,
+      "sha256": "8fdbb541d6069ce68665b19f8470306902cbd0428355fe44896566923c7ace84"
+    },
+    {
+      "path": "sources/building3.png",
+      "bytes": 6797,
+      "sha256": "2b8974e2dc645964a5ab68093c2ee51a4bed29ce08f2e5fde29d194e85c64caf"
+    },
+    {
+      "path": "sources/building4.png",
+      "bytes": 1231629,
+      "sha256": "00d80083e543a6afc776412a4ab5a3edde42b055833c227edfefd2bf703953a2"
+    },
+    {
+      "path": "sources/cat1.png",
+      "bytes": 7097,
+      "sha256": "2b19c983985cf38b29b2446cfaf72cd828bf3a5f4d21f55efb867584616226c7"
+    },
+    {
+      "path": "sources/cat2.png",
+      "bytes": 7041,
+      "sha256": "22cd308ad6cef39b537e6e87f1d24d7963be5469d3aa74fb49e572dcd45e97c3"
+    },
+    {
+      "path": "sources/catfish1.png",
+      "bytes": 25002,
+      "sha256": "f05a009a8c25d9627941b3317b40a85c8290b2ede845cde288503815f74227e1"
+    },
+    {
+      "path": "sources/catfish2.png",
+      "bytes": 24986,
+      "sha256": "e677c997fcd06bf6da755bffbba15bacd09a884117a31bc993e473f226df00af"
+    },
+    {
+      "path": "sources/construct1.mp3",
+      "bytes": 727680,
+      "sha256": "d08a32d73e9e29d03bb08a64a3a1d55bf4a28db814c1d15b291e6480a8017d77"
+    },
+    {
+      "path": "sources/construct2.mp3",
+      "bytes": 83040,
+      "sha256": "656755096535efc963753ae8dc930fe32da49a69e705267c7b4acdbeb2ec6dc4"
+    },
+    {
+      "path": "sources/construct3.mp3",
+      "bytes": 120960,
+      "sha256": "353156df42d59a4ee2f5ba0ca90e6dc5f26623b2cb66a7b63906b1a4ad97c7ac"
+    },
+    {
+      "path": "sources/dust1.png",
+      "bytes": 20681,
+      "sha256": "a0f3c0590ca48a2b063574c5e14c02d4545aa2c590c1c8caddec73eda84f6e5d"
+    },
+    {
+      "path": "sources/dust2.png",
+      "bytes": 20640,
+      "sha256": "81f3752f7c4ce4905d802b574039c927a79aaeaaba884feca345c8cd80508837"
+    },
+    {
+      "path": "sources/dying.mp3",
+      "bytes": 71053,
+      "sha256": "7c5486e63b9fc64fe75ce8e8ed1182cdf72f356a60f20ea66435b0b2001d955b"
+    },
+    {
+      "path": "sources/enemy.mp3",
+      "bytes": 2456807,
+      "sha256": "ec3f7e002c37b9ac308c4b9c006e918497f4c6c5654cd4a504fcffdb19516bcf"
+    },
+    {
+      "path": "sources/enemy1.png",
+      "bytes": 6594,
+      "sha256": "6067523897d0d77b2e0fc584f1ede30474520c29323a3d0b0e24982eb3177e19"
+    },
+    {
+      "path": "sources/enemy2.png",
+      "bytes": 6581,
+      "sha256": "6598d436497da05f6802447b61a8f5e8c8dd144a13ec3080dbd2013e9c88eb5c"
+    },
+    {
+      "path": "sources/fish.mp3",
+      "bytes": 102240,
+      "sha256": "5ab524d2cae541c86203e0bafc521ecc4ec2b45c3b8ef8fb37fe73777fd19b73"
+    },
+    {
+      "path": "sources/fish1.png",
+      "bytes": 6871,
+      "sha256": "1a228dd734d417ebd9f2eeafffa64f85bffd2ba23ca7346dbd5d18a69646a828"
+    },
+    {
+      "path": "sources/fish2.png",
+      "bytes": 6857,
+      "sha256": "22b60f223e6b60be469a63b81b37381337070526a94e6fe9ad3331a193c4b481"
+    },
+    {
+      "path": "sources/goalbackground.png",
+      "bytes": 91922,
+      "sha256": "599e241b2f4b53aa64ad304b5d149962b4ae8c75b959e1c30da45b396fea5aa6"
+    },
+    {
+      "path": "sources/jump.mp3",
+      "bytes": 35520,
+      "sha256": "3d542f91232b31cd1d9f45c50eb22c8c2f9184eb342c00c0548317b332f2913e"
+    },
+    {
+      "path": "sources/main.mp3",
+      "bytes": 1652235,
+      "sha256": "abf29a1accdc752a98497c5aac4ec00c4d8c215ab0773b9a0cb163f0771b3fa3"
+    },
+    {
+      "path": "sources/main.png",
+      "bytes": 1025284,
+      "sha256": "e698220d9b207635ea491d214dbe8abd3338b0d6efaa8d63db34d57f1003cb66"
+    },
+    {
+      "path": "sources/milk.png",
+      "bytes": 22362,
+      "sha256": "ae72a3d4aab4f6a7b8b63b76b8418f1d9fb998f9982206292c54286b9b69427c"
+    },
+    {
+      "path": "static/css/main.514dd8ac.css",
+      "bytes": 3168,
+      "sha256": "1d070942f4bc1b26b6db2b235c259b196d5f562973950eb38f178cf07972e009"
+    },
+    {
+      "path": "static/js/206.0aecd1ea.chunk.js",
+      "bytes": 4480,
+      "sha256": "02dde0e2f7d671f1a55446d9308669e10c79ba5cb9271bfe359536cd7e8955f3"
+    },
+    {
+      "path": "static/js/main.b04362fc.js",
+      "bytes": 1736513,
+      "sha256": "96678be1b68b0f436074f413ade22504935aebdc1c6569c57dff8f6275531281"
+    },
+    {
+      "path": "static/js/main.b04362fc.js.LICENSE.txt",
+      "bytes": 7088,
+      "sha256": "d538b64960776a38cd38cdf0628afa834d3b0f1154c0998d326175b9359f9bdb"
+    },
+    {
+      "path": "static/media/press-start-2p-latin-400-normal.78a190b9b6b23ec031c7.woff2",
+      "bytes": 12512,
+      "sha256": "afec86997fdaf54af1f59358fa2c1e2a0f1d04146edad18e5cd141d0384a7548"
+    },
+    {
+      "path": "static/media/Pretendard-Bold.subset.a5ccc8f78b68ba6de99a.woff2",
+      "bytes": 270784,
+      "sha256": "78eb71c33101ee7d4f8d1b777d193a12d00f8a296e712a8c417cf27abe946397"
+    },
+    {
+      "path": "static/media/Pretendard-Regular.subset.e0a855e501f761b58aa8.woff2",
+      "bytes": 267096,
+      "sha256": "01dd73155fdfab7ce9b25224523e85a96927e21aef97f21957d41f1bfa7e3878"
+    },
+    {
+      "path": "static/media/Pretendard-SemiBold.subset.c50116c0682fbf0defde.woff2",
+      "bytes": 268752,
+      "sha256": "4247dc5e260b92640c2cbd0e75091154647b71e1d5884116655e2903468c54cc"
+    }
+  ]
+}
