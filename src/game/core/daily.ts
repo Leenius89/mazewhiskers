@@ -118,8 +118,5 @@ export const disarmDaily = (): void => {
 
 export const dailyDate = (): string | null => armed;
 
-/** What kind of city today's is, or null on an ordinary run. */
-export const dailyKind = (): CityKind | null => (armed ? kindForDay(armed) : null);
-
 /** What the maze generator is seeded with. The district is folded in later. */
 export const dailySeed = (): string | null => (armed ? `daily-${armed}` : null);

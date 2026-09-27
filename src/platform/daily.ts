@@ -14,8 +14,6 @@ export {
     disarmDaily,
     dailyDate,
     dailySeed,
-    dailyKind,
-    dailyKind as dailyPlan,
     kindForDay,
     kindForDay as planFor
 } from '../game/core/daily';

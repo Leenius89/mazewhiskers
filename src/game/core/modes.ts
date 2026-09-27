@@ -92,8 +92,6 @@ export const resolveMode = (): ModeSettings => {
     return requested === 'arcade' ? MODES.arcade : MODES.exhibition;
 };
 
-export const getMode = (key: GameMode): ModeSettings => MODES[key];
-
 /**
  * Seed for the maze.
  *
