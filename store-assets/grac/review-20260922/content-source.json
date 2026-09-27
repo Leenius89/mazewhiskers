@@ -1,0 +1,651 @@
+{
+  "ko": {
+    "menu.start": "GAME START",
+    "menu.ranking": "랭킹 / RANKING",
+    "menu.settings": "설정 / SETTINGS",
+    "menu.endings": "도감",
+    "menu.rankingShort": "랭킹",
+    "menu.daily": "오늘의 도시",
+    "daily.tag": "오늘의 도시",
+    "daily.best": "오늘 최고",
+    "daily.tries": "{n}번째",
+    "daily.streak": "{n}일째",
+    "daily.newBest": "오늘의 도시 내 최고 점수입니다",
+    "endings.title": "엔딩 도감",
+    "endings.home.body": "도시가 먼저 도착하지 못했습니다. 이번에는.",
+    "endings.note": "아직 보지 못한 끝이 남아 있습니다.",
+    "endings.complete": "이 도시가 고양이를 내보내는 방법을 모두 보았습니다. 그리고 한 번은 집에 닿았습니다.",
+    "endings.found": "새 엔딩을 발견했습니다",
+    "ad.milk.offer": "광고 보고 우유 한 팩 들고 시작 (점프 +1)",
+    "ad.milk.held": "우유 한 팩을 챙겼습니다 · 다음 판 점프 +1",
+    "pause.eyebrow": "PAUSED",
+    "pause.title": "잠시 멈춤",
+    "pause.resume": "이어하기",
+    "pause.restart": "다시 시작",
+    "pause.mainMenu": "메뉴로",
+    "header.menu": "메뉴 / MENU",
+    "settings.eyebrow": "SETTINGS",
+    "settings.title": "설정",
+    "settings.sound": "소리 / SOUND",
+    "settings.on": "켬 / ON",
+    "settings.off": "끔 / OFF",
+    "settings.language": "언어 / LANGUAGE",
+    "settings.difficulty": "난이도 / DIFFICULTY",
+    "settings.appearance": "화면 / APPEARANCE",
+    "settings.comfort": "진동 · 화면 효과 / COMFORT",
+    "settings.haptics": "진동",
+    "settings.reducedEffects": "효과 줄이기",
+    "settings.dark": "어둡게",
+    "settings.light": "밝게",
+    "settings.close": "닫기 / CLOSE",
+    "header.score": "SCORE",
+    "header.restart": "다시 시작 / Restart",
+    "header.mute": "소리 끄기 / Mute",
+    "header.unmute": "소리 켜기 / Unmute",
+    "board.fastest": "빨리 도달한 냥",
+    "board.fastest.eyebrow": "FASTEST HOME",
+    "board.survived": "가장 오래 돌아다닌 냥",
+    "board.survived.eyebrow": "LONGEST ON THE STREET",
+    "board.fed": "가장 많이 먹은 냥",
+    "board.fed.eyebrow": "BEST FED",
+    "board.closest": "가장 아슬아슬했던 냥",
+    "board.closest.eyebrow": "CLOSEST CALL",
+    "board.weighted": "순위는 난이도를 반영해 환산한 값 기준입니다.",
+    "board.loading": "불러오는 중…",
+    "board.failed": "기록을 불러오지 못했습니다.",
+    "board.empty": "아직 기록이 없습니다. 첫 번째가 되어 보세요.",
+    "board.close": "닫기 / CLOSE",
+    "over.eyebrow": "RUN ENDED",
+    "over.health.title": "버티지 못했다",
+    "over.health.body": "월세와 생활비가 남은 것을 다 가져갔습니다. 생선은 모아 둘 수 없습니다.",
+    "over.enemy.title": "붙잡혔다",
+    "over.enemy.body": "버틸 수 있는 만큼은 버텼습니다. 그 다음은 없었습니다.",
+    "over.apartment:player.title": "밀려날 곳이 없었다",
+    "over.apartment:player.body": "짓눌린 것이 아닙니다. 밀려나고 또 밀려나다, 물러설 자리가 사라졌을 뿐입니다.",
+    "over.apartment:goal.title": "집이 먼저 사라졌다",
+    "over.apartment:goal.body": "도착하기 전에 그 자리에 아파트가 들어섰습니다.",
+    "over.trapped.title": "갈 곳이 없었다",
+    "over.trapped.body": "사방이 막혔습니다. 체력이 남아 있어도 나갈 길이 없으면 끝난 것입니다.",
+    "over.sealed.title": "길이 끊겼다",
+    "over.sealed.body": "집은 아직 저기 있습니다. 다만 거기까지 가는 길이 모두 아파트가 되었습니다.",
+    "over.idle.title": "움직이지 않았다",
+    "over.idle.body": "가만히 서 있는 동안에도 월세는 나갔습니다. 도시는 기다려 주지 않습니다.",
+    "over.score": "SCORE",
+    "over.fish": "🐟 FISH",
+    "over.milk": "🥛 MILK",
+    "over.name": "이름 / YOUR NAME",
+    "over.submit": "기록 등록 / SUBMIT",
+    "over.submitting": "전송 중…",
+    "over.submitted": "기록 등록 완료 / SUBMITTED",
+    "over.partial": "점수만 등록됨 — 생존·생선 기록은 저장되지 않았습니다",
+    "over.lasted": "⏱ 버틴 시간",
+    "slip.total": "RANK SCORE",
+    "slip.gathered": "모은 것",
+    "slip.clear": "도착",
+    "slip.time": "시간",
+    "slip.weight": "난이도",
+    "slip.sending": "랭킹에 올리는 중…",
+    "slip.sent": "토스 랭킹에 올렸습니다",
+    "slip.rejected": "랭킹에 올리지 못했습니다. 기록은 이 기기에 남아 있습니다.",
+    "slip.kept": "기록을 이 기기에 저장했습니다",
+    "slip.newScore": "내 최고 점수를 넘었습니다",
+    "slip.newClear": "내 가장 빠른 도착입니다",
+    "records.title": "내 기록",
+    "records.empty": "아직 기록이 없습니다. 한 판 달리고 오면 여기에 남습니다.",
+    "records.bestScore": "BEST SCORE",
+    "records.bestClear": "⚑ 최단 도착",
+    "records.longest": "⏱ 최장 생존",
+    "records.runs": "달린 횟수",
+    "records.clears": "도착 횟수",
+    "records.tossNote": "다른 고양이들과의 순위는 토스 앱의 랭킹에서 볼 수 있습니다.",
+    "leave.title": "게임을 끝낼까요?",
+    "leave.body": "기록은 저장되어 있습니다. 언제든 돌아와서 이어 달릴 수 있습니다.",
+    "leave.stay": "계속하기",
+    "leave.go": "나가기",
+    "over.retry": "다시 / RETRY",
+    "over.mainMenu": "메뉴로",
+    "over.ranking": "랭킹",
+    "over.spaceHint": "SPACE 로도 다시 시작합니다",
+    "over.saveFailed": "기록을 저장하지 못했습니다. 다시 시도해 주세요.",
+    "win.title": "집에 닿았다",
+    "win.submit": "기록 등록 / SUBMIT TIME",
+    "tut.move.speaker": "· 이동",
+    "cat.idle.1": "야옹~",
+    "cat.idle.2": "캬캬캬",
+    "cat.idle.3": "또 왔네?",
+    "cat.idle.4": "이 동네 내 구역인데",
+    "cat.idle.5": "오늘은 조용하네",
+    "cat.idle.6": "배고프다...",
+    "cat.meet.a.1": "어이, 또 너야?",
+    "cat.meet.a.2": "여기 내 자리거든?",
+    "cat.meet.a.3": "캬캬캬, 곧 아닐걸",
+    "cat.meet.b.1": "저 위에 아파트 또 생긴대",
+    "cat.meet.b.2": "나쁠 거 있나. 난 지붕이 좋아",
+    "cat.meet.c.1": "집에 가는 길 알아?",
+    "cat.meet.c.2": "알지. 안 알려줄 뿐이야",
+    "cat.meet.c.3": "치사해",
+    "cat.chase.tabby.1": "으악!",
+    "cat.chase.tabby.2": "아 왜 또!",
+    "cat.chase.tabby.3": "살려!",
+    "cat.chase.black.1": "캬캬캬캬",
+    "cat.chase.black.2": "거기 서!",
+    "cat.chase.black.3": "어디 가~",
+    "cat.escaped.1": "하아... 하아...",
+    "cat.escaped.2": "심장 떨어질 뻔",
+    "cat.taunt.1": "겨우 그거야? 캬캬캬",
+    "cat.taunt.2": "집이 저기 있는데 말이지~",
+    "cat.taunt.3": "야옹~ 다음엔 좀 더 빨리 뛰어",
+    "cat.taunt.4": "내 자리 앉아도 되지?",
+    "cat.taunt.5": "한 번 더 해봐. 기다려 줄게",
+    "tut.nightmare": "설명 같은 건 없어. 할 수 있으면 해보든가~ 캬캬캬",
+    "tut.nightmare.speaker": "· 어둠 속에서",
+    "tut.move": "당신은 길고양이입니다. 방향키로 골목을 걸어 다닐 수 있습니다.",
+    "tut.move.touch": "당신은 길고양이입니다. 왼쪽 아래 스틱으로 골목을 걸어 다닐 수 있습니다.",
+    "tut.goal.speaker": "· 집",
+    "tut.goal": "저기 도시 한가운데가 당신의 집입니다. 노란 화살표가 늘 그쪽을 가리킵니다.",
+    "tut.fish.speaker": "· 생선",
+    "tut.fish": "생선은 체력을 채워 줍니다. 모아 둘 수는 없고, 계속 구해야 합니다.",
+    "tut.milk.speaker": "· 우유",
+    "tut.milk": "우유를 마시면 방향대로 점프할 수 있습니다.",
+    "tut.apartment.speaker": "· 재개발",
+    "tut.apartment": "노란 줄은 아파트가 들어서는 자리입니다. 피하세요.",
+    "tut.health.speaker": "· 체력",
+    "tut.health": "체력은 가만히 있어도 줄어듭니다. 머리 위 막대가 당신에게 남은 시간입니다.",
+    "tut.start.speaker": "· 시작",
+    "tut.start": "자, 이제 집까지 가세요!",
+    "tut.skip": "SKIP ▸",
+    "tut.hint": "▸ ENTER / CLICK",
+    "tut.enemy.speaker": "· ?",
+    "tut.enemy": "인생은 뜻하지 않은 위기가 도사리지 캬캬",
+    "bark.firstTower": "재개발이 시작되는구나!",
+    "bark.tower": "또 하나 올라갔어...|여기도 아파트야?|내 골목 내놔!|어? 길이 없어졌잖아|아니 저기 내 자리인데|이러다 앉을 데도 없겠다",
+    "bark.panic": "살려줘! 도망가!|아오 %$#%!|$@#^%#&*!|왜 나만 쫓아와!|헉헉... 안 돼!|@#$%! 저리 가!|어어어 오지 마!",
+    "bark.hurt": "아야!|#$%@!|아 진짜!",
+    "bark.idle": "여긴 또 어디야...|월세가 또 올랐대|집이 있으면 좋겠다|보증금이 뭔데 그렇게 비싸|배고파...|다리 아파|이 골목 아까 왔는데?|내 방 한 칸이면 되는데|따뜻한 데서 자고 싶다|여기 원래 우리 동네였는데",
+    "bark.taunt": "캬캬캬|어디 가시나~|집은 있고?|월세나 내라옹|거기 서라옹|보증금 5억이다냥|재개발은 못 참지|도망가봐야 소용없다냥|여긴 이제 내 구역이다",
+    "ending.1": "Life begins without a rehearsal.\n인생은 리허설 없이 시작된다.",
+    "ending.2": "Using the rough waves of anxiety as our drive\n불안이라는 거친 파도를 동력 삼아",
+    "ending.3": "we simply plunge toward an unknown point.\n우리는 그저 미지의 점을 향해 뛰어든다.",
+    "ending.4": "Even if I were to open my eyes again,\n내가 다시 눈을 뜬다 해도,",
+    "ending.5": "my choice remains the repetition of this very life.\n나의 선택은 바로 이 삶의 반복이다.",
+    "ending.skip": "▸  SKIP  /  건너뛰기",
+    "credits.return": "▸  SKIP  /  건너뛰기"
+  },
+  "en": {
+    "menu.start": "GAME START",
+    "menu.ranking": "RANKING",
+    "menu.settings": "SETTINGS",
+    "menu.endings": "ENDINGS",
+    "menu.rankingShort": "RANKING",
+    "menu.daily": "TODAY'S CITY",
+    "daily.tag": "Today's city",
+    "daily.best": "best today",
+    "daily.tries": "try {n}",
+    "daily.streak": "day {n}",
+    "daily.newBest": "Your best on today's city",
+    "endings.title": "Endings",
+    "endings.home.body": "The city did not get there first. This time.",
+    "endings.note": "There are endings you have not seen.",
+    "endings.complete": "You have seen every way this city shows a cat out. And once, you got home.",
+    "endings.found": "New ending found",
+    "ad.milk.offer": "Watch an ad, start with extra milk (jump +1)",
+    "ad.milk.held": "Milk packed · next run starts with jump +1",
+    "pause.eyebrow": "PAUSED",
+    "pause.title": "Paused",
+    "pause.resume": "RESUME",
+    "pause.restart": "RESTART",
+    "pause.mainMenu": "MAIN MENU",
+    "header.menu": "MENU",
+    "settings.eyebrow": "SETTINGS",
+    "settings.title": "Settings",
+    "settings.sound": "SOUND",
+    "settings.on": "ON",
+    "settings.off": "OFF",
+    "settings.language": "LANGUAGE",
+    "settings.difficulty": "DIFFICULTY",
+    "settings.appearance": "APPEARANCE",
+    "settings.comfort": "COMFORT",
+    "settings.haptics": "VIBRATION",
+    "settings.reducedEffects": "LESS FLASH",
+    "settings.dark": "DARK",
+    "settings.light": "LIGHT",
+    "settings.close": "CLOSE",
+    "header.score": "SCORE",
+    "header.restart": "Restart",
+    "header.mute": "Mute",
+    "header.unmute": "Unmute",
+    "board.fastest": "Fastest Home",
+    "board.fastest.eyebrow": "FASTEST HOME",
+    "board.survived": "Longest On The Street",
+    "board.survived.eyebrow": "LONGEST ON THE STREET",
+    "board.fed": "Best Fed",
+    "board.fed.eyebrow": "BEST FED",
+    "board.closest": "Closest Call",
+    "board.closest.eyebrow": "CLOSEST CALL",
+    "board.weighted": "Ranked on values adjusted for difficulty.",
+    "board.loading": "Loading…",
+    "board.failed": "Could not load the records.",
+    "board.empty": "No records yet. Be the first.",
+    "board.close": "CLOSE",
+    "over.eyebrow": "RUN ENDED",
+    "over.health.title": "You could not hold out",
+    "over.health.body": "Rent and the cost of living took what was left. Fish do not keep.",
+    "over.enemy.title": "Caught",
+    "over.enemy.body": "You took what you could. There was nothing left after that.",
+    "over.apartment:player.title": "Nowhere left to be pushed",
+    "over.apartment:player.body": "Nothing crushed you. You were moved along, and moved along, until there was no along left.",
+    "over.apartment:goal.title": "Home went first",
+    "over.apartment:goal.body": "A tower went up on it before you got there.",
+    "over.sealed.title": "The way is gone",
+    "over.sealed.body": "Home is still standing. Every road to it has become an apartment block.",
+    "over.idle.title": "You stopped moving",
+    "over.idle.body": "Rent went out while you stood still. The city does not wait.",
+    "over.trapped.title": "Nowhere to go",
+    "over.trapped.body": "Walled in on every side. Health left over counts for nothing with no way out.",
+    "over.score": "SCORE",
+    "over.fish": "🐟 FISH",
+    "over.milk": "🥛 MILK",
+    "over.name": "YOUR NAME",
+    "over.submit": "SUBMIT",
+    "over.submitting": "Sending…",
+    "over.submitted": "SUBMITTED",
+    "over.partial": "Score only — survival and fish were not saved",
+    "over.lasted": "⏱ LASTED",
+    "slip.total": "RANK SCORE",
+    "slip.gathered": "Gathered",
+    "slip.clear": "Home",
+    "slip.time": "Time",
+    "slip.weight": "Difficulty",
+    "slip.sending": "Sending to the board…",
+    "slip.sent": "On the Toss leaderboard",
+    "slip.rejected": "Could not reach the board. The run is saved on this device.",
+    "slip.kept": "Saved on this device",
+    "slip.newScore": "Your best score yet",
+    "slip.newClear": "Your fastest way home",
+    "records.title": "My Records",
+    "records.empty": "Nothing yet. Go for a run and it will be here.",
+    "records.bestScore": "BEST SCORE",
+    "records.bestClear": "⚑ FASTEST HOME",
+    "records.longest": "⏱ LONGEST RUN",
+    "records.runs": "RUNS",
+    "records.clears": "TIMES HOME",
+    "records.tossNote": "Rankings against other cats are on the leaderboard in the Toss app.",
+    "leave.title": "Leave the game?",
+    "leave.body": "Your records are saved. Come back and run again whenever you like.",
+    "leave.stay": "Keep playing",
+    "leave.go": "Leave",
+    "over.retry": "RETRY",
+    "over.mainMenu": "MAIN MENU",
+    "over.ranking": "RANKING",
+    "over.spaceHint": "SPACE also restarts",
+    "over.saveFailed": "Could not save your record. Please try again.",
+    "win.title": "You made it home",
+    "win.submit": "SUBMIT TIME",
+    "tut.move.speaker": "· MOVING",
+    "cat.idle.1": "meow~",
+    "cat.idle.2": "hehehe",
+    "cat.idle.3": "back again?",
+    "cat.idle.4": "my street, this",
+    "cat.idle.5": "quiet tonight",
+    "cat.idle.6": "I'm starving...",
+    "cat.meet.a.1": "oi, you again?",
+    "cat.meet.a.2": "this is my spot, actually",
+    "cat.meet.a.3": "hehehe, not for long",
+    "cat.meet.b.1": "they're putting up another tower",
+    "cat.meet.b.2": "suits me. I like the roofs",
+    "cat.meet.c.1": "you know the way home?",
+    "cat.meet.c.2": "I do. I'm just not telling",
+    "cat.meet.c.3": "charming",
+    "cat.chase.tabby.1": "aaah!",
+    "cat.chase.tabby.2": "oh come ON",
+    "cat.chase.tabby.3": "help!",
+    "cat.chase.black.1": "hehehehe",
+    "cat.chase.black.2": "come back!",
+    "cat.chase.black.3": "going somewhere~",
+    "cat.escaped.1": "hah... hah...",
+    "cat.escaped.2": "nearly had me",
+    "cat.taunt.1": "that was it? hehehe",
+    "cat.taunt.2": "home was right there~",
+    "cat.taunt.3": "meow~ run faster next time",
+    "cat.taunt.4": "mind if I sit here?",
+    "cat.taunt.5": "go on, again. I'll wait",
+    "tut.nightmare": "No lesson this time. Have a go, if you think you can~ hehehe",
+    "tut.nightmare.speaker": "· from the dark",
+    "tut.move": "You are a stray. The arrow keys walk you down the alleys.",
+    "tut.move.touch": "You are a stray. The stick at the bottom left walks you down the alleys.",
+    "tut.goal.speaker": "· HOME",
+    "tut.goal": "Home is the middle of the city. The yellow arrow always points at it.",
+    "tut.fish.speaker": "· FISH",
+    "tut.fish": "Fish restore your health. You cannot save them up — you have to keep finding more.",
+    "tut.milk.speaker": "· MILK",
+    "tut.milk": "Drink milk and you can jump in whatever direction you are facing.",
+    "tut.apartment.speaker": "· REDEVELOPMENT",
+    "tut.apartment": "Yellow tape is where a tower is about to go. Stay out of it.",
+    "tut.health.speaker": "· HEALTH",
+    "tut.health": "Health drains even standing still. The bar over your head is the time you have left.",
+    "tut.start.speaker": "· GO",
+    "tut.start": "Right — get yourself home!",
+    "tut.skip": "SKIP ▸",
+    "tut.hint": "▸ ENTER / CLICK",
+    "tut.enemy.speaker": "· ?",
+    "tut.enemy": "Life keeps a crisis or two up its sleeve, heh heh",
+    "bark.firstTower": "So this is redevelopment!",
+    "bark.tower": "There goes another one...|This one too?|Give me back my alley!|Hey, the road's gone|That was my spot|Soon there'll be nowhere to sit",
+    "bark.panic": "Help! Run!|Ah %$#%!|$@#^%#&*!|Why is it always me!|Nope nope nope!|@#$%! Get away!|No no no don't!",
+    "bark.hurt": "Ow!|#$%@!|Oh come on!",
+    "bark.idle": "Where even am I...|Rent went up again|I'd love a place of my own|Why is a deposit so much|I'm hungry...|My legs hurt|Haven't I been down here already?|One room would do me|I want to sleep somewhere warm|This used to be our neighbourhood",
+    "bark.taunt": "Heh heh heh|Going somewhere?|Got a place to live?|Pay your rent, kitty|Stay right there|Deposit's half a million|Redevelopment waits for no cat|Running won't help you|This is my block now",
+    "ending.1": "Life begins without a rehearsal.\n인생은 리허설 없이 시작된다.",
+    "ending.2": "Using the rough waves of anxiety as our drive\n불안이라는 거친 파도를 동력 삼아",
+    "ending.3": "we simply plunge toward an unknown point.\n우리는 그저 미지의 점을 향해 뛰어든다.",
+    "ending.4": "Even if I were to open my eyes again,\n내가 다시 눈을 뜬다 해도,",
+    "ending.5": "my choice remains the repetition of this very life.\n나의 선택은 바로 이 삶의 반복이다.",
+    "ending.skip": "▸  SKIP",
+    "credits.return": "▸  SKIP"
+  },
+  "CITY_KINDS": [
+    {
+      "key": "plain",
+      "label": {
+        "ko": "보통 도시",
+        "en": "Ordinary city"
+      },
+      "note": {
+        "ko": "평소의 골목",
+        "en": "The alleys as they are"
+      },
+      "plan": {}
+    },
+    {
+      "key": "circle",
+      "label": {
+        "ko": "원형 도시",
+        "en": "Round city"
+      },
+      "note": {
+        "ko": "둥근 성벽 안",
+        "en": "Inside a round wall"
+      },
+      "plan": {
+        "mask": "circle"
+      }
+    },
+    {
+      "key": "diamond",
+      "label": {
+        "ko": "마름모 도시",
+        "en": "Diamond city"
+      },
+      "note": {
+        "ko": "모서리로 선 도시",
+        "en": "A city stood on its corner"
+      },
+      "plan": {
+        "mask": "diamond"
+      }
+    },
+    {
+      "key": "cross",
+      "label": {
+        "ko": "십자 도시",
+        "en": "Crossroads"
+      },
+      "note": {
+        "ko": "네 구역이 가운데서만 만남",
+        "en": "Four quarters, joined only in the middle"
+      },
+      "plan": {
+        "mask": "cross"
+      }
+    },
+    {
+      "key": "tall",
+      "label": {
+        "ko": "좁고 긴 도시",
+        "en": "Narrow city"
+      },
+      "note": {
+        "ko": "옆으로 도망칠 곳이 없음",
+        "en": "Nowhere sideways to run"
+      },
+      "plan": {
+        "mask": "tall"
+      }
+    },
+    {
+      "key": "ring",
+      "label": {
+        "ko": "고리 도시",
+        "en": "Ring city"
+      },
+      "note": {
+        "ko": "둘러 가거나, 가로질러 가거나",
+        "en": "Round the ring, or straight through"
+      },
+      "plan": {
+        "mask": "ring"
+      }
+    },
+    {
+      "key": "radial",
+      "label": {
+        "ko": "방사형 도시",
+        "en": "Radial city"
+      },
+      "note": {
+        "ko": "모든 대로가 집으로 향함",
+        "en": "Every avenue points home"
+      },
+      "plan": {
+        "generator": "radial"
+      }
+    },
+    {
+      "key": "planned",
+      "label": {
+        "ko": "계획 도시",
+        "en": "Planned city"
+      },
+      "note": {
+        "ko": "곧은 벽과 네모난 구획",
+        "en": "Straight walls, square blocks"
+      },
+      "plan": {
+        "generator": "division"
+      }
+    },
+    {
+      "key": "blocks",
+      "label": {
+        "ko": "블록 도시",
+        "en": "Block city"
+      },
+      "note": {
+        "ko": "주택이 두꺼워 점프로도 못 넘음",
+        "en": "Housing too deep to jump"
+      },
+      "plan": {
+        "generator": "blocks"
+      }
+    },
+    {
+      "key": "shanty",
+      "label": {
+        "ko": "판자촌",
+        "en": "Shanty town"
+      },
+      "note": {
+        "ko": "아무도 계획하지 않은 골목",
+        "en": "Alleys nobody planned"
+      },
+      "plan": {
+        "generator": "caves"
+      }
+    },
+    {
+      "key": "perfect",
+      "label": {
+        "ko": "완전미로",
+        "en": "True maze"
+      },
+      "note": {
+        "ko": "돌아 나갈 길이 없음",
+        "en": "No way round, only back"
+      },
+      "plan": {
+        "braid": 0
+      }
+    },
+    {
+      "key": "plazas",
+      "label": {
+        "ko": "광장 도시",
+        "en": "City of squares"
+      },
+      "note": {
+        "ko": "트인 대신 숨을 곳이 없음",
+        "en": "Open, and nowhere to hide"
+      },
+      "plan": {
+        "plazas": 15
+      }
+    },
+    {
+      "key": "spiral",
+      "label": {
+        "ko": "나선 도시",
+        "en": "Spiral city"
+      },
+      "note": {
+        "ko": "길은 하나, 멀기만 함",
+        "en": "One street, and a long one"
+      },
+      "plan": {
+        "generator": "spiral",
+        "size": 31
+      }
+    },
+    {
+      "key": "grid",
+      "label": {
+        "ko": "격자 도시",
+        "en": "Lattice city"
+      },
+      "note": {
+        "ko": "갈림길뿐이라 방향을 잃음",
+        "en": "Junctions all the way down"
+      },
+      "plan": {
+        "generator": "prim"
+      }
+    },
+    {
+      "key": "metropolis",
+      "label": {
+        "ko": "대도시",
+        "en": "Metropolis"
+      },
+      "note": {
+        "ko": "한 변 61칸",
+        "en": "Sixty-one cells a side"
+      },
+      "plan": {
+        "size": 61
+      }
+    },
+    {
+      "key": "town",
+      "label": {
+        "ko": "소도시",
+        "en": "Small town"
+      },
+      "note": {
+        "ko": "초 단위로 갈리는 단거리",
+        "en": "A sprint, decided in seconds"
+      },
+      "plan": {
+        "size": 25
+      }
+    },
+    {
+      "key": "frost",
+      "label": {
+        "ko": "서리 낀 골목",
+        "en": "Frosted alleys"
+      },
+      "note": {
+        "ko": "군데군데 얼어 있음",
+        "en": "Frozen here and there"
+      },
+      "plan": {
+        "ice": 0.1
+      }
+    },
+    {
+      "key": "blackice",
+      "label": {
+        "ko": "빙판 도시",
+        "en": "Black ice"
+      },
+      "note": {
+        "ko": "빙판이 지름길이자 함정",
+        "en": "The ice is a short cut and a trap"
+      },
+      "plan": {
+        "ice": 0.3
+      }
+    },
+    {
+      "key": "glacier",
+      "label": {
+        "ko": "얼어붙은 도시",
+        "en": "Frozen over"
+      },
+      "note": {
+        "ko": "걷는 구간이 드묾",
+        "en": "Walking is the exception"
+      },
+      "plan": {
+        "ice": 0.55
+      }
+    },
+    {
+      "key": "avenues",
+      "label": {
+        "ko": "결빙 대로",
+        "en": "Frozen avenues"
+      },
+      "note": {
+        "ko": "긴 직선만 얼어 끝까지 미끄러짐",
+        "en": "Only the long straights freeze"
+      },
+      "plan": {
+        "ice": 0.3,
+        "iceStyle": "avenues"
+      }
+    }
+  ],
+  "credits": [
+    "Maze Whiskers",
+    "",
+    "A game about housing and equality",
+    "",
+    "Developer",
+    "Joongmin Lee",
+    "",
+    "Art & Design",
+    "Joongmin Lee",
+    "",
+    "Music & Sound",
+    "Pixabay",
+    "Lesiakower - Battle Time",
+    "Spencer_YK - Little Slime's Adventure",
+    "",
+    "Special Thanks",
+    "알투스통합예술연구소",
+    "",
+    "© 2024 studio 凹凸",
+    "",
+    ""
+  ]
+}
