@@ -1,3 +1,4 @@
+import { VERSION } from '../../version';
 import Phaser from 'phaser';
 import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
@@ -32,7 +33,8 @@ export const showCredits = (
     creditsBg.setAlpha(0);
 
     const credits = [
-        "Maze Whiskers",
+        // Major and minor only: the roll names the release, not the patch.
+        `Maze Whiskers v.${VERSION.split('.').slice(0, 2).join('.')}`,
         "",
         "A game about housing and equality",
         "",
@@ -42,15 +44,22 @@ export const showCredits = (
         "Art & Design",
         "Joongmin Lee",
         "",
-        "Music & Sound",
+        "Music",
+        "Spencer_YK — Little Slime's Adventure",
+        "Lesiakower — Battle Time",
+        "",
+        "Sound Effects",
         "Pixabay",
-        "Lesiakower - Battle Time",
-        "Spencer_YK - Little Slime's Adventure",
         "",
         "Special Thanks",
         "알투스통합예술연구소",
+        // The two people whose music carries every run. Pixabay asks for no
+        // credit; they get it anyway, and by name, where a player can see it.
+        "Spencer_YK",
+        "Lesiakower",
+        "and everyone who shares their sound on Pixabay",
         "",
-        "© 2024 studio 凹凸",
+        "© 2026 Joongmin Lee",
         "",
         ""
     ];
@@ -87,6 +96,23 @@ export const showCredits = (
     skipPrompt.setOrigin(0.5, 0.5);
     skipPrompt.setDepth(1003);
     skipPrompt.setAlpha(0);
+
+    /**
+     * Shrunk to fit between the top of the screen and the prompt, never
+     * grown past its own size.
+     *
+     * The roll outgrew a phone once the people whose music carries the game
+     * were thanked by name: the first lines ran off the top and the names
+     * sat underneath the skip prompt, which is the one place a credit cannot
+     * be read. Fitting the block keeps every line on screen, whatever the
+     * screen.
+     */
+    const margin = ui(24, camera);
+    const bandTop = margin;
+    const bandBottom = skipPrompt.y - skipPrompt.displayHeight / 2 - margin;
+    const room = Math.max(1, bandBottom - bandTop);
+    creditsText.setScale(Math.min(1, room / creditsText.height, (width - margin * 2) / creditsText.width));
+    creditsText.setPosition(width / 2, bandTop + room / 2);
 
     // Full screen clickable area
     const clickableArea = scene.add.rectangle(width / 2, height / 2, width * 2, height * 2);
