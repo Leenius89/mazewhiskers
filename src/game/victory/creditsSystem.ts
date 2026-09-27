@@ -1,3 +1,4 @@
+import { VERSION } from '../../version';
 import Phaser from 'phaser';
 import { TEXT, fontPx, ui } from '../core/uiScale';
 import { t } from '../../i18n';
@@ -32,7 +33,8 @@ export const showCredits = (
     creditsBg.setAlpha(0);
 
     const credits = [
-        "Maze Whiskers",
+        // Major and minor only: the roll names the release, not the patch.
+        `Maze Whiskers v.${VERSION.split('.').slice(0, 2).join('.')}`,
         "",
         "A game about housing and equality",
         "",
@@ -57,7 +59,7 @@ export const showCredits = (
         "Lesiakower",
         "and everyone who shares their sound on Pixabay",
         "",
-        "© 2024 studio 凹凸",
+        "© 2026 Joongmin Lee",
         "",
         ""
     ];
