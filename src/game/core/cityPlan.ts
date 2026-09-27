@@ -19,8 +19,6 @@ export const setCityPlan = (plan: CityPlan | null): void => {
     override = plan;
 };
 
-export const cityPlanOverride = (): CityPlan | null => override;
-
 export const resolveCityPlan = (rng: GridRng): CityPlan => {
     if (override) return override;
 

@@ -1,5 +1,3 @@
-import Phaser from 'phaser';
-
 /**
  * One depth axis for the whole world.
  *
@@ -24,18 +22,5 @@ export const DEPTH = {
     DEBUG: 1_000_000
 } as const;
 
-/** World Y of a sprite's ground contact — its bottom edge. */
-export const footY = (sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image): number =>
-    sprite.y + sprite.displayHeight * (1 - sprite.originY);
-
 /** Depth for an object whose feet are at `y`. */
 export const sortDepth = (y: number): number => DEPTH.SORTED + y;
-
-/**
- * Sorts a sprite by its own feet.
- *
- * Call once for anything that never moves, every frame for anything that does.
- */
-export const applySortDepth = (sprite: Phaser.GameObjects.Sprite | Phaser.GameObjects.Image): void => {
-    sprite.setDepth(sortDepth(footY(sprite)));
-};

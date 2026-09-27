@@ -80,21 +80,6 @@ export const setStaticFootBody = (sprite: Phaser.Physics.Arcade.Sprite, options:
     body.setOffset(body.offset.x + (targetX - body.position.x), body.offset.y + (targetY - body.position.y));
 };
 
-/** Static box covering the whole sprite — for tiles that *are* their own footprint. */
-export const setStaticFullBody = (sprite: Phaser.Physics.Arcade.Sprite, width: number, height: number): void => {
-    sprite.refreshBody();
-
-    const body = sprite.body as Phaser.Physics.Arcade.StaticBody | null;
-    if (!body) return;
-
-    const topLeft = sprite.getTopLeft();
-    const targetX = (topLeft.x ?? 0) + (sprite.displayWidth - width) / 2;
-    const targetY = (topLeft.y ?? 0) + (sprite.displayHeight - height) / 2;
-
-    body.setSize(width, height, false);
-    body.setOffset(body.offset.x + (targetX - body.position.x), body.offset.y + (targetY - body.position.y));
-};
-
 /**
  * Circular body centred on the sprite, sized in world pixels.
  *
