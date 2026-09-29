@@ -30,6 +30,8 @@ export class HudOverlay {
     private readonly flash: Phaser.GameObjects.Rectangle;
 
     private mapDirty = true;
+    /** Minimap cell size, from the same layout pass that placed the map. */
+    private cell = 0;
     private lastOpenCount = -1;
     private origin = { x: 0, y: 0 };
     /** The last viewport the layout was measured against. */
@@ -109,6 +111,11 @@ export class HudOverlay {
         const size = currentMazeSize() * cell;
         const margin = ui(GameConfig.HUD.MARGIN, camera);
 
+        // Redrawn only when the map moves or resizes: this runs every frame.
+        if (cell !== this.cell || this.origin.x !== viewport.width - margin - size || this.origin.y !== margin) {
+            this.mapDirty = true;
+        }
+        this.cell = cell;
         this.origin = { x: viewport.width - margin - size, y: margin };
         this.readoutOffset = { x: viewport.width - margin, y: margin + size + ui(6, camera) };
 
@@ -120,7 +127,6 @@ export class HudOverlay {
             margin + size + ui(6, camera) + this.readout.height + ui(GameConfig.HUD.RESERVED_TAIL, camera)
         );
         this.flash.setSize(viewport.width, viewport.height);
-        this.mapDirty = true;
     }
 
     private drawMap(): void {
@@ -128,7 +134,7 @@ export class HudOverlay {
         if (!maze) return;
 
         const cfg = GameConfig.HUD.MINIMAP;
-        const cell = cfg.CELL;
+        const cell = this.cell;
         const size = currentMazeSize() * cell;
         const fog = this.scene.fogOfWar;
 
@@ -176,7 +182,7 @@ export class HudOverlay {
 
     private drawMarkers(time: number): void {
         const cfg = GameConfig.HUD.MINIMAP;
-        const cell = cfg.CELL;
+        const cell = this.cell;
         const fog = this.scene.fogOfWar;
         const known = (worldX: number, worldY: number): boolean => {
             if (!fog) return true;
@@ -279,7 +285,7 @@ export class HudOverlay {
         this.drawMarkers(time);
         this.drawRentBar();
 
-        const alleys = Math.round((this.scene.apartmentSystem?.alleysRemaining ?? 1) * 100);
+        const alleys = Math.round(openCount * 100);
         const districts = this.scene.mode.districts;
         const label =
             districts > 1

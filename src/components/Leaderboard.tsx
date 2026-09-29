@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
@@ -134,7 +134,12 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
     const [loading, setLoading] = useState(true);
     const [failed, setFailed] = useState(false);
 
+    // Only the newest request may fill the table: a slow answer for the tab
+    // just left would otherwise land under the one just chosen.
+    const latest = useRef(0);
+
     const fetchScores = useCallback(async () => {
+        const ticket = ++latest.current;
         setLoading(true);
         setFailed(false);
         try {
@@ -176,6 +181,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
                 })
             );
 
+            if (ticket !== latest.current) return;
+
             const failure = groups.find((group) => group.error);
             if (failure?.error) {
                 /*
@@ -212,9 +219,9 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
             setScores(ranked);
         } catch (error) {
             console.error('Error fetching leaderboard:', error);
-            setFailed(true);
+            if (ticket === latest.current) setFailed(true);
         } finally {
-            setLoading(false);
+            if (ticket === latest.current) setLoading(false);
         }
     }, [board]);
 

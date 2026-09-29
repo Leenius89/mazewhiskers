@@ -110,13 +110,14 @@ const pixelButton = (
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: '10px',
+        // Tight on a phone: '설정 / SETTINGS' otherwise squeezes its icon to nothing.
+        gap: isMobile ? '8px' : '10px',
         width: isMobile ? '260px' : '380px',
         boxSizing: 'border-box',
         backgroundColor: face,
         color: ink,
         border: `4px solid ${edge}`,
-        padding: isMobile ? '12px 16px' : '15px 20px',
+        padding: isMobile ? '12px 10px' : '15px 20px',
         fontSize: isMobile ? '1.05rem' : '1.35rem',
         fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
         cursor: 'pointer',
@@ -607,7 +608,7 @@ const MainPage: React.FC<MainPageProps> = ({
                             whileHover={{ y: -2 }}
                             whileTap={{ y: 3 }}
                         >
-                            <Trophy size={isMobile ? 13 : 15} />
+                            <Trophy size={isMobile ? 13 : 15} style={{ flexShrink: 0 }} />
                             {t('menu.ranking')}
                         </MotionClickable>
 
@@ -617,7 +618,7 @@ const MainPage: React.FC<MainPageProps> = ({
                             whileHover={{ y: -2 }}
                             whileTap={{ y: 3 }}
                         >
-                            <SettingsIcon size={isMobile ? 13 : 15} />
+                            <SettingsIcon size={isMobile ? 13 : 15} style={{ flexShrink: 0 }} />
                             {t('menu.settings')}
                         </MotionClickable>
 
@@ -637,7 +638,7 @@ const MainPage: React.FC<MainPageProps> = ({
                             whileTap={{ y: 3 }}
                         >
                             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <CalendarDays size={isMobile ? 13 : 15} />
+                                <CalendarDays size={isMobile ? 13 : 15} style={{ flexShrink: 0 }} />
                                 {t('menu.daily')} {shortDate(today)}
                             </span>
                             <span
