@@ -128,6 +128,8 @@ export const restore = async (keys: string[]): Promise<void> => {
             if (kept === null) return;
 
             try {
+                // The player may have changed it while the mirror was answering.
+                if (window.localStorage.getItem(key) !== null) return;
                 window.localStorage.setItem(key, kept);
             } catch {
                 // Nothing to restore into.
@@ -293,6 +295,8 @@ export const adsSupported = (): boolean => {
 const AD_LOAD_TIMEOUT_MS = 15_000;
 /** If nothing has appeared by now, the run carries on without it. */
 const AD_APPEAR_TIMEOUT_MS = 6_000;
+/** An ad that showed but never said it closed must not hold the game forever. */
+const AD_MAX_MS = 120_000;
 
 /** Fetches an ad ahead of time. Resolves false rather than rejecting. */
 export const loadAd = (adGroupId: string): Promise<boolean> =>
@@ -384,4 +388,5 @@ export const showAd = (adGroupId: string): Promise<AdResult> =>
         window.setTimeout(() => {
             if (!shown) finish();
         }, AD_APPEAR_TIMEOUT_MS);
+        window.setTimeout(finish, AD_MAX_MS);
     });

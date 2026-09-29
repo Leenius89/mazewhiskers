@@ -367,6 +367,14 @@ export class SoundManager {
         }
     }
 
+    /** Scene is going: the sound manager is the game's, so its sounds would outlive it. */
+    destroy() {
+        this.stopAllSounds();
+        Object.values(this.sounds).forEach((sound) => sound?.destroy());
+        this.sounds = {};
+        this.soundsLoaded = false;
+    }
+
     playConstructSound() {
         if (!this.soundsLoaded) {
             console.warn('Sounds not loaded yet');

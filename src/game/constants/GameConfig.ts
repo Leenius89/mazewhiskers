@@ -690,13 +690,6 @@ export const GameConfig = {
             DELAY_AFTER_INTRO: 10000
         },
         LOOK_AHEAD_DIST: 50,
-        /** Camera move that introduces the enemy. */
-        INTRO: {
-            PAN_DURATION: 1000,
-            ZOOM: 1.3,
-            HOLD: 2000,
-            RETURN_DURATION: 500
-        },
     },
 
     MILK: {

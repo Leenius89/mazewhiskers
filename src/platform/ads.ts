@@ -113,6 +113,8 @@ const present = async (unit: Unit): Promise<{ shown: boolean; rewarded: boolean 
 /** Counts a finished run towards the between-runs ad. */
 export const noteRunFinished = (): void => {
     runsThisVisit += 1;
+    // Another go at any ad that failed to load: one bad fetch lasted the visit.
+    warmAds();
 };
 
 /**

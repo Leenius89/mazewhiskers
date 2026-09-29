@@ -210,6 +210,10 @@ function App() {
             game.current.sound.stopAll();
         }
 
+        // destroy() only tells scenes DESTROY, but their cleanup listens for
+        // SHUTDOWN. Without this every run left its listeners behind, and the
+        // whole old game with them.
+        game.current.scene.getScenes(false).forEach((scene) => scene.sys.events.emit('shutdown', scene.sys));
         game.current.destroy(true);
         game.current = null;
     }, []);
@@ -338,6 +342,8 @@ function App() {
     }, []);
 
     useEffect(() => {
+        // Leaving for the menu mid-run: nothing below would tear the game down.
+        if (!showGame) destroyGame();
         if (showGame && !isGameOver && !isVictory) {
             // Small delay to ensure DOM container exists
             const timer = setTimeout(() => {
@@ -352,11 +358,6 @@ function App() {
         };
     }, [showGame, isGameOver, isVictory, createGame, destroyGame]);
 
-    /**
-     * Resizing reshapes the running game instead of replacing it.
-     *
-     * The scale mode is RESIZE, so Phaser handles the new viewport itself.
-     */
     /**
      * One switch for everything the game plays.
      *
@@ -501,10 +502,11 @@ function App() {
      * not open there.
      */
     const openPause = useCallback(() => {
-        if (isGameOver || isVictory || isShowingCredits) return;
+        // Also the background hook: going away from the menu has nothing to pause.
+        if (!showGame || isGameOver || isVictory || isShowingCredits) return;
         bus.current?.emit('pauseGame');
         setShowPause(true);
-    }, [isGameOver, isVictory, isShowingCredits]);
+    }, [showGame, isGameOver, isVictory, isShowingCredits]);
 
     const closePause = useCallback(() => {
         setShowPause(false);
@@ -551,6 +553,8 @@ function App() {
     }, []);
 
     const beginRun = () => {
+        setShowSettings(false);
+        setShowEndings(false);
         setShowGame(true);
         setIsGameOver(false);
         setIsVictory(false);

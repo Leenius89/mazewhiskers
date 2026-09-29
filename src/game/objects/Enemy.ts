@@ -384,9 +384,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         const stalled = now - this.anchorAt;
 
         if (stalled >= cfg.RESCUE_MS && this.escalated < 2) {
-            this.escalated = 2;
             this.forgetRoute();
             this.scene.apartmentSystem?.rehomeEnemy(this);
+            // Start the watch over: a rescue that changed nothing gets another go.
+            this.anchorAt = 0;
+            this.escalated = 0;
             return;
         }
 

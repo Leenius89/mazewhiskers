@@ -192,6 +192,8 @@ export class NarrativeOverlay {
      * each beat then checks `wasSkipped` and returns early.
      */
     requestSkip(): void {
+        // ESC during play would otherwise swallow the next beat unseen.
+        if (!this.scene.narrativeActive) return;
         this.skipped = true;
         this.acknowledge();
     }

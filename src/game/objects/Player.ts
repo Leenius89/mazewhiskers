@@ -33,6 +33,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      * diagonal slide would put the cat into a corner it never steered for.
      */
     private slide: Phaser.Math.Vector2 | null = null;
+    private jumpArc: Phaser.Tweens.Tween | null = null;
 
 
 
@@ -545,6 +546,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      * rise, turn over, and then simply stand up again in one piece.
      */
     beginDeath(): void {
+        // A death mid-air would otherwise keep flying the arc, then land.
+        this.jumpArc?.stop();
         this.slide = null;
         this.setVelocity(0, 0);
         if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
@@ -626,7 +629,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         // A plain progress object, so both axes move from one source of truth.
         const arc = { t: 0 };
-        this.scene.tweens.add({
+        this.jumpArc = this.scene.tweens.add({
             targets: arc,
             t: 1,
             duration,

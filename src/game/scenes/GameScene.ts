@@ -804,35 +804,6 @@ export class GameScene extends Phaser.Scene {
         }
     }
 
-    /** Camera pans to the enemy, holds, then returns to the player. */
-    private playEnemyIntro(enemy: Enemy): void {
-        const intro = GameConfig.ENEMY.INTRO;
-        const camera = this.cameras.main;
-        const originalZoom = camera.zoom;
-
-        this.cameraDirector?.setEnabled(false);
-        camera.stopFollow();
-        camera.setFollowOffset(0, 0);
-        camera.pan(enemy.x, enemy.y, intro.PAN_DURATION, 'Power2');
-        // Relative to wherever the camera already is. As an absolute value this
-        // was a lurch on any screen whose base zoom was not 1 — which is every
-        // phone, and now every screen at all.
-        camera.zoomTo(originalZoom * intro.ZOOM, intro.PAN_DURATION);
-
-        this.time.delayedCall(intro.HOLD, () => {
-            if (this.state.hasEnded() || !this.player) return;
-
-            camera.pan(this.player.x, this.player.y, intro.RETURN_DURATION, 'Power2');
-            camera.zoomTo(originalZoom, intro.RETURN_DURATION);
-
-            this.time.delayedCall(intro.RETURN_DURATION, () => {
-                if (this.state.hasEnded() || !this.player) return;
-                camera.startFollow(this.player, true);
-                this.cameraDirector?.setEnabled(true);
-            });
-        });
-    }
-
     // ---------------------------------------------------------------- update
 
     update(_time: number, delta: number) {
@@ -1136,6 +1107,9 @@ export class GameScene extends Phaser.Scene {
 
     private handleShutdown(): void {
         this.bus?.off('pauseGame', this.handlePauseRequest, this);
+        // Scene events outlive a restart, so each district would count twice.
+        this.events.off('collectMilk');
+        this.events.off('collectFish');
         this.bus?.off('resumeGame', this.handleResumeRequest, this);
 
         this.debugOverlay?.destroy();
@@ -1191,7 +1165,7 @@ export class GameScene extends Phaser.Scene {
         this.enemy = null;
         this.enemySpawned = false;
 
-        this.soundManager?.stopAllSounds();
+        this.soundManager?.destroy();
         this.cameraDirector = null;
     }
 }

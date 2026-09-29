@@ -33,7 +33,8 @@ export class CameraDirector {
         this.enabled = enabled;
         if (!enabled) return;
 
-        this.baseZoom = this.camera.zoom;
+        // A scripted move can cut a jump's zoom-back short; finish it here.
+        if (this.camera.zoom !== this.baseZoom) this.camera.zoomTo(this.baseZoom, 250, 'Sine.easeInOut');
         this.lookahead.set(0, 0);
         this.camera.setFollowOffset(0, 0);
     }
