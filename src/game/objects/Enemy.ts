@@ -5,7 +5,7 @@ import { getSettings } from '../../settings';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
 import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
-import { axisOf, iceTakes, slideVelocity } from '../core/ice';
+import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -262,8 +262,17 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
     /** Carried along until the ice runs out or it hits something. */
     private keepSliding(): void {
-        const dir = this.slide;
+        let dir = this.slide;
         if (!dir) return;
+
+        // Steered off where its route turns, as the player can be.
+        const here = cellOf(this.x, this.groundY);
+        const at = this.path.findIndex((c) => c.gx === here.gx && c.gy === here.gy);
+        const next = at >= 0 ? this.path[at + 1] : this.path[0];
+        if (next && Math.abs(next.gx - here.gx) + Math.abs(next.gy - here.gy) === 1) {
+            const side = turnOff(this.scene, this, dir, { x: next.gx - here.gx, y: next.gy - here.gy });
+            if (side) dir = this.slide = side;
+        }
 
         const carried = slideVelocity(this.scene, this, dir);
         if (!carried) {

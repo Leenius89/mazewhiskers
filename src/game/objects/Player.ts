@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { setFootBody } from '../core/bodies';
-import { axisOf, iceTakes, slideVelocity } from '../core/ice';
+import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
 
@@ -324,9 +324,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             return;
         }
 
-        // The ice has the cat: input is read, and ignored, until it is over.
+        // The ice has the cat: input only counts where a side street opens.
         if (this.slide) {
-            this.keepSliding();
+            this.keepSliding(moveDirection);
             return;
         }
 
@@ -386,14 +386,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     /**
      * Carried along until the ice runs out or something stops it.
      *
-     * Two ends, and no third: the cat halts on the first ordinary cell it
-     * reaches, or against whatever it slides into. Nothing the player presses
-     * in between changes either — that is the whole of the mechanic — but a
-     * jump still lifts the cat off, which is what milk is for.
+     * The cat halts on the first ordinary cell it reaches, or against
+     * whatever it slides into. In between, the player can only steer it into
+     * a side street — or jump off, which is what milk is for.
      */
-    private keepSliding(): void {
-        const dir = this.slide;
+    private keepSliding(moveDirection: Phaser.Math.Vector2): void {
+        let dir = this.slide;
         if (!dir) return;
+
+        const side = turnOff(this.scene, this, dir, moveDirection);
+        if (side) dir = this.slide = side;
 
         const carried = slideVelocity(this.scene, this, dir);
         if (!carried) {
