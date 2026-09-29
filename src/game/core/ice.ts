@@ -53,10 +53,41 @@ export const iceTakes = (scene: GameScene, from: Slippery, dir: Phaser.Math.Vect
 };
 
 /**
+ * The side alley a slide along `dir` turns into here, or null to carry on.
+ *
+ * A slide cannot be stopped or reversed, but it can be steered off where a
+ * side street opens, towards `want`. Without that, a frozen dead end whose
+ * only way out was a turning halfway along held anything that slid in: every
+ * slide ran straight past the gap, forever. With it, anywhere reachable on
+ * foot is reachable on ice. Taken only at the middle of the cell, so the turn
+ * goes into the alley rather than into its corner.
+ */
+export const turnOff = (
+    scene: GameScene,
+    sliding: Slippery,
+    dir: Phaser.Math.Vector2,
+    want: { x: number; y: number }
+): Phaser.Math.Vector2 | null => {
+    const side =
+        dir.x !== 0 ? new Phaser.Math.Vector2(0, Math.sign(want.y)) : new Phaser.Math.Vector2(Math.sign(want.x), 0);
+    if (side.lengthSq() === 0) return null;
+
+    const here = cellOf(sliding.x, sliding.groundY);
+    const past =
+        dir.x !== 0 ? (sliding.x - here.gx * TILE_UNIT) * dir.x : (sliding.groundY - here.gy * TILE_UNIT) * dir.y;
+    if (past < 0 || past > TILE_UNIT / 4) return null;
+
+    const gx = here.gx + side.x;
+    const gy = here.gy + side.y;
+    if (scene.maze?.[gy]?.[gx] !== 0 || scene.apartmentSystem?.isCellBuilt(gx, gy)) return null;
+    return side;
+};
+
+/**
  * The velocity a slide wants this frame, or null when the slide is over.
  *
- * Two ends, and no third: the first ordinary cell reached, or whatever the
- * body has slid into. Nothing pressed in between changes either.
+ * Two ends: the first ordinary cell reached, or whatever the body has slid
+ * into. The only way off in between is a side street (see `turnOff`).
  */
 export const slideVelocity = (
     scene: GameScene,
