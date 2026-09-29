@@ -805,6 +805,15 @@ const generateGrid = (size: number, centre: GridCell, rng: GridRng, plan: CityPl
     braid(maze, size, rng, plan.braid ?? GameConfig.MAZE.BRAID_CHANCE);
     carvePlazas(maze, size, rng, plan.plazas ?? GameConfig.MAZE.PLAZAS);
 
+    // Braids and plazas do not know the shape, and used to push streets out
+    // through it. Everything outside is built back over; the one way in from
+    // the doorstep is laid afterwards, by joinUp.
+    for (let y = 1; y <= size - 2; y++) {
+        for (let x = 1; x <= size - 2; x++) {
+            if (!mask(x, y)) maze[y][x] = 1;
+        }
+    }
+
     // Again: a generator that fills its own ground (division, blocks, caves)
     // may have built over the door or the doorway to home.
     clearLandmarks();
