@@ -1,6 +1,6 @@
 import { GameConfig } from '../constants/GameConfig';
 import { CITY_KINDS } from './cityKinds';
-import { generateCity, walkLength } from './mazeGrid';
+import { generateCity, maskFor, walkLength } from './mazeGrid';
 import type { GridRng } from './mazeGrid';
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -60,6 +60,30 @@ describe.each(CITY_KINDS.map((kind) => [kind.key, kind] as const))('%s', (key, k
         const centre = centreOf(once.size);
         expect(once.maze[start.y][start.x]).toBe(0);
         expect(once.maze[centre.y][centre.x]).toBe(0);
+    });
+
+    it('keeps to its outline: outside the shape, only the way in from the doorstep', () => {
+        for (let i = 0; i < 20; i++) {
+            const city = generateCity(41, seeded(`${key}-outline-${i}#1`), kind.plan);
+            const inside = maskFor(kind.plan.mask ?? 'square', city.size);
+            const outside = (x: number, y: number) => city.maze[y]?.[x] === 0 && !inside(x, y);
+
+            // The doorway: open ground outside the shape, joined to the doorstep.
+            const door = new Set<string>();
+            const todo = [start];
+            while (todo.length) {
+                const { x, y } = todo.pop()!;
+                if (door.has(`${x},${y}`) || !outside(x, y)) continue;
+                door.add(`${x},${y}`);
+                todo.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
+            }
+
+            for (let y = 0; y < city.size; y++) {
+                for (let x = 0; x < city.size; x++) {
+                    if (outside(x, y)) expect(door.has(`${x},${y}`) ? 'doorway' : `leak at ${x},${y}`).toBe('doorway');
+                }
+            }
+        }
     });
 
     it('freezes only walkable street, and only when asked', () => {
