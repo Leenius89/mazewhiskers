@@ -34,12 +34,18 @@ describe('resolveCityPlan', () => {
         // Otherwise a frozen city and a clear one would leave the generator in
         // different places, and everything downstream of it — the buildings,
         // the fish, the milk — would differ for a reason the player cannot see.
-        const iced = seeded('stream-check');
-        const plain = seeded('stream-check');
-
-        resolveCityPlan(iced);
-        resolveCityPlan(plain);
-        expect(iced.frac()).toBe(plain.frac());
+        // Against a reference that took exactly two, over seeds that land on
+        // both sides of the roll.
+        const outcomes = new Set<boolean>();
+        for (let i = 0; i < 40; i++) {
+            const rng = seeded(`stream-${i}`);
+            const reference = seeded(`stream-${i}`);
+            outcomes.add(resolveCityPlan(rng).ice !== undefined);
+            reference.frac();
+            reference.frac();
+            expect(rng.frac()).toBe(reference.frac());
+        }
+        expect(outcomes.size).toBe(2);
     });
 
     it('gives one seed the same weather twice', () => {

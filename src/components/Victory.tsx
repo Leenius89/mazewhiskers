@@ -65,7 +65,7 @@ const Victory: React.FC<VictoryProps> = ({
                     <p style={eyebrow}>ARRIVED</p>
                     <h2 style={headline(theme.good)}>{t('win.title')}</h2>
                     <p style={{ margin: 0, fontSize: '0.9rem', lineHeight: 1.65, color: theme.inkMuted }}>
-                        도시가 먼저 도착하지 못했습니다. 이번에는.
+                        {t('win.body')}
                     </p>
                 </div>
 
@@ -93,7 +93,7 @@ const Victory: React.FC<VictoryProps> = ({
                 <div style={buttonRow}>
                     <MotionButton style={button('primary')} onClick={onRetry} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
                         <RotateCcw size={13} />
-                        다시 / RETRY
+                        {t('over.retry')}
                     </MotionButton>
                     <MotionButton
                         style={button('quiet')}
@@ -102,7 +102,7 @@ const Victory: React.FC<VictoryProps> = ({
                         whileTap={{ y: 0 }}
                     >
                         <Trophy size={13} />
-                        랭킹
+                        {t('over.ranking')}
                     </MotionButton>
                 </div>
 
@@ -114,7 +114,7 @@ const Victory: React.FC<VictoryProps> = ({
                         whileTap={{ y: 0 }}
                     >
                         <Film size={13} />
-                        크레딧
+                        {t('win.credits')}
                     </MotionButton>
                     <MotionButton
                         style={button('quiet')}
@@ -123,7 +123,7 @@ const Victory: React.FC<VictoryProps> = ({
                         whileTap={{ y: 0 }}
                     >
                         <Home size={13} />
-                        메뉴
+                        {t('win.menu')}
                     </MotionButton>
                 </div>
             </motion.div>

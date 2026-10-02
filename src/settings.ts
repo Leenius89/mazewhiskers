@@ -64,7 +64,7 @@ function load(): Settings {
             muted: typeof parsed.muted === 'boolean' ? parsed.muted : DEFAULTS.muted,
             language: parsed.language === 'en' ? 'en' : 'ko',
             difficulty:
-                parsed.difficulty && parsed.difficulty in DIFFICULTIES
+                parsed.difficulty && Object.prototype.hasOwnProperty.call(DIFFICULTIES, parsed.difficulty)
                     ? parsed.difficulty
                     : DEFAULTS.difficulty,
             appearance: parsed.appearance === 'light' ? 'light' : 'dark',

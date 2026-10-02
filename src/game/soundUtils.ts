@@ -99,7 +99,10 @@ export class SoundManager {
             }
             if (this.enemySwapPending) {
                 this.enemySwapPending = false;
-                this.playEnemySound();
+                // Arriving under the pause menu, it would start the chase over
+                // it; it waits for the game instead.
+                if (this.scene.sys.isPaused()) this.scene.events.once('resume', () => this.playEnemySound());
+                else this.playEnemySound();
             }
         });
         loader.start();
@@ -205,9 +208,8 @@ export class SoundManager {
     playEnemySound(): Phaser.Sound.BaseSound | null {
         if (this.soundsLoaded && this.sounds.enemySound) {
             try {
-                this.scene.sound.getAllPlaying().forEach((sound) => {
-                    if (sound.key === 'mainBGM') sound.stop();
-                });
+                // Paused copies too: resumeAll would bring them back under it.
+                this.scene.sound.getAll('mainBGM').forEach((sound) => sound.stop());
 
                 const enemySound = this.sounds.enemySound;
                 enemySound.play();

@@ -25,12 +25,11 @@ import type { GameOverPayload } from './game/core/GameEvents';
 import { isDebugEnabled } from './game/core/debug';
 import { RENDER_SCALE } from './game/core/renderScale';
 
-import { resolveMode } from './game/core/modes';
 import { isSimulated, useChrome } from './platform/chrome';
 import type { Chrome } from './platform/chrome';
-import { onBackground, stepAside } from './platform/lifecycle';
+import { onBackground, stepAside, stepBack } from './platform/lifecycle';
 import { fileRun, getRecords } from './platform/records';
-import { betweenRuns, noteRunFinished, warmAds, watchForMilk } from './platform/ads';
+import { adShowing, betweenRuns, noteRunFinished, warmAds, watchForMilk } from './platform/ads';
 import { armDaily, dailyDate, disarmDaily } from './platform/daily';
 import EndingsPanel from './components/EndingsPanel';
 import { scoreRun } from './platform/score';
@@ -147,8 +146,6 @@ function App() {
     const [isShowingCredits, setIsShowingCredits] = useState(false);
     const [endReason, setEndReason] = useState<GameOverPayload['reason']>('health');
 
-    // Exhibition or arcade, fixed for the page load. A kiosk pins it in the URL.
-    const mode = useRef(resolveMode()).current;
 
     // Typed view onto the game's event emitter. The scene owns game state;
     // React only subscribes to it.
@@ -430,49 +427,9 @@ function App() {
         }, 100);
     }, [destroyGame]);
 
-    /**
-     * Kiosk idle return.
-     *
-     * An unattended exhibition machine is left on a results screen by whoever
-     * walked away, and the next visitor should find the attract screen rather
-     * than someone else's game over. Only runs in exhibition mode, and only
-     * while a results screen is up — never mid-play.
-     *
-     * Not in this build. The Toss game plays by exhibition's rules — one
-     * district, one cat, the gallery's damage and pace, checked frame for
-     * frame against the web build — but a phone is not an unattended kiosk,
-     * and a player reading their own score should not be sent to the menu
-     * for taking forty-five seconds over it.
-     */
-    useEffect(() => {
-        const timeout: number | null = null;
-        if (!timeout) return;
-        if (!isGameOver && !isVictory) return;
-        if (isShowingCredits || showRecords) return;
-
-        let timer = window.setTimeout(() => {
-            setIsGameOver(false);
-            setIsVictory(false);
-            setShowGame(false);
-        }, timeout);
-
-        const postpone = () => {
-            window.clearTimeout(timer);
-            timer = window.setTimeout(() => {
-                setIsGameOver(false);
-                setIsVictory(false);
-                setShowGame(false);
-            }, timeout);
-        };
-
-        const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
-        events.forEach((event) => window.addEventListener(event, postpone));
-
-        return () => {
-            window.clearTimeout(timer);
-            events.forEach((event) => window.removeEventListener(event, postpone));
-        };
-    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showRecords]);
+    // No kiosk idle return here: a phone is not an unattended exhibition
+    // machine, and a player reading their own score should not be sent to the
+    // menu for taking forty-five seconds over it.
 
     // Global Event handlers (if any)
     useEffect(() => {
@@ -505,6 +462,10 @@ function App() {
         // Also the background hook: going away from the menu has nothing to pause.
         if (!showGame || isGameOver || isVictory || isShowingCredits) return;
         bus.current?.emit('pauseGame');
+        // Answered synchronously. The scene refuses while loading, dying or
+        // clearing, and a pause menu over a run still going is worse than none.
+        const scene = game.current?.scene.getScene('GameScene') as GameScene | null;
+        if (!scene?.state?.is('paused')) return;
         setShowPause(true);
     }, [showGame, isGameOver, isVictory, isShowingCredits]);
 
@@ -533,6 +494,8 @@ function App() {
         (next: () => void) => {
             if (leavingRef.current) return;
             leavingRef.current = true;
+            // betweenRuns waits out a milk ad already on screen, so Retry tapped
+            // under it starts the run once it closes, with the milk.
 
             void betweenRuns(quietForAd, resumeAfterAd).then(() => {
                 leavingRef.current = false;
@@ -606,7 +569,10 @@ function App() {
 
         stepAside();
         void openLeaderboard().then((opened) => {
-            if (!opened) setShowRecords(true);
+            if (opened) return;
+            // Nothing covered the page, so nothing will bring the music back.
+            stepBack();
+            setShowRecords(true);
         });
     }, []);
 
@@ -664,6 +630,9 @@ function App() {
      */
     const backRef = useRef<() => void>(() => undefined);
     backRef.current = () => {
+        // A results screen on its way out, or under an ad: the way out is
+        // already chosen, and leaving by back would let it fire on the menu.
+        if (leavingRef.current || adShowing()) return;
         if (showLeave) return setShowLeave(false);
         if (showSettings) return setShowSettings(false);
         if (showRecords) return setShowRecords(false);

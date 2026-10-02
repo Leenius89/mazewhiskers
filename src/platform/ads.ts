@@ -97,13 +97,28 @@ const simulate = (label: string, ms: number): Promise<void> =>
         }, ms);
     });
 
+/**
+ * The ad on screen, if one is. Two at once — the milk ad still coming up when
+ * Retry asks for the between-runs one — would stack full-screen ads and let
+ * the first to close unmute the game under the second.
+ */
+let onScreen: Promise<unknown> | null = null;
+
+/** Whether an ad is up or on its way: the results screen holds still meanwhile. */
+export const adShowing = (): boolean => onScreen !== null;
+
 const present = async (unit: Unit): Promise<{ shown: boolean; rewarded: boolean }> => {
+    if (onScreen) return { shown: false, rewarded: false };
     ready[unit] = false;
     changed();
 
-    const result = isSimulated()
-        ? await simulate(unit, 1500).then(() => ({ shown: true, rewarded: unit === 'rewarded' }))
-        : await showAd(AD_UNITS[unit]);
+    const showing = isSimulated()
+        ? simulate(unit, 1500).then(() => ({ shown: true, rewarded: unit === 'rewarded' }))
+        : showAd(AD_UNITS[unit]);
+    onScreen = showing;
+    const result = await showing.finally(() => {
+        onScreen = null;
+    });
 
     // Load → show → load the next, as the ad guide asks.
     void fetchUnit(unit);
@@ -124,6 +139,10 @@ export const noteRunFinished = (): void => {
  * exactly as long as something else is making noise.
  */
 export const betweenRuns = async (quiet: () => void, resume: () => void): Promise<void> => {
+    // The milk ad first, if it is still up: its reward has to land before the
+    // next run takes its start bonus, and it may stand in for this one.
+    if (onScreen) await onScreen.catch(() => undefined);
+
     const due =
         available() &&
         ready.interstitial &&

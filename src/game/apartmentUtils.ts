@@ -92,12 +92,10 @@ export class ApartmentSystem {
     }
 
     /** Share of the original walkable city still standing, 0 to 1. */
+    // raiseTower is the only thing that closes a street, and it counts them:
+    // no need to rescan the grid, which the HUD and the ice did every frame.
     get alleysRemaining(): number {
-        const maze = this.scene.maze;
-        if (!maze || this.openCellsAtStart === 0) return 1;
-
-        const open = maze.reduce((total, row) => total + row.filter((cell) => cell === 0).length, 0);
-        return Phaser.Math.Clamp(open / this.openCellsAtStart, 0, 1);
+        return 1 - this.development;
     }
 
     /** How far the redevelopment has advanced overall, 0 to 1. */
@@ -160,6 +158,8 @@ export class ApartmentSystem {
             for (let gx = block.gx; gx < block.gx + block.width; gx++) {
                 if (this.isCellBuilt(gx, gy)) continue;
                 if (this.isProtectedGoal(gx, gy)) continue;
+                // Already taped by another block: that one owns the cell.
+                if (this.pending.has(this.cellKey(gx, gy))) continue;
 
                 const cell = { gx, gy };
                 this.pending.set(this.cellKey(gx, gy), cell);
@@ -370,8 +370,9 @@ export class ApartmentSystem {
         // mid-shove or mid-hit.
         this.freeTrappedEnemies();
 
-        // A shove already in flight is the fix, not the problem.
-        if (player.isRecovering) return;
+        // A shove already in flight is the fix, not the problem. And mid-jump
+        // the body rides the arc a cell or more above the ground it is over.
+        if (player.isRecovering || player.isJumping) return;
 
         // Being hit throws the cat about, and a hit is never allowed to end the
         // run this way — that loss belongs to the towers, not to the black cat.
@@ -551,6 +552,13 @@ export class ApartmentSystem {
 
     private clearBlock(cells: PendingCell[]): void {
         if (this.scene.state.hasEnded()) return;
+
+        // The world holds its breath for a scripted beat, as rent and the
+        // drain do; a block due mid-beat lands just after it.
+        if (this.scene.narrativeActive) {
+            this.scene.time.delayedCall(250, () => this.clearBlock(cells));
+            return;
+        }
 
         const playerCell = cellOf(this.player.x, this.scene.player?.groundY ?? this.player.y);
         cells.forEach((cell) => this.pending.delete(this.cellKey(cell.gx, cell.gy)));
@@ -785,7 +793,6 @@ export class ApartmentSystem {
     }
 
     private raiseTower(cell: PendingCell, x: number, baseY: number): void {
-        this.removeExistingWalls(x, cell.gy * this.tileUnit);
 
         const apartmentType = Phaser.Math.Between(1, 3);
         // Origin at the base, placed on the tile's ground line, so the tower
@@ -873,21 +880,6 @@ export class ApartmentSystem {
      *  reachability check needs to know which cells are gone. */
     isCellBuilt(gx: number, gy: number): boolean {
         return this.occupiedPositions.has(this.cellKey(gx, gy));
-    }
-
-    private removeExistingWalls(x: number, y: number): void {
-        const walls = this.scene.walls;
-        if (!walls) return;
-
-        const children = walls.getChildren() as Phaser.Physics.Arcade.Sprite[];
-        for (let i = children.length - 1; i >= 0; i--) {
-            const wall = children[i];
-            if (wall.active && Math.abs(wall.x - x) < this.tileUnit && Math.abs(wall.y - y) < this.tileUnit) {
-                const { gx, gy } = cellOf(wall.x, wall.y);
-                this.scene.occluders.delete(this.cellKey(gx, gy));
-                wall.destroy();
-            }
-        }
     }
 
     // ------------------------------------------------------------------ state

@@ -46,6 +46,9 @@ export const readDailyRecord = (): DailyRecord => {
 /** Files a finished run of a day's city and hands back the shelf as it now is. */
 export const fileDailyRun = (date: string, score: number): DailyRecord => {
     const held = readDailyRecord();
+    // A run of yesterday's city finishing after one of today's (another tab,
+    // or begun before midnight) must not wind the shelf back a day.
+    if (held.date && held.date > date) return held;
     const sameDay = held.date === date;
 
     const next: DailyRecord = sameDay

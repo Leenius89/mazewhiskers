@@ -43,6 +43,9 @@ export const onBackground = (hook: BackgroundHook): (() => void) => {
 
 export const isBackgrounded = (): boolean => hidden;
 
+/** Undoes stepAside when the screen it made way for never came up. */
+export const stepBack = (): void => show();
+
 /**
  * For screens Toss lays over the game without hiding the page.
  *

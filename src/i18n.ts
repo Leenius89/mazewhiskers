@@ -35,6 +35,8 @@ const ko: Dict = {
     'endings.found': '새 엔딩을 발견했습니다',
     'ad.milk.offer': '광고 보고 우유 한 팩 들고 시작 (점프 +1)',
     'ad.milk.held': '우유 한 팩을 챙겼습니다 · 다음 판 점프 +1',
+    'hud.alleys': '남은 골목 {n}%',
+    'hud.district': '구역 {d}/{of}',
 
     // ------------------------------------------------------------ settings
     'pause.eyebrow': 'PAUSED',
@@ -136,10 +138,13 @@ const ko: Dict = {
 
     // ------------------------------------------------------------- victory
     'win.title': '집에 닿았다',
+    'win.body': '도시가 먼저 도착하지 못했습니다. 이번에는.',
+    'win.credits': '크레딧',
+    'win.menu': '메뉴',
     'win.submit': '기록 등록 / SUBMIT TIME',
 
     // ------------------------------------------------------------ tutorial
-    'tut.move.speaker': '· 이동',
+    'tut.move.speaker': '· 고양이',
     'cat.idle.1': '야옹~',
     'cat.idle.2': '캬캬캬',
     'cat.idle.3': '또 왔네?',
@@ -185,7 +190,7 @@ const ko: Dict = {
     'tut.start': '자, 이제 집까지 가세요!',
     'tut.skip': 'SKIP ▸',
     'tut.hint': '▸ ENTER / CLICK',
-    'tut.enemy.speaker': '· ?',
+    'tut.enemy.speaker': '· ???',
     'tut.enemy': '인생은 뜻하지 않은 위기가 도사리지 캬캬',
 
     // --------------------------------------------------------------- barks
@@ -215,7 +220,7 @@ const en: Dict = {
     'menu.settings': 'SETTINGS',
     'menu.endings': 'ENDINGS',
     'menu.rankingShort': 'RANKING',
-    'menu.daily': "TODAY'S CITY",
+    'menu.daily': 'DAILY',
     'daily.tag': "Today's city",
     'daily.best': 'best today',
     'daily.tries': 'try {n}',
@@ -228,6 +233,8 @@ const en: Dict = {
     'endings.found': 'New ending found',
     'ad.milk.offer': 'Watch an ad, start with extra milk (jump +1)',
     'ad.milk.held': 'Milk packed · next run starts with jump +1',
+    'hud.alleys': 'ALLEYS LEFT {n}%',
+    'hud.district': 'DISTRICT {d}/{of}',
 
     'pause.eyebrow': 'PAUSED',
     'pause.title': 'Paused',
@@ -325,9 +332,12 @@ const en: Dict = {
     'over.saveFailed': 'Could not save your record. Please try again.',
 
     'win.title': 'You made it home',
+    'win.body': 'The city did not get there first. This time.',
+    'win.credits': 'CREDITS',
+    'win.menu': 'MENU',
     'win.submit': 'SUBMIT TIME',
 
-    'tut.move.speaker': '· MOVING',
+    'tut.move.speaker': '· CAT',
     'cat.idle.1': 'meow~',
     'cat.idle.2': 'hehehe',
     'cat.idle.3': 'back again?',
@@ -373,7 +383,7 @@ const en: Dict = {
     'tut.start': 'Right — get yourself home!',
     'tut.skip': 'SKIP ▸',
     'tut.hint': '▸ ENTER / CLICK',
-    'tut.enemy.speaker': '· ?',
+    'tut.enemy.speaker': '· ???',
     'tut.enemy': 'Life keeps a crisis or two up its sleeve, heh heh',
 
     'bark.firstTower': 'So this is redevelopment!',

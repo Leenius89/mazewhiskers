@@ -48,11 +48,22 @@ const warn = (what: string, error: unknown): void => {
 };
 
 /** Runs an SDK call if there is a Toss to run it against. */
-const attempt = async <T>(what: string, run: () => Promise<T> | T, fallback: T): Promise<T> => {
+/**
+ * Calls the SDK, and gives up after `ms` (when given) rather than waiting
+ * forever on a bridge that never answers.
+ */
+const attempt = async <T>(what: string, run: () => Promise<T> | T, fallback: T, ms?: number): Promise<T> => {
     if (!inToss()) return fallback;
 
     try {
-        return await run();
+        if (!ms) return await run();
+        return await Promise.race([
+            Promise.resolve(run()),
+            new Promise<T>((resolve) => window.setTimeout(() => {
+                warn(what, `no answer in ${ms}ms`);
+                resolve(fallback);
+            }, ms))
+        ]);
     } catch (error) {
         warn(what, error);
         return fallback;
@@ -69,7 +80,9 @@ const attempt = async <T>(what: string, run: () => Promise<T> | T, fallback: T):
  * here: it names the save slot and nothing else.
  */
 export const fetchUserKey = async (): Promise<string | null> => {
-    const result = await attempt('getUserKeyForGame', () => getUserKeyForGame(), undefined);
+    // Bounded: a run filed before the key arrives goes on the local shelf,
+    // and the key arriving later used to replace that shelf, run and all.
+    const result = await attempt('getUserKeyForGame', () => getUserKeyForGame(), undefined, 5000);
 
     if (result && typeof result === 'object' && result.type === 'HASH') return result.hash;
     return null;
@@ -78,7 +91,7 @@ export const fetchUserKey = async (): Promise<string | null> => {
 // ------------------------------------------------------------------- storage
 
 /**
- * Reads a value, preferring the copy the Toss app keeps.
+ * Reads a value: the working copy, or the Toss app's when that is gone.
  *
  * `localStorage` is synchronous and is what the settings module was built
  * on, so it stays the working copy. But iOS clears a WebView's storage after
@@ -86,14 +99,17 @@ export const fetchUserKey = async (): Promise<string | null> => {
  * have their best run — the SDK's store is the one that survives that.
  */
 export const recall = async (key: string): Promise<string | null> => {
-    const kept = await attempt(`Storage.getItem(${key})`, () => Storage.getItem(key), null);
-    if (kept !== null) return kept;
-
+    // The working copy first, as restore() does: it is written synchronously
+    // and the Toss copy is not, so a write the Toss copy missed (the app
+    // closed first, or the call failed) would otherwise be rolled back.
     try {
-        return window.localStorage.getItem(key);
+        const local = window.localStorage.getItem(key);
+        if (local !== null) return local;
     } catch {
-        return null;
+        // Storage switched off: the Toss copy is all there is.
     }
+
+    return attempt(`Storage.getItem(${key})`, () => Storage.getItem(key), null);
 };
 
 /** Writes to both copies. Neither failing is allowed to fail the caller. */
@@ -159,7 +175,8 @@ export const submitScore = async (score: number): Promise<SubmitOutcome> => {
     const result = await attempt(
         'submitGameCenterLeaderBoardScore',
         () => submitGameCenterLeaderBoardScore({ score: String(Math.max(0, Math.round(score))) }),
-        undefined
+        undefined,
+        10000
     );
 
     if (!result) return 'unavailable';

@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import type { CSSProperties } from 'react';
 import { getSettings, subscribe } from '../settings';
 import type { Appearance } from '../settings';
@@ -388,4 +389,20 @@ export const button = (tone: ButtonTone, disabled = false): CSSProperties => {
         whiteSpace: 'nowrap',
         userSelect: 'none'
     };
+};
+
+/**
+ * A panel over another screen: Escape closes it, and the screen beneath does
+ * not hear Enter or Space. The menu and the results screens listen on window
+ * for those, so with Settings open, Space started a run underneath it.
+ */
+export const useModalKeys = (onClose: () => void): void => {
+    useEffect(() => {
+        const swallow = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') e.stopImmediatePropagation();
+        };
+        window.addEventListener('keydown', swallow, true);
+        return () => window.removeEventListener('keydown', swallow, true);
+    }, [onClose]);
 };

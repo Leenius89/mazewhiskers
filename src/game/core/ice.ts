@@ -68,9 +68,12 @@ export const turnOff = (
     dir: Phaser.Math.Vector2,
     want: { x: number; y: number }
 ): Phaser.Math.Vector2 | null => {
-    const side =
-        dir.x !== 0 ? new Phaser.Math.Vector2(0, Math.sign(want.y)) : new Phaser.Math.Vector2(Math.sign(want.x), 0);
-    if (side.lengthSq() === 0) return null;
+    // Only for input that is mostly sideways. A diagonal, or a stick held a
+    // hair off straight, would otherwise turn at every gap, and back again.
+    const across = dir.x !== 0 ? want.y : want.x;
+    const along = dir.x !== 0 ? want.x : want.y;
+    if (Math.abs(across) <= Math.abs(along)) return null;
+    const side = dir.x !== 0 ? new Phaser.Math.Vector2(0, Math.sign(across)) : new Phaser.Math.Vector2(Math.sign(across), 0);
 
     const here = cellOf(sliding.x, sliding.groundY);
     const past =

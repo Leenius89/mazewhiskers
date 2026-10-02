@@ -49,12 +49,15 @@ describe('generateCity', () => {
     });
 
     it('asks the generator for nothing when no ice is wanted', () => {
-        const plain = generateCity(41, seeded('ice-none#1'));
-        const same = generateCity(41, seeded('ice-none#1'), {});
+        const rng = seeded('ice-none#1');
+        const plain = generateCity(41, rng);
+        const zeroRng = seeded('ice-none#1');
+        generateCity(41, zeroRng, { ice: 0 });
         const iced = generateCity(41, seeded('ice-none#1'), { ice: 0.3 });
 
         expect(plain.ice).toEqual([]);
-        expect(same.maze).toEqual(plain.maze);
+        // Asking for none of it leaves the stream exactly where no ice does.
+        expect(zeroRng.frac()).toBe(rng.frac());
         // The ice is drawn after the layout, so asking for it must not move a
         // single wall: an ordinary city and an icy one of the same seed are
         // the same city underneath.

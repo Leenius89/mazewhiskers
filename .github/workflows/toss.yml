@@ -44,6 +44,11 @@ jobs:
           REACT_APP_AD_REWARDED: ${{ vars.AD_REWARDED_ID }}
         run: |
           if [ -z "$REACT_APP_AD_INTERSTITIAL" ] || [ -z "$REACT_APP_AD_REWARDED" ]; then
+            # A release tag uploads for review: test ads there must stop the run.
+            if [[ "$GITHUB_REF" == refs/tags/toss-* ]]; then
+              echo "::error::Ad group IDs are not set; a release would ship TEST ads. Set AD_INTERSTITIAL_ID and AD_REWARDED_ID in Variables."
+              exit 1
+            fi
             echo "::warning::Ad group IDs are not set; this bundle shows TEST ads. Fine for QR testing, not for review."
           fi
           npm run build:toss

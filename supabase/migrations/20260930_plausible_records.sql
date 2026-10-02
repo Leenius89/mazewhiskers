@@ -12,10 +12,12 @@
 --                real clear so far is 19.85 s. 8 s leaves room for a run
 --                nobody has managed yet.
 --   survived_ms  Health drains 1 a second from 100, and a fish gives back at
---                most 35. So a run can last at most (100 + 35 x fish) seconds;
+--                most 35. Arcade runs three districts and refills health in
+--                each, so a run can last at most (300 + 35 x fish) seconds;
 --                doubled here, for slack.
---   fish_count   At most 300. The biggest city holds around 200.
---   score        At most 50 000, and at least 100 per fish (fish are 100 each).
+--   fish_count   At most 600. The biggest city holds around 200, three times
+--                over in arcade.
+--   score        At most 100 000, and at least 100 per fish (fish are 100 each).
 --
 -- Every column stays null-tolerant, because the game's fallback insert sends
 -- only a name and a score.
@@ -33,14 +35,14 @@ create policy "insert_scores"
     with check (
         username is not null
         and char_length(btrim(username)) between 1 and 10
-        and (score       is null or score between 0 and 50000)
+        and (score       is null or score between 0 and 100000)
         and (survived_ms is null or survived_ms between 0 and 3600000)
-        and (fish_count  is null or fish_count between 0 and 300)
+        and (fish_count  is null or fish_count between 0 and 600)
         and (health_left is null or health_left between 0 and 100)
         and (difficulty  is null or difficulty in ('easy', 'normal', 'hard', 'nightmare'))
         -- Consistent with each other, where both were sent.
         and (fish_count is null or score is null or score >= fish_count * 100)
-        and (fish_count is null or survived_ms is null or survived_ms <= (100 + 35 * fish_count) * 2000)
+        and (fish_count is null or survived_ms is null or survived_ms <= (300 + 35 * fish_count) * 2000)
     );
 
 -- ------------------------------------------------------------------- times
@@ -64,7 +66,7 @@ create policy "insert_times"
 select
     tablename,
     policyname,
-    (with_check like '%8000%' or with_check like '%50000%') as has_new_bounds
+    (with_check like '%8000%' or with_check like '%100000%') as has_new_bounds
 from pg_policies
 where schemaname = 'public'
   and tablename in ('scores', 'speedrun_leaderboard')
@@ -78,7 +80,7 @@ where time_ms < 8000
 union all
 select 'scores', count(*)
 from public.scores
-where score > 50000
-   or fish_count > 300
+where score > 100000
+   or fish_count > 600
    or (fish_count is not null and score is not null and score < fish_count * 100)
-   or (fish_count is not null and survived_ms is not null and survived_ms > (100 + 35 * fish_count) * 2000);
+   or (fish_count is not null and survived_ms is not null and survived_ms > (300 + 35 * fish_count) * 2000);

@@ -522,8 +522,8 @@ const reachableFrom = (maze: number[][], from: GridCell): Set<string> => {
     const seen = new Set<string>([`${from.x},${from.y}`]);
     const queue: GridCell[] = [from];
 
-    while (queue.length) {
-        const cell = queue.shift()!;
+    for (let head = 0; head < queue.length; head++) {
+        const cell = queue[head];
 
         for (const [dx, dy] of NEIGHBOURS) {
             const x = cell.x + dx;

@@ -31,17 +31,17 @@ const PauseMenu: React.FC<PauseMenuProps> = ({ onResume, onRestart, onMainMenu }
     const t = useTranslation();
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={{ ...overlayBackdrop }}>
             <motion.div
-                style={panel}
+                style={{ ...panel }}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.24, ease: 'easeOut' }}
             >
-                <div style={hazardEdge} />
+                <div style={{ ...hazardEdge }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={eyebrow}>{t('pause.eyebrow')}</p>
+                    <p style={{ ...eyebrow }}>{t('pause.eyebrow')}</p>
                     <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>{t('pause.title')}</h2>
                 </div>
 
@@ -98,7 +98,7 @@ const PauseMenu: React.FC<PauseMenuProps> = ({ onResume, onRestart, onMainMenu }
                     {t('pause.resume')}
                 </MotionButton>
 
-                <div style={buttonRow}>
+                <div style={{ ...buttonRow }}>
                     <MotionButton style={button('quiet')} onClick={onRestart} whileTap={{ y: 1 }}>
                         <RotateCcw size={13} />
                         {t('pause.restart')}
