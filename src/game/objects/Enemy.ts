@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
-import { currentDifficulty, difficultyOf } from '../core/difficulty';
-import { getSettings } from '../../settings';
+import { currentDifficulty } from '../core/difficulty';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
 import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
@@ -26,7 +25,6 @@ export type EnemyAwareness = 'telegraph' | 'chase';
 
 export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public isJumping = false;
-    public enemySound?: Phaser.Sound.BaseSound;
 
     /** Ground position, which differs from `y` while the jump arc is playing. */
     public groundY: number;
@@ -240,10 +238,6 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.forgetRoute();
     }
 
-    /** True while the street, rather than the hunt, is choosing. */
-    get isSliding(): boolean {
-        return this.slide !== null;
-    }
 
     /**
      * Hands it to the ice, if the ice will have it.
@@ -396,7 +390,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const stalled = now - this.anchorAt;
 
-        if (stalled >= cfg.RESCUE_MS && this.escalated < 2) {
+        if (stalled >= cfg.RESCUE_MS) {
             this.forgetRoute();
             this.scene.apartmentSystem?.rehomeEnemy(this);
             // Start the watch over: a rescue that changed nothing gets another go.
@@ -642,12 +636,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     /** Headlight. Purely directional now — it shows where the thing is heading. */
     private drawCone(now: number): void {
         const vision = GameConfig.ENEMY.VISION;
-        const alert = true;
 
         // During the telegraph the beam flashes, which is the warning itself.
         const flash = this.awareness === 'telegraph' ? 0.5 + 0.5 * Math.sin(now / 60) : 1;
-        const alpha = (alert ? vision.CONE_ALPHA_ALERT : vision.CONE_ALPHA_CALM) * flash;
-        const color = alert ? vision.CONE_COLOR_ALERT : vision.CONE_COLOR;
+        const alpha = vision.CONE_ALPHA_ALERT * flash;
+        const color = vision.CONE_COLOR_ALERT;
 
         const half = Phaser.Math.DegToRad(vision.HALF_ANGLE_DEG);
 
@@ -743,7 +736,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                 this.y = endY;
                 this.jumpReadyAt =
                     this.scene.runNow +
-                    GameConfig.ENEMY.JUMP.COOLDOWN_MS * difficultyOf(getSettings().difficulty).enemyJumpScale;
+                    GameConfig.ENEMY.JUMP.COOLDOWN_MS * currentDifficulty().enemyJumpScale;
                 this.syncGroundVisuals();
                 this.play('enemyWalk', true);
             }

@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import type { GameOverReason } from '../scenes/GameScene';
-import type { GamePhase } from './GameState';
 
 /**
  * Typed wrapper around the game-level event emitter.
@@ -50,23 +49,13 @@ export interface VictoryPayload extends RunSummary {
     timeMs: number;
 }
 
-export interface PhaseChangedPayload {
-    from: GamePhase;
-    to: GamePhase;
-}
-
 export interface GameEventMap {
-    /** Scene finished `create()`; React may now show the tutorial overlay. */
-    gameReady: void;
     /** React asks the scene to suspend. */
     pauseGame: void;
     /** React asks the scene to continue. */
     resumeGame: void;
-    phaseChanged: PhaseChangedPayload;
     /** Authoritative health, owned by the scene. React only displays it. */
     healthChanged: HealthChangedPayload;
-    /** How many jumps the cat is holding. Drives the dots over its head. */
-    jumpCountChanged: number;
     /**
      * How many jumps have been spent this run.
      *
@@ -102,11 +91,6 @@ export class GameEventBus {
         return this;
     }
 
-    once<K extends EventKey>(key: K, handler: Handler<K>, context?: unknown): this {
-        this.emitter.once(key, handler, context);
-        return this;
-    }
-
     off<K extends EventKey>(key: K, handler?: Handler<K>, context?: unknown): this {
         this.emitter.off(key, handler, context);
         return this;
@@ -124,12 +108,9 @@ export class GameEventBus {
  * is added to `GameEventMap` and forgotten here.
  */
 const EVENT_KEYS: Record<EventKey, true> = {
-    gameReady: true,
     pauseGame: true,
     resumeGame: true,
-    phaseChanged: true,
     healthChanged: true,
-    jumpCountChanged: true,
     jumpsUsedChanged: true,
     milkCollected: true,
     fishCollected: true,

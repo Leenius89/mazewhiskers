@@ -1,7 +1,6 @@
 import Phaser from 'phaser';
 import { GameConfig } from './constants/GameConfig';
-import { currentDifficulty, difficultyOf } from './core/difficulty';
-import { getSettings } from '../settings';
+import { currentDifficulty } from './core/difficulty';
 import { setStaticFootBody } from './core/bodies';
 import { DEPTH, sortDepth } from './core/depth';
 import { TILE_UNIT, bodyCell, cellOf, isOpen, mazeSize as currentMazeSize, worldOf } from './core/grid';
@@ -71,7 +70,7 @@ export class ApartmentSystem {
         this.createDustAnimation();
         this.countOpenCells();
 
-        const difficulty = difficultyOf(getSettings().difficulty);
+        const difficulty = currentDifficulty();
         const delay =
             GameConfig.APARTMENT.DELAY *
             scene.mode.apartmentDelayScale *

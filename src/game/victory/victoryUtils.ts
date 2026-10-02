@@ -4,9 +4,8 @@ import { showCredits } from './creditsSystem';
 import { GameEventBus } from '../core/GameEvents';
 
 export class VictoryScene extends Phaser.Scene {
-    private buttonsContainer: HTMLDivElement | null;
     /** Guards against a second credits roll while one is already on screen. */
-    private isShowingCredits: boolean;
+    private isShowingCredits = false;
     private bus!: GameEventBus;
     private timeMs: number = 0;
     private milkCount: number = 0;
@@ -18,16 +17,9 @@ export class VictoryScene extends Phaser.Scene {
 
     constructor() {
         super('VictoryScene');
-        this.buttonsContainer = null;
-        this.isShowingCredits = false;
-        this.milkCount = 0;
-        this.fishCount = 0;
-        this.healthLeft = 0;
-        this.timeMs = 0;
     }
 
     preload() {
-        // Relative paths assumed correct based on AssetLoader usage
         if (!this.textures.exists('goalBackground')) {
             this.load.image('goalBackground', 'sources/goalbackground.png');
         }

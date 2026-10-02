@@ -17,9 +17,7 @@ export const DEPTH = {
     /** Base for y-sorted world objects. World Y is added to this. */
     SORTED: 1_000,
     /** Above the whole world: silhouettes, goal arrow, screen effects. */
-    OVERLAY: 900_000,
-    /** `?debug=1` instrumentation. */
-    DEBUG: 1_000_000
+    OVERLAY: 900_000
 } as const;
 
 /** Depth for an object whose feet are at `y`. */

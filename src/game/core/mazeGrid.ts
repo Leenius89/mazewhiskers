@@ -874,11 +874,6 @@ export const generateCity = (mazeSize: number, rng: GridRng, plan: CityPlan = {}
         }
     }
 
-    if (best) return { ...best, ice: ice(best.maze) };
-
-    // Never reached: `joinUp` leaves every city walkable. The belt to those
-    // braces — a plain street rather than a city with no way home.
-    const maze = generateGrid(size, centre, rng, plan);
-    forceRoute(maze, start, centre);
-    return { maze, walk: walkLength(maze, start, centre), inBand: false, ice: [], size };
+    // Every attempt is measured against the band, so one of them is closest.
+    return { ...best!, ice: ice(best!.maze) };
 };

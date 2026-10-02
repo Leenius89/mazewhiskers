@@ -5,7 +5,6 @@ import { currentDifficulty } from './core/difficulty';
 
 interface SoundMap {
     mainBGM?: Phaser.Sound.BaseSound;
-    fishSound?: Phaser.Sound.BaseSound;
     dyingSound?: Phaser.Sound.BaseSound;
     enemySound?: Phaser.Sound.BaseSound;
     jumpSound?: Phaser.Sound.BaseSound;
@@ -114,7 +113,6 @@ export class SoundManager {
         try {
             this.sounds = {
                 mainBGM: this.scene.sound.add('mainBGM', { loop: true, volume: 0.5 }),
-                fishSound: this.scene.sound.add('fishSound', { loop: false, volume: 0.5 }),
                 dyingSound: this.scene.sound.add('dyingSound', { loop: false, volume: 0.5 })
             };
 
@@ -168,7 +166,6 @@ export class SoundManager {
                 this.sounds.mainBGM.play();
                 // Nightmare hears the same tune played wrong.
                 bendSound(this.sounds.mainBGM, currentDifficulty().dread);
-                console.log('Main BGM started playing');
             } catch (error) {
                 console.error('Error playing mainBGM:', error);
             }
@@ -189,7 +186,6 @@ export class SoundManager {
             });
 
             fishSound.play();
-            console.log('Fish sound played');
 
             // Cleanup on complete
             fishSound.once('complete', () => {
@@ -323,14 +319,9 @@ export class SoundManager {
         }
     }
 
-    stopEnemySound(enemySound?: Phaser.Sound.BaseSound) {
-        const track = enemySound ?? this.activeEnemyTrack;
-        if (track && track.isPlaying) {
-            track.stop();
-        }
-        if (!enemySound || enemySound === this.activeEnemyTrack) {
-            this.activeEnemyTrack = null;
-        }
+    stopEnemySound() {
+        if (this.activeEnemyTrack?.isPlaying) this.activeEnemyTrack.stop();
+        this.activeEnemyTrack = null;
     }
 
     /**
@@ -365,9 +356,6 @@ export class SoundManager {
                     sound.stop();
                 }
             });
-
-            // Cleanup listeners
-            this.scene.sound.removeAllListeners();
         }
     }
 

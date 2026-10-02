@@ -113,10 +113,7 @@ export const createGoal = (
         scene.time.removeAllEvents();
 
         try {
-            if (scene.soundManager) {
-                scene.soundManager.stopAllSounds();
-                scene.sound.removeAllListeners();
-            }
+            scene.soundManager?.stopAllSounds();
 
             await create8BitTransition(scene);
 

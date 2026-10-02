@@ -84,8 +84,6 @@ export const GameConfig = {
          * its whole length.
          */
         CENTRING: 6,
-        /** Milk breaks a slide: a jump is the way off the ice early. */
-        JUMP_BREAKS: true,
         /** Patch shapes, in cells. A run is a random walk down the alleys. */
         RUN: { MIN: 3, MAX: 9 },
         /** Cells around the doorstep and home that never freeze. */
@@ -286,10 +284,7 @@ export const GameConfig = {
         TYPE_MS: 28,
         PAN_MS: 700,
         PULSE_MS: 900,
-        SHADE_COLOR: 0x05070c,
-        SHADE_ALPHA: 0.78,
         SPOTLIGHT_PADDING: 14,
-        HIGHLIGHT_COLOR: 0xf0b429,
         BOX_COLOR: 0x0b0d13,
         BOX_ALPHA: 0.94,
         /**
@@ -317,13 +312,9 @@ export const GameConfig = {
         /** Room kept under the text for the ENTER hint. */
         HINT_ROOM: 26,
         TEXT_COLOR: '#e7e9ee',
-        SPEAKER_COLOR: '#f0b429',
-        HINT_COLOR: '#8b919c',
-        SKIP_COLOR: '#ffffff',
         SKIP_SIZE: '12px',
         /** Gap between the skip button and the top of the dialogue box. */
-        SKIP_GAP: 10,
-        ENEMY_LINE: '인생은 뜻하지 않은 위기가 도사리지 캬캬'
+        SKIP_GAP: 10
     },
 
     /**
@@ -372,52 +363,7 @@ export const GameConfig = {
         PANIC_DISTANCE: 340,
         PANIC_COOLDOWN_MS: 4200,
         TAUNT_DISTANCE: 430,
-        TAUNT_COOLDOWN_MS: 6500,
-        LINES: {
-            /** The first tower is the one that gets a written line. */
-            FIRST_TOWER: '재개발이 시작되는구나!',
-            TOWER: [
-                '또 하나 올라갔어...',
-                '여기도 아파트야?',
-                '내 골목 내놔!',
-                '어? 길이 없어졌잖아',
-                '아니 저기 내 자리인데',
-                '이러다 앉을 데도 없겠다'
-            ],
-            PANIC: [
-                '살려줘! 도망가!',
-                '아오 %$#%!',
-                '$@#^%#&*!',
-                '왜 나만 쫓아와!',
-                '헉헉... 안 돼!',
-                '@#$%! 저리 가!',
-                '어어어 오지 마!'
-            ],
-            HURT: ['아야!', '#$%@!', '아 진짜!'],
-            IDLE: [
-                '여긴 또 어디야...',
-                '월세가 또 올랐대',
-                '집이 있으면 좋겠다',
-                '보증금이 뭔데 그렇게 비싸',
-                '배고파...',
-                '다리 아파',
-                '이 골목 아까 왔는데?',
-                '내 방 한 칸이면 되는데',
-                '따뜻한 데서 자고 싶다',
-                '여기 원래 우리 동네였는데'
-            ],
-            TAUNT: [
-                '캬캬캬',
-                '어디 가시나~',
-                '집은 있고?',
-                '월세나 내라옹',
-                '거기 서라옹',
-                '보증금 5억이다냥',
-                '재개발은 못 참지',
-                '도망가봐야 소용없다냥',
-                '여긴 이제 내 구역이다'
-            ]
-        }
+        TAUNT_COOLDOWN_MS: 6500
     },
 
     /** Health and jumps, read where the player is actually looking. */
@@ -504,7 +450,6 @@ export const GameConfig = {
             LANDING_SHAKE_MS: 120,
             DUST: { COUNT: 6, SIZE: 14, SPREAD: 34, DURATION: 320, COLOR: 0xd9d2c5 }
         },
-        LOOK_AHEAD_DIST: 50,
         /** Grid cell the run starts in. `createMaze` clears this and its neighbours. */
         START_TILE: { X: 1, Y: 1 },
         GOAL_INDICATOR: {
@@ -558,8 +503,6 @@ export const GameConfig = {
         VISION: {
             RANGE: 400,
             HALF_ANGLE_DEG: 45,
-            CONE_COLOR: 0xffe27a,
-            CONE_ALPHA_CALM: 0.08,
             CONE_ALPHA_ALERT: 0.2,
             CONE_COLOR_ALERT: 0xff6b5c
         },
@@ -646,20 +589,8 @@ export const GameConfig = {
             PLACE_SETTLE_MS: 250
         },
 
-
-        PATROL: { SPEED: 55, REPICK_MS: 2600 },
-        /** Heard something: walks to where the player was last seen. */
-        SUSPICIOUS: { SPEED: 72, GIVE_UP_MS: 3000 },
         /** A beat of warning before the chase starts. */
         TELEGRAPH: { DURATION_MS: 1200 },
-        /** Sight lost for this long ends a chase. */
-        LOSE_SIGHT_MS: 3000,
-        /**
-         * Contact is a heavy hit, not a death.
-         *
-         * An instant kill gives an exhibition visitor nothing to learn from.
-         * Two hits still end the run, so it stays frightening.
-         */
         /**
          * Being hit throws the cat clear.
          *
@@ -668,7 +599,7 @@ export const GameConfig = {
          * barely a third of a second of actual travel, which read as no knockback
          * at all.
          */
-        CONTACT: { DAMAGE: -35, KNOCKBACK: 340, KNOCKBACK_MS: 340, INVULNERABLE_MS: 1500 },
+        CONTACT: { KNOCKBACK: 340, KNOCKBACK_MS: 340, INVULNERABLE_MS: 1500 },
         JUMP: {
             HEIGHT: 120,
             /** Reach in grid cells, matching the player's. */
@@ -688,8 +619,7 @@ export const GameConfig = {
             MAX_ATTEMPTS: 100,
             /** Delay after the intro camera sequence finishes. */
             DELAY_AFTER_INTRO: 10000
-        },
-        LOOK_AHEAD_DIST: 50,
+        }
     },
 
     MILK: {

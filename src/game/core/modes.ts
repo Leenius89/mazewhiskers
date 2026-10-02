@@ -11,7 +11,6 @@ export type GameMode = 'exhibition' | 'arcade';
  */
 export interface ModeSettings {
     key: GameMode;
-    label: string;
 
     /** Enemies in the first district. */
     enemies: number;
@@ -43,7 +42,6 @@ export interface ModeSettings {
 
 const EXHIBITION: ModeSettings = {
     key: 'exhibition',
-    label: '전시 / EXHIBITION',
     enemies: 1,
     enemiesPerDistrict: 0,
     apartmentDelayScale: 1.3,
@@ -59,7 +57,6 @@ const EXHIBITION: ModeSettings = {
 
 const ARCADE: ModeSettings = {
     key: 'arcade',
-    label: '아케이드 / ARCADE',
     enemies: 1,
     enemiesPerDistrict: 1,
     apartmentDelayScale: 0.75,
