@@ -25,7 +25,7 @@ import { BarkSystem } from '../systems/BarkSystem';
 import { SweatDrops } from '../systems/SweatDrops';
 import { CullingSystem } from '../systems/CullingSystem';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
-import { cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
+import { bodyCell, cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
 import { RENDER_SCALE } from '../core/renderScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
@@ -278,6 +278,15 @@ export class GameScene extends Phaser.Scene {
         // Phaser does not call a `shutdown` method on a Scene subclass, so wire
         // teardown to the lifecycle event explicitly.
         this.events.once('shutdown', this.handleShutdown, this);
+
+        // A hidden tab stops the loop but not the clock runNow reads, so every
+        // deadline (invulnerability, telegraph, stagger) lapsed while away.
+        // Counted like a pause, unless the pause menu is already counting it.
+        const away = (ms: number) => {
+            if (!this.state.is('paused')) this.pausedTotalMs += ms;
+        };
+        this.game.events.on(Phaser.Core.Events.RESUME, away);
+        this.events.once('shutdown', () => this.game.events.off(Phaser.Core.Events.RESUME, away));
 
         this.controls = new InputManager(this, { dashEnabled: this.mode.dashEnabled });
 
@@ -577,14 +586,16 @@ export class GameScene extends Phaser.Scene {
         if (!player || this.narrativeActive || !this.state.is('playing')) {
             this.stillSince = 0;
             this.enclosedSince = 0;
-            this.trapCheckAt = now + GameConfig.TRAPPED.MIN_TRAVEL;
+            this.trapCheckAt = now + 1000;
             this.trapAnchor = { x: player?.x ?? 0, y: player?.groundY ?? 0 };
             return;
         }
 
         const cfg = GameConfig.TRAPPED;
-        const here = cellOf(player.x, player.groundY);
-        const boxedIn = openNeighbours(this.maze, here).length === 0;
+        // The body's cell: the ground point rounds into a wall the cat leans on.
+        const here = bodyCell(player);
+        // A cat with milk can still jump out, as canStillReachHome agrees.
+        const boxedIn = openNeighbours(this.maze, here).length === 0 && player.jumpCount === 0;
 
         if (boxedIn) {
             if (this.enclosedSince === 0) this.enclosedSince = now;
@@ -639,7 +650,7 @@ export class GameScene extends Phaser.Scene {
         if (!player || !maze || !this.goal) return true;
 
         const target = cellOf(this.goal.x, this.goal.y);
-        const start = cellOf(player.x, player.groundY);
+        const start = bodyCell(player);
         const apartments = this.apartmentSystem;
 
         const height = maze.length;
@@ -1008,6 +1019,11 @@ export class GameScene extends Phaser.Scene {
 
         this.apartmentSystem?.stopSpawning();
 
+        // Once, for their end-of-run branch: update() stops calling them from
+        // here, which left the red wash and the speech bubbles frozen on.
+        this.threat?.update(this.runNow);
+        this.barks?.update(this.runNow);
+
         const player = this.player;
         if (!player) {
             this.finishGameOver();
@@ -1020,6 +1036,9 @@ export class GameScene extends Phaser.Scene {
         player.beginDeath();
         this.statusBar?.setVisible(false);
         this.occlusion?.hide();
+        // update() stops at the end of a run, so nothing would steer them: stop
+        // them rather than let them coast and hop through the death.
+        this.enemies.forEach((enemy) => enemy.setVelocity(0, 0));
         this.physics.world.resume();
 
         const groundY = player.groundY;

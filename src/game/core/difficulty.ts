@@ -229,8 +229,9 @@ export const DIFFICULTY_ORDER: DifficultyKey[] = ['easy', 'normal', 'hard', 'nig
 /** The setting this run is being played on. */
 export const currentDifficulty = (): Difficulty => difficultyOf(getSettings().difficulty);
 
+// Own keys only: a stored "toString" would otherwise find Object's method.
 export const difficultyOf = (key: string | undefined | null): Difficulty =>
-    DIFFICULTIES[(key as DifficultyKey) ?? 'easy'] ?? DIFFICULTIES.easy;
+    key && Object.prototype.hasOwnProperty.call(DIFFICULTIES, key) ? DIFFICULTIES[key as DifficultyKey] : DIFFICULTIES.easy;
 
 /**
  * Turns a raw board value into the one it is ranked by.

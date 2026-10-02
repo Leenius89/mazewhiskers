@@ -61,6 +61,12 @@ const orderFor = (block: number): number[] => {
         order[i] = order[j];
         order[j] = held;
     }
+
+    // Each block is shuffled on its own, so one could open on the kind the
+    // last one closed on: the same city two days running.
+    if (block > 0 && order[0] === orderFor(block - 1)[order.length - 1]) {
+        [order[0], order[1]] = [order[1], order[0]];
+    }
     return order;
 };
 

@@ -1,4 +1,4 @@
-import { dailySeed } from './daily';
+import { dailySeed, todayKey } from './daily';
 export type GameMode = 'exhibition' | 'arcade';
 
 /**
@@ -106,7 +106,8 @@ export const resolveSeed = (mode: ModeSettings): string | null => {
     if (daily) return daily;
 
     if (mode.seedStrategy === 'daily') {
-        return `daily-${new Date().toISOString().slice(0, 10)}`;
+        // Korean midnight, like today's city, not UTC's nine hours later.
+        return `daily-${todayKey()}`;
     }
     return readParam('seed');
 };

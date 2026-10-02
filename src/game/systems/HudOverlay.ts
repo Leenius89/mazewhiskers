@@ -6,6 +6,7 @@ import { pinToScreen, placeOnScreen, viewportOf } from '../core/screenSpace';
 import type { Viewport } from '../core/screenSpace';
 import { TEXT, fontPx, minimapCell, ui, uiScale } from '../core/uiScale';
 import type { GameScene } from '../scenes/GameScene';
+import { t } from '../../i18n';
 
 /**
  * Screen-space readouts for the pressure systems.
@@ -197,8 +198,9 @@ export class HudOverlay {
             const gy = worldY / unit;
             this.markerLayer.fillStyle(color, 1);
             this.markerLayer.fillRect(
-                this.origin.x + gx * cell - cell * scale * 0.5,
-                this.origin.y + gy * cell - cell * scale * 0.5,
+                // Cell gx is drawn over [gx, gx + 1) * cell; its middle is half in.
+                this.origin.x + (gx + 0.5) * cell - cell * scale * 0.5,
+                this.origin.y + (gy + 0.5) * cell - cell * scale * 0.5,
                 cell * scale,
                 cell * scale
             );
@@ -287,12 +289,15 @@ export class HudOverlay {
 
         const alleys = Math.round(openCount * 100);
         const districts = this.scene.mode.districts;
+        const left = t('hud.alleys').replace('{n}', String(alleys));
         const label =
             districts > 1
-                ? `구역 ${this.scene.district}/${districts}   남은 골목 ${alleys}%`
-                : `남은 골목 ${alleys}%`;
+                ? `${t('hud.district').replace('{d}', String(this.scene.district)).replace('{of}', String(districts))}   ${left}`
+                : left;
         this.readout.setText(label);
-        this.readout.setColor(alleys <= 35 ? GameConfig.HUD.WARN_COLOR : GameConfig.HUD.TEXT_COLOR);
+        // Only on a change: setColor redraws and re-uploads the text every call.
+        const color = alleys <= 35 ? GameConfig.HUD.WARN_COLOR : GameConfig.HUD.TEXT_COLOR;
+        if (this.readout.style.color !== color) this.readout.setColor(color);
     }
 
     destroy(): void {

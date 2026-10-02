@@ -9,6 +9,10 @@ import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
 
+// Hoisted: the route search visits thousands of cells, and this was five
+// fresh arrays for each. Same order as before, so ties break the same way.
+const STEPS: ReadonlyArray<readonly [number, number]> = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+
 /**
  * The machine only ever does two things: announce itself, then come for you.
  *
@@ -596,7 +600,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
             const gx = at % size;
             const gy = (at - gx) / size;
 
-            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            for (const [dx, dy] of STEPS) {
                 const nx = gx + dx;
                 const ny = gy + dy;
                 if (!inside(nx, ny)) continue;
@@ -711,6 +715,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         if (this.isJumping) return;
 
         this.isJumping = true;
+        this.slide = null;
         this.setVelocity(0, 0);
 
         const { HEIGHT: jumpHeight, DURATION: jumpDuration } = GameConfig.ENEMY.JUMP;

@@ -97,13 +97,19 @@ export const createGoal = (
         scene.physics.pause();
         player.setVelocity(0, 0);
 
-        scene.apartmentSystem?.destroy();
+        // Stopped, not destroyed: destroying took every tower off the screen
+        // before the wipe had covered it. The scene's shutdown clears them.
+        scene.apartmentSystem?.stopSpawning();
 
         if (scene.enemy) {
             scene.enemy.setVelocity(0, 0);
         }
         scene.soundManager?.stopEnemyTrack();
 
+        // Home reached mid-beat (a jump already in the air when the black cat
+        // arrived): the beat's timers go next, so it would never close and
+        // its box would sit over the wipe.
+        scene.narrative?.finish();
         scene.time.removeAllEvents();
 
         try {

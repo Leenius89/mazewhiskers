@@ -87,6 +87,8 @@ export class NarrativeOverlay {
     private savedBounds: Phaser.Geom.Rectangle | null = null;
     private resolveWait: (() => void) | null = null;
     private typingEvent: Phaser.Time.TimerEvent | null = null;
+    /** Ends the line being typed, so a skip does not wait for it to finish. */
+    private typed: (() => void) | null = null;
 
     constructor(scene: GameScene) {
         this.scene = scene;
@@ -193,6 +195,12 @@ export class NarrativeOverlay {
         // ESC during play would otherwise swallow the next beat unseen.
         if (!this.scene.narrativeActive) return;
         this.skipped = true;
+        // Mid-line as well as at the prompt: it used to do nothing until the
+        // line had finished typing out.
+        this.stopTyping();
+        const typed = this.typed;
+        this.typed = null;
+        typed?.();
         this.acknowledge();
     }
 
@@ -236,8 +244,10 @@ export class NarrativeOverlay {
         if (options.lookAt) {
             await this.panTo(options.lookAt.x, options.lookAt.y);
         }
+        if (this.skipped) return;
 
         await this.typeOut(text);
+        if (this.skipped) return;
 
         if (options.autoAdvanceMs) {
             await this.wait(options.autoAdvanceMs);
@@ -377,6 +387,7 @@ export class NarrativeOverlay {
 
         return new Promise((resolve) => {
             let index = 0;
+            this.typed = resolve;
             this.typingEvent = this.scene.time.addEvent({
                 delay: GameConfig.NARRATIVE.TYPE_MS,
                 repeat: text.length - 1,
@@ -385,6 +396,7 @@ export class NarrativeOverlay {
                     this.bodyText.setText(text.slice(0, index));
                     if (index >= text.length) {
                         this.typingEvent = null;
+                        this.typed = null;
                         resolve();
                     }
                 }
@@ -552,7 +564,8 @@ export class NarrativeOverlay {
         // Wrapped first: the box is measured from the text, so the text has to
         // know how wide it may be before anything can be sized.
         const wrapWidth = boxWidth - padding * 2;
-        this.bodyText.setWordWrapWidth(wrapWidth);
+        // Only on a change: it redraws the text every call, and this is per frame.
+        if (this.bodyText.style.wordWrapWidth !== wrapWidth) this.bodyText.setWordWrapWidth(wrapWidth);
 
         const bodyTop = (this.speakerText.text ? cfg.BODY_TOP_WITH_SPEAKER : cfg.BODY_TOP) * k;
         const boxHeight = Math.max(

@@ -227,16 +227,20 @@ export class InputManager {
         gameContainer.appendChild(controlsContainer);
 
         const origin = { x: 0, y: 0 };
+        // The thumb on the stick. The other thumb's JUMP taps also reach
+        // `document`, and used to centre the stick and stop the cat.
+        let stickPointer = -1;
 
         const onStickDown = (e: PointerEvent) => {
             this.touchStickActive = true;
+            stickPointer = e.pointerId;
             const rect = joystickArea.getBoundingClientRect();
             origin.x = e.clientX - rect.left;
             origin.y = e.clientY - rect.top;
         };
 
         const onPointerMove = (e: PointerEvent) => {
-            if (!this.touchStickActive) return;
+            if (!this.touchStickActive || e.pointerId !== stickPointer) return;
 
             const rect = joystickArea.getBoundingClientRect();
             const dx = e.clientX - rect.left - origin.x;
@@ -259,8 +263,8 @@ export class InputManager {
             this.move.set(Math.cos(angle) * scaled, Math.sin(angle) * scaled);
         };
 
-        const onStickEnd = () => {
-            if (!this.touchStickActive) return;
+        const onStickEnd = (e: PointerEvent) => {
+            if (!this.touchStickActive || e.pointerId !== stickPointer) return;
             this.touchStickActive = false;
             joystickHandle.style.transform = 'translate(-50%, -50%)';
             this.move.set(0, 0);

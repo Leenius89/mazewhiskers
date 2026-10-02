@@ -198,7 +198,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setScale(this.baseScale * (1 + squash * 0.6), this.baseScale * (1 - squash));
 
         const targetLean = this.isJumping || !moving ? 0 : Phaser.Math.Clamp(this.body!.velocity.x / this.speed, -1, 1) * cfg.LEAN_DEG;
-        this.lean = Phaser.Math.Linear(this.lean, this.flipX ? -targetLean : targetLean, cfg.LEAN_EASE);
+        // Already signed by the velocity; flipX does not mirror a rotation.
+        this.lean = Phaser.Math.Linear(this.lean, targetLean, cfg.LEAN_EASE);
         this.setAngle(this.lean);
     }
 
@@ -231,7 +232,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         if (!this.scene.mode.dashEnabled) return false;
 
         const now = this.scene.runNow;
-        if (this.isJumping || this.isDashing || now < this.dashReadyAt) return false;
+        // Not while a hit or a shove has the cat: the dash would cancel it.
+        if (this.isJumping || this.isDashing || this.isRecovering || now < this.dashReadyAt) return false;
 
         const dash = GameConfig.PLAYER.DASH;
         const source = moveDirection.lengthSq() > 0 ? moveDirection : this.facing;
@@ -470,13 +472,16 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         return new Phaser.Math.Vector2(cell.gx * this.tileUnit, cell.gy * this.tileUnit);
     }
 
-    /** A landing spot must be inside the world and on an open grid cell. */
+    /**
+     * A landing spot must be inside the world, on an open grid cell, and not
+     * one a tower is already going up on (dust first, the wall 700ms later).
+     */
     private canLandAt(direction: Phaser.Math.Vector2): boolean {
         const maze = this.scene.maze;
         if (!maze) return true;
 
         const { gx, gy } = this.landingCellFor(direction);
-        return maze[gy] !== undefined && maze[gy][gx] === 0;
+        return maze[gy]?.[gx] === 0 && !this.scene.apartmentSystem?.isCellBuilt(gx, gy);
     }
 
     /**
@@ -548,8 +553,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      * rise, turn over, and then simply stand up again in one piece.
      */
     beginDeath(): void {
-        // A death mid-air would otherwise keep flying the arc, then land.
+        // A death mid-air would otherwise keep flying the arc, then land; a
+        // shove would keep carrying the body through the animation.
         this.jumpArc?.stop();
+        this.scene.tweens.killTweensOf(this);
         this.slide = null;
         this.setVelocity(0, 0);
         if (this.body) (this.body as Phaser.Physics.Arcade.Body).enable = false;
@@ -645,8 +652,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             },
             onComplete: () => this.land(target),
             onStop: () => {
+                // Down to the ground under the arc, not left hanging in the air.
                 this.isJumping = false;
-                this.groundY = this.y;
+                this.y = this.groundY;
                 this.syncGroundVisuals();
             }
         });

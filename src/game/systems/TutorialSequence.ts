@@ -228,6 +228,10 @@ const runNightmareOpening = async (scene: GameScene): Promise<void> => {
         autoAdvanceMs: GameConfig.NIGHTMARE_OPENING_MS
     });
 
+    // The beat took the camera; without this it stayed put while the run
+    // started, until the black cat's entrance happened to give it back.
+    await narrative.returnToPlayer();
+
     // Hands the world back. Without this the overlay stays up and the run
     // never starts: `narrativeActive` is only ever cleared here, and every
     // cost in the game is gated on it being false.
@@ -254,7 +258,7 @@ export const runTutorial = async (scene: GameScene): Promise<void> => {
     // A phone has no arrow keys, and the line that named them was the
     // first thing a visitor read.
     await narrative.play(t(isMobileDevice() ? 'tut.move.touch' : 'tut.move'), {
-        speaker: '· 고양이',
+        speaker: t('tut.move.speaker'),
         lookAt: { x: player.x, y: player.y },
         spotlight: spotOn(player, 1.8),
         subject: player
@@ -353,7 +357,7 @@ export const playEnemyEntrance = async (
     if (!narrative) return;
 
     await narrative.play(t('tut.enemy'), {
-        speaker: '· ???',
+        speaker: t('tut.enemy.speaker'),
         lookAt: { x: enemy.x, y: enemy.y },
         spotlight: {
             x: enemy.x,
