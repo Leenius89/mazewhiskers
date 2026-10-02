@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '../i18n';
 import type { RunOutcome } from '../platform/score';
 import { ENDING_KEYS } from '../platform/records';
-import { shortDate } from '../platform/daily';
+import { shortDate } from '../game/core/daily';
 import { hint, statHero, statHeroValue, statLabel, theme } from './theme';
 
 interface ScoreSlipProps {

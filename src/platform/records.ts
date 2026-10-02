@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { isNextDay } from './daily';
+import { isNextDay } from '../game/core/daily';
 import { fetchUserKey, recall, remember } from './toss';
 
 /**

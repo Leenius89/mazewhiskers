@@ -30,7 +30,7 @@ import type { Chrome } from './platform/chrome';
 import { onBackground, stepAside, stepBack } from './platform/lifecycle';
 import { fileRun, getRecords } from './platform/records';
 import { adShowing, betweenRuns, noteRunFinished, warmAds, watchForMilk } from './platform/ads';
-import { armDaily, dailyDate, disarmDaily } from './platform/daily';
+import { armDaily, dailyDate, disarmDaily } from './game/core/daily';
 import EndingsPanel from './components/EndingsPanel';
 import { scoreRun } from './platform/score';
 import type { RunOutcome } from './platform/score';

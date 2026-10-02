@@ -10,7 +10,7 @@ import { VERSION_LABEL } from '../version';
 import { SEEN_INTRO_KEY } from '../platform/boot';
 import { isBackgrounded, onBackground } from '../platform/lifecycle';
 import { ENDING_KEYS, useRecords } from '../platform/records';
-import { planFor, shortDate, todayKey } from '../platform/daily';
+import { kindForDay, shortDate, todayKey } from '../game/core/daily';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 
@@ -271,7 +271,7 @@ const MainPage: React.FC<MainPageProps> = ({
 
     // Only today's numbers belong on today's button.
     const today = todayKey();
-    const kind = planFor(today);
+    const kind = kindForDay(today);
     const dailyToday = records.daily.date === today ? records.daily : null;
     const endingsSeen = ENDING_KEYS.filter((key) => records.endings[key]).length;
 
