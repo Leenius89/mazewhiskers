@@ -258,8 +258,10 @@ const MainPage: React.FC<MainPageProps> = ({
          * believe anything will appear. After the first visit the menu is
          * simply there.
          */
-        const firstVisit = !sessionStorage.getItem(SEEN_INTRO);
+        let firstVisit = true;
         try {
+            // Inside the try too: with storage blocked, reading throws as well.
+            firstVisit = !sessionStorage.getItem(SEEN_INTRO);
             sessionStorage.setItem(SEEN_INTRO, '1');
         } catch {
             // Private mode. The opening plays every time; no harm done.

@@ -396,28 +396,27 @@ function App() {
      *
      * An unattended exhibition machine is left on a results screen by whoever
      * walked away, and the next visitor should find the attract screen rather
-     * than someone else's game over. Only runs in exhibition mode, and only
-     * while a results screen is up — never mid-play.
+     * than someone else's game over — or their leaderboard, or their paused
+     * run. Only in exhibition mode, and never mid-play.
      */
     useEffect(() => {
         const timeout = mode.idleReturnMs;
         if (!timeout) return;
-        if (!isGameOver && !isVictory) return;
-        if (isShowingCredits || showLeaderboard) return;
+        if (!isGameOver && !isVictory && !showPause) return;
+        if (isShowingCredits) return;
 
-        let timer = window.setTimeout(() => {
+        const home = () => {
+            setShowLeaderboard(false);
+            setShowPause(false);
             setIsGameOver(false);
             setIsVictory(false);
             setShowGame(false);
-        }, timeout);
+        };
+        let timer = window.setTimeout(home, timeout);
 
         const postpone = () => {
             window.clearTimeout(timer);
-            timer = window.setTimeout(() => {
-                setIsGameOver(false);
-                setIsVictory(false);
-                setShowGame(false);
-            }, timeout);
+            timer = window.setTimeout(home, timeout);
         };
 
         const events: (keyof WindowEventMap)[] = ['pointerdown', 'keydown', 'touchstart'];
@@ -427,7 +426,7 @@ function App() {
             window.clearTimeout(timer);
             events.forEach((event) => window.removeEventListener(event, postpone));
         };
-    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showLeaderboard]);
+    }, [mode.idleReturnMs, isGameOver, isVictory, isShowingCredits, showPause]);
 
     // Global Event handlers (if any)
     useEffect(() => {
@@ -459,6 +458,10 @@ function App() {
     const openPause = useCallback(() => {
         if (isGameOver || isVictory || isShowingCredits) return;
         bus.current?.emit('pauseGame');
+        // Answered synchronously. The scene refuses while loading, dying or
+        // clearing, and a pause menu over a run still going is worse than none.
+        const scene = game.current?.scene.getScene('GameScene') as GameScene | null;
+        if (!scene?.state?.is('paused')) return;
         setShowPause(true);
     }, [isGameOver, isVictory, isShowingCredits]);
 
@@ -584,25 +587,29 @@ function App() {
             )}
 
             {/* Hidden while the credits roll: this overlay is position:fixed over
-                the whole viewport, so it would cover the canvas they render on. */}
-            {isVictory && !isShowingCredits && (
-                <Victory
-                    onRetry={restartGame}
-                    onMainMenu={() => {
-                        setIsVictory(false);
-                        setShowGame(false);
-                    }}
-                    onShowLeaderboard={() => handleShowLeaderboard('fastest')}
-                    onShowCredits={() => {
-                        setIsShowingCredits(true);
-                        bus.current?.emit('showCredits');
-                    }}
-                    timeMs={victoryTime}
-                    milkCount={milkCount}
-                    fishCount={fishCount}
-                    score={score}
-                    healthLeft={healthLeft}
-                />
+                the whole viewport, so it would cover the canvas they render on.
+                Hidden rather than unmounted, so a name already sent stays sent
+                and coming back from the credits cannot post the clear twice. */}
+            {isVictory && (
+                <div style={{ display: isShowingCredits ? 'none' : 'contents' }}>
+                    <Victory
+                        onRetry={restartGame}
+                        onMainMenu={() => {
+                            setIsVictory(false);
+                            setShowGame(false);
+                        }}
+                        onShowLeaderboard={() => handleShowLeaderboard('fastest')}
+                        onShowCredits={() => {
+                            setIsShowingCredits(true);
+                            bus.current?.emit('showCredits');
+                        }}
+                        timeMs={victoryTime}
+                        milkCount={milkCount}
+                        fishCount={fishCount}
+                        score={score}
+                        healthLeft={healthLeft}
+                    />
+                </div>
             )}
 
             {showPause && (

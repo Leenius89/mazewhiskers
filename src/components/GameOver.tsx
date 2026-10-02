@@ -102,7 +102,8 @@ const GameOver: React.FC<GameOverProps> = ({
         if (!username.trim()) return;
         setIsSubmitting(true);
         try {
-            const name = username.toUpperCase();
+            // Trimmed, and capped after upper-casing: 'ß' becomes 'SS'.
+            const name = username.trim().toUpperCase().slice(0, 10);
 
             // Survival time and fish are what the other two boards rank by. They
             // are sent as their own columns, and if the database has not been

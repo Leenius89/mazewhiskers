@@ -5,7 +5,7 @@ import { useSettings } from '../settings';
 import type { Appearance, Language } from '../settings';
 import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
-import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
+import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme, useModalKeys } from './theme';
 import { VERSION_LABEL } from '../version';
 
 interface SettingsPanelProps {
@@ -24,19 +24,20 @@ const MotionButton = motion.div as React.ElementType;
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
     const [settings, update] = useSettings();
     const t = useTranslation();
+    useModalKeys(onClose);
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={{ ...overlayBackdrop }}>
             <motion.div
-                style={panel}
+                style={{ ...panel }}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}
             >
-                <div style={hazardEdge} />
+                <div style={{ ...hazardEdge }} />
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <p style={eyebrow}>{t('settings.eyebrow')}</p>
+                    <p style={{ ...eyebrow }}>{t('settings.eyebrow')}</p>
                     <h2 style={{ ...headline(theme.accent), fontSize: '1.35rem' }}>{t('settings.title')}</h2>
                 </div>
 

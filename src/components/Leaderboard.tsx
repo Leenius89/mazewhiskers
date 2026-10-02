@@ -4,7 +4,7 @@ import { X } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { DIFFICULTY_ORDER, difficultyOf, weighted } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
-import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
+import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme, useModalKeys } from './theme';
 
 interface Score {
     id: number;
@@ -129,6 +129,7 @@ const MotionButton = motion.div as React.ElementType;
 const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' }) => {
     const [active, setActive] = useState<BoardKey>(mode);
     const t = useTranslation();
+    useModalKeys(onClose);
     const board = BOARDS.find((b) => b.key === active) ?? BOARDS[0];
     const [scores, setScores] = useState<Score[]>([]);
     const [loading, setLoading] = useState(true);
