@@ -8,7 +8,6 @@ import type { Player } from './objects/Player';
 
 export const createMilkItems = (
     scene: GameScene,
-    walls: Phaser.Physics.Arcade.StaticGroup,
     player: Player,
     rng: Phaser.Math.RandomDataGenerator
 ): Phaser.Physics.Arcade.Group => {
@@ -31,13 +30,7 @@ export const createMilkItems = (
             const posX = x * tileUnit;
             const posY = y * tileUnit;
 
-            // The maze grid answers this in O(1); walking every wall sprite was O(N).
-            const hasWall = scene.maze
-                ? scene.maze[y]?.[x] === 1
-                : walls.getChildren().some((wall) => {
-                      const sprite = wall as Phaser.Physics.Arcade.Sprite;
-                      return Math.abs(sprite.x - posX) < tileSize && Math.abs(sprite.y - posY) < tileSize;
-                  });
+            const hasWall = scene.maze?.[y]?.[x] === 1;
 
             const isStartTile = x === GameConfig.PLAYER.START_TILE.X && y === GameConfig.PLAYER.START_TILE.Y;
             if (hasWall || isStartTile || rng.frac() >= GameConfig.MILK.PROBABILITY) continue;
@@ -71,7 +64,6 @@ export const createMilkItems = (
         scene.soundManager?.playFishSound();
 
         player.jumpCount++;
-        scene.bus.emit('jumpCountChanged', player.jumpCount);
         scene.events.emit('collectMilk');
 
         milk.destroy();

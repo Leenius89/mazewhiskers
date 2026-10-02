@@ -182,16 +182,11 @@ export class NarrativeOverlay {
         this.skipText.setBackgroundColor(canvasTheme.skipBackground);
     }
 
-    /** True once the player has asked to stop being talked to. */
-    get wasSkipped(): boolean {
-        return this.skipped;
-    }
-
     /**
      * Abandons the rest of the sequence.
      *
      * Resolves whatever beat is waiting so the caller's `await` chain unwinds;
-     * each beat then checks `wasSkipped` and returns early.
+     * every later `play()` then returns at once.
      */
     requestSkip(): void {
         // ESC during play would otherwise swallow the next beat unseen.
@@ -204,10 +199,6 @@ export class NarrativeOverlay {
         this.typed = null;
         typed?.();
         this.acknowledge();
-    }
-
-    get isWaiting(): boolean {
-        return this.waitingForInput;
     }
 
     private setVisible(visible: boolean): void {

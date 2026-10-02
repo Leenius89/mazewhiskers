@@ -28,20 +28,13 @@ const TRANSITIONS: Record<GamePhase, readonly GamePhase[]> = {
     victory: []
 };
 
-export type PhaseListener = (to: GamePhase, from: GamePhase) => void;
-
 export class GameStateMachine {
     private phase: GamePhase = 'loading';
     /** Phase to fall back to when `resume()` is called. */
     private resumeTarget: GamePhase = 'loading';
-    private readonly listeners: PhaseListener[] = [];
 
     get current(): GamePhase {
         return this.phase;
-    }
-
-    onChange(listener: PhaseListener): void {
-        this.listeners.push(listener);
     }
 
     is(...phases: GamePhase[]): boolean {
@@ -58,11 +51,6 @@ export class GameStateMachine {
      */
     hasEnded(): boolean {
         return this.is('dying', 'clearing', 'gameover', 'victory');
-    }
-
-    /** True while the player is meant to have control. */
-    acceptsInput(): boolean {
-        return this.is('intro', 'playing');
     }
 
     canTransitionTo(to: GamePhase): boolean {
@@ -82,9 +70,7 @@ export class GameStateMachine {
             return false;
         }
 
-        const from = this.phase;
         this.phase = to;
-        this.listeners.forEach((listener) => listener(to, from));
         return true;
     }
 
@@ -104,6 +90,5 @@ export class GameStateMachine {
     reset(): void {
         this.phase = 'loading';
         this.resumeTarget = 'loading';
-        this.listeners.length = 0;
     }
 }

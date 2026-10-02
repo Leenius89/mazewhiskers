@@ -8,7 +8,6 @@ import { setupHealthSystem } from '../healthUtils';
 import { SoundManager } from '../soundUtils';
 import { ApartmentSystem } from '../apartmentUtils';
 import { GameConfig } from '../constants/GameConfig';
-import { AssetLoader } from '../managers/AssetLoader';
 import { GameEventBus } from '../core/GameEvents';
 import { GameStateMachine } from '../core/GameState';
 import { DebugOverlay } from '../core/DebugOverlay';
@@ -89,7 +88,6 @@ export class GameScene extends Phaser.Scene {
     public enemy: Enemy | null = null;
     /** Every live enemy. Arcade districts add more. */
     public readonly enemies: Enemy[] = [];
-    public enemySpawned = false;
     public worldWidth = 0;
     public worldHeight = 0;
     public soundManager: SoundManager | null = null;
@@ -266,7 +264,13 @@ export class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        new AssetLoader(this).preload();
+        // Images in public/sources, by the key the game knows them as.
+        Object.entries({
+            cat1: 'cat1', cat2: 'cat2', milk: 'milk', fish1: 'fish1', fish2: 'fish2',
+            building1: 'building1', building2: 'building2', building3: 'building3',
+            enemy1: 'enemy1', enemy2: 'enemy2', goal: 'building4', goalBackground: 'goalbackground',
+            apt1: 'apt1', apt2: 'apt2', apt3: 'apt3', dust1: 'dust1', dust2: 'dust2'
+        }).forEach(([key, file]) => this.load.image(key, `sources/${file}.png`));
 
         this.soundManager = new SoundManager(this);
         this.soundManager.preloadSounds();
@@ -275,7 +279,6 @@ export class GameScene extends Phaser.Scene {
     create() {
         this.bus = new GameEventBus(this.game.events);
 
-        this.state.onChange((to, from) => this.bus.emit('phaseChanged', { from, to }));
 
         // Phaser does not call a `shutdown` method on a Scene subclass, so wire
         // teardown to the lifecycle event explicitly.
@@ -332,13 +335,12 @@ export class GameScene extends Phaser.Scene {
             GameConfig.PLAYER.START_TILE.Y * this.tileSize * this.spacing
         );
 
-        this.bus.emit('jumpCountChanged', 0);
         this.registry.set('jumpsUsed', this.registry.get('carriedJumps') || 0);
         this.bus.emit('jumpsUsedChanged', this.registry.get('jumpsUsed'));
         this.bus.emit('healthChanged', { health: this.health, max: GameConfig.HEALTH.MAX, delta: 0 });
 
         this.fishes = fishes;
-        this.milks = createMilkItems(this, walls, player, rng);
+        this.milks = createMilkItems(this, player, rng);
 
         // District 1 starts a fresh run; later districts continue the totals.
         if (this.district === 1) {
@@ -451,7 +453,6 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.state.transitionTo('intro');
-        this.bus.emit('gameReady');
     }
 
     /**
@@ -787,10 +788,7 @@ export class GameScene extends Phaser.Scene {
         const enemy = new Enemy(this, this.player, this.worldWidth, this.worldHeight, this.maze);
         this.enemy = enemy;
         this.enemies.push(enemy);
-        if (this.enemies.length === 1) {
-            enemy.enemySound = this.soundManager?.playEnemySound() || undefined;
-        }
-        this.enemySpawned = true;
+        if (this.enemies.length === 1) this.soundManager?.playEnemySound();
 
         if (this.walls) {
             // The jump is cooled down inside tryJumpToward, so bumping a wall
@@ -1182,7 +1180,6 @@ export class GameScene extends Phaser.Scene {
         this.soundManager?.stopEnemyTrack();
         this.enemies.length = 0;
         this.enemy = null;
-        this.enemySpawned = false;
 
         this.soundManager?.destroy();
         this.cameraDirector = null;

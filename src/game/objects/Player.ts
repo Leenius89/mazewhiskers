@@ -8,7 +8,6 @@ import type { GameScene } from '../scenes/GameScene';
 export class Player extends Phaser.Physics.Arcade.Sprite {
     public jumpCount = GameConfig.PLAYER.JUMP.START_STOCK;
     public isJumping = false;
-    public lastDirection: 'left' | 'right' = 'right';
 
     /**
      * Where the cat is standing, as opposed to where it is drawn.
@@ -339,13 +338,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
             this.facing.copy(moveDirection).normalize();
             this.anims.play('walk', true);
 
-            if (moveDirection.x < 0) {
-                this.setFlipX(true);
-                this.lastDirection = 'left';
-            } else if (moveDirection.x > 0) {
-                this.setFlipX(false);
-                this.lastDirection = 'right';
-            }
+            if (moveDirection.x !== 0) this.setFlipX(moveDirection.x < 0);
         } else {
             this.setVelocity(0);
             this.anims.stop();
@@ -358,10 +351,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.tryStartSlide(moveDirection);
     }
 
-    /** True while the street, rather than the player, is choosing. */
-    get isSliding(): boolean {
-        return this.slide !== null;
-    }
 
     /**
      * Takes the cat's own direction and hands it to the ice.
@@ -407,13 +396,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         this.setVelocity(carried.x, carried.y);
         this.facing.copy(dir);
-        if (dir.x < 0) {
-            this.setFlipX(true);
-            this.lastDirection = 'left';
-        } else if (dir.x > 0) {
-            this.setFlipX(false);
-            this.lastDirection = 'right';
-        }
+        if (dir.x !== 0) this.setFlipX(dir.x < 0);
     }
 
     private endSlide(): void {
@@ -608,20 +591,13 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Off the ice, whatever it was doing with the cat.
         this.slide = null;
         this.jumpCount--;
-        this.scene.bus.emit('jumpCountChanged', this.jumpCount);
         this.scene.registerJumpUsed();
         this.scene.soundManager?.playJumpSound();
 
         this.isJumping = true;
         this.setVelocity(0, 0);
 
-        if (direction.x < 0) {
-            this.setFlipX(true);
-            this.lastDirection = 'left';
-        } else if (direction.x > 0) {
-            this.setFlipX(false);
-            this.lastDirection = 'right';
-        }
+        if (direction.x !== 0) this.setFlipX(direction.x < 0);
         this.facing.copy(direction);
 
         const jumpHeight = GameConfig.PLAYER.JUMP.HEIGHT;

@@ -431,26 +431,6 @@ function App() {
     // machine, and a player reading their own score should not be sent to the
     // menu for taking forty-five seconds over it.
 
-    // Global Event handlers (if any)
-    useEffect(() => {
-        // Define event type for CustomEvent
-        const handleVictory = (event: Event) => {
-            const customEvent = event as CustomEvent;
-            const action = customEvent.detail?.action;
-
-            if (action === 'mainMenu') {
-                setIsVictory(false);
-                setIsGameOver(false);
-                setShowGame(false);
-            } else if (action === 'retry') {
-                restartGame();
-            }
-        };
-
-        document.addEventListener('gameVictory', handleVictory);
-        return () => document.removeEventListener('gameVictory', handleVictory);
-    }, [restartGame]);
-
     /**
      * Opens the run menu and stops the world behind it.
      *

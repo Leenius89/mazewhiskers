@@ -17,7 +17,6 @@ type Dict = Record<string, string>;
 
 const ko: Dict = {
     // ---------------------------------------------------------------- menu
-    'menu.start': 'GAME START',
     'menu.ranking': '랭킹 / RANKING',
     'menu.settings': '설정 / SETTINGS',
     'menu.endings': '도감',
@@ -62,9 +61,6 @@ const ko: Dict = {
 
     // -------------------------------------------------------------- header
     'header.score': 'SCORE',
-    'header.restart': '다시 시작 / Restart',
-    'header.mute': '소리 끄기 / Mute',
-    'header.unmute': '소리 켜기 / Unmute',
 
     // --------------------------------------------------------- leaderboard
     'board.fastest': '빨리 도달한 냥',
@@ -98,7 +94,6 @@ const ko: Dict = {
     'over.sealed.body': '집은 아직 저기 있습니다. 다만 거기까지 가는 길이 모두 아파트가 되었습니다.',
     'over.idle.title': '움직이지 않았다',
     'over.idle.body': '가만히 서 있는 동안에도 월세는 나갔습니다. 도시는 기다려 주지 않습니다.',
-    'over.score': 'SCORE',
     'over.fish': '🐟 FISH',
     'over.milk': '🥛 MILK',
     'over.name': '이름 / YOUR NAME',
@@ -215,7 +210,6 @@ const ko: Dict = {
 };
 
 const en: Dict = {
-    'menu.start': 'GAME START',
     'menu.ranking': 'RANKING',
     'menu.settings': 'SETTINGS',
     'menu.endings': 'ENDINGS',
@@ -258,9 +252,6 @@ const en: Dict = {
     'settings.close': 'CLOSE',
 
     'header.score': 'SCORE',
-    'header.restart': 'Restart',
-    'header.mute': 'Mute',
-    'header.unmute': 'Unmute',
 
     'board.fastest': 'Fastest Home',
     'board.fastest.eyebrow': 'FASTEST HOME',
@@ -293,7 +284,6 @@ const en: Dict = {
     'over.trapped.title': 'Nowhere to go',
     'over.trapped.body':
         'Walled in on every side. Health left over counts for nothing with no way out.',
-    'over.score': 'SCORE',
     'over.fish': '🐟 FISH',
     'over.milk': '🥛 MILK',
     'over.name': 'YOUR NAME',
