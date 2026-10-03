@@ -102,7 +102,9 @@ export const CITY_KINDS: CityKind[] = [
         // A smaller city: one street from the edge to the middle is a long
         // walk however big the place is, and at full size it is a walk the
         // rent outlives.
-        plan: { generator: 'spiral', size: 31 }
+        // Two squares rather than five: each one cuts across the rings, and
+        // with five the band kept whichever cut the most, skipping most of it.
+        plan: { generator: 'spiral', size: 31, plazas: 2 }
     },
     {
         key: 'grid',

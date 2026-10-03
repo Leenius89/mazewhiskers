@@ -62,6 +62,33 @@ describe.each(CITY_KINDS.map((kind) => [kind.key, kind] as const))('%s', (key, k
         expect(once.maze[centre.y][centre.x]).toBe(0);
     });
 
+    it('has more ways round with braiding than without', () => {
+        // Braiding opens dead ends into loops. It once did nothing at all in
+        // the shaped cities, which were carved on the lattice it never reads.
+        // (The caves and blocks kinds are open ground; braiding is noise there.)
+        if (!kind.plan.mask) return;
+        const loops = (maze: number[][]): number => {
+            let cells = 0;
+            let links = 0;
+            maze.forEach((row, y) =>
+                row.forEach((cell, x) => {
+                    if (cell !== 0) return;
+                    cells++;
+                    if (row[x + 1] === 0) links++;
+                    if (maze[y + 1]?.[x] === 0) links++;
+                })
+            );
+            return links - cells + 1;
+        };
+        let braided = 0;
+        let plain = 0;
+        for (let i = 0; i < 10; i++) {
+            braided += loops(generateCity(41, seeded(`${key}-braid-${i}#1`), kind.plan).maze);
+            plain += loops(generateCity(41, seeded(`${key}-braid-${i}#1`), { ...kind.plan, braid: 0 }).maze);
+        }
+        expect(braided).toBeGreaterThan(plain);
+    });
+
     it('keeps to its outline: outside the shape, only the way in from the doorstep', () => {
         for (let i = 0; i < 20; i++) {
             const city = generateCity(41, seeded(`${key}-outline-${i}#1`), kind.plan);

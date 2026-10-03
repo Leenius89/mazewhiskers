@@ -776,8 +776,12 @@ const generateGrid = (size: number, centre: GridCell, rng: GridRng, plan: CityPl
     clearLandmarks();
 
     // Carving begins at the doorstep where the doorstep is part of the city,
-    // and at home where the shape has left it outside the walls.
-    const seed = carvable(start.x, start.y, size, mask) ? start : centre;
+    // and next to home where the shape has left it outside the walls. On the
+    // odd lattice, like the doorstep: home sits on an even cell in most
+    // sizes, and a maze carved from there lands where braid never looks, so
+    // shaped cities came out with no way round.
+    const odd = (n: number): number => (n % 2 === 0 ? n - 1 : n);
+    const seed = carvable(start.x, start.y, size, mask) ? start : { x: odd(centre.x), y: odd(centre.y) };
 
     switch (plan.generator ?? 'backtracker') {
         case 'prim':
