@@ -4,6 +4,7 @@ import { setFootBody } from '../core/bodies';
 import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
+import { calm } from '../core/comfort';
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
     public jumpCount = GameConfig.PLAYER.JUMP.START_STOCK;
@@ -563,7 +564,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
     /** Solid white for a beat. The single clearest way to sell a hit. */
     flashHit(): void {
-        this.setTintFill(0xffffff);
+        // A soft red rather than a white blink when the screen is kept still.
+        if (calm()) this.setTint(0xff9a9a);
+        else this.setTintFill(0xffffff);
         this.scene.time.delayedCall(GameConfig.HIT.FLASH_MS, () => {
             if (this.active) this.clearTint();
         });

@@ -13,6 +13,7 @@ import { ENDING_KEYS, useRecords } from '../platform/records';
 import { kindForDay, shortDate, todayKey } from '../game/core/daily';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
+import { calm } from '../game/core/comfort';
 
 interface MainPageProps {
     onShowLeaderboard: () => void;
@@ -177,6 +178,8 @@ const MainPage: React.FC<MainPageProps> = ({
     // The same subscription is what makes nightmare arrive the instant it is
     // picked, rather than when the run starts.
     const dread = difficultyOf(settings.difficulty).dread;
+    // Less flash: nightmare's menu keeps its colour but stops moving.
+    const still = calm();
 
     /**
      * The picture's own proportions, learned before anything is drawn.
@@ -428,7 +431,7 @@ const MainPage: React.FC<MainPageProps> = ({
                         <img
                             src="sources/main.png"
                             alt="Background"
-                            className={dread ? 'mw-dread-sway' : undefined}
+                            className={dread && !still ? 'mw-dread-sway' : undefined}
                             style={{
                                 width: '100%',
                                 height: 'auto',
@@ -439,7 +442,7 @@ const MainPage: React.FC<MainPageProps> = ({
                                 filter: dread
                                     ? 'hue-rotate(-38deg) saturate(1.5) contrast(1.12) brightness(0.82)'
                                     : undefined,
-                                animation: dread ? 'mw-dread-sway 3.1s ease-in-out infinite' : undefined,
+                                animation: dread && !still ? 'mw-dread-sway 3.1s ease-in-out infinite' : undefined,
                                 willChange: dread ? 'transform, filter' : undefined
                             }}
                         />
@@ -491,21 +494,25 @@ const MainPage: React.FC<MainPageProps> = ({
                                 mixBlendMode: 'multiply',
                                 background:
                                     'radial-gradient(120% 90% at 50% 40%, rgba(150,92,255,0.55) 0%, rgba(78,26,140,0.82) 65%, rgba(24,6,44,0.95) 100%)',
-                                animation: 'mw-dread-throb 2.3s ease-in-out infinite'
+                                // The throb's middle, held.
+                                opacity: still ? 0.43 : undefined,
+                                animation: still ? undefined : 'mw-dread-throb 2.3s ease-in-out infinite'
                             }}
                         />
-                        <div
-                            className="mw-dread-tear"
-                            style={{
-                                position: 'absolute',
-                                inset: 0,
-                                zIndex: 1,
-                                pointerEvents: 'none',
-                                background:
-                                    'repeating-linear-gradient(180deg, rgba(180,123,255,0.5) 0px, rgba(180,123,255,0.5) 3px, transparent 3px, transparent 26px, rgba(45,225,194,0.35) 26px, rgba(45,225,194,0.35) 30px, transparent 30px, transparent 74px)',
-                                animation: 'mw-dread-tear 6.5s steps(1, end) infinite'
-                            }}
-                        />
+                        {!still && (
+                            <div
+                                className="mw-dread-tear"
+                                style={{
+                                    position: 'absolute',
+                                    inset: 0,
+                                    zIndex: 1,
+                                    pointerEvents: 'none',
+                                    background:
+                                        'repeating-linear-gradient(180deg, rgba(180,123,255,0.5) 0px, rgba(180,123,255,0.5) 3px, transparent 3px, transparent 26px, rgba(45,225,194,0.35) 26px, rgba(45,225,194,0.35) 30px, transparent 30px, transparent 74px)',
+                                    animation: 'mw-dread-tear 6.5s steps(1, end) infinite'
+                                }}
+                            />
+                        )}
                     </>
                 )}
 

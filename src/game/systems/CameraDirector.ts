@@ -56,7 +56,8 @@ export class CameraDirector {
 
     /** Small pull-back for the duration of a jump arc, then back to normal. */
     punchOutForJump(duration: number): void {
-        if (!this.enabled) return;
+        // A zoom on every jump is motion for its own sake: kept still on request.
+        if (!this.enabled || calm()) return;
 
         const cfg = GameConfig.CAMERA.JUMP_ZOOM;
         this.camera.zoomTo(this.baseZoom * cfg.SCALE, duration * cfg.OUT_FRACTION, 'Sine.easeOut');

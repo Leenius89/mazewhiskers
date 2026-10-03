@@ -213,7 +213,7 @@ export class HudOverlay {
         // away on that setting.
         const pending = this.scene.apartmentSystem?.pending;
         if (pending && pending.size > 0) {
-            const pulse = 0.5 + 0.5 * Math.sin((time / GameConfig.APARTMENT.WARNING.PULSE_MS) * Math.PI * 2);
+            const pulse = calm() ? 0.6 : 0.5 + 0.5 * Math.sin((time / GameConfig.APARTMENT.WARNING.PULSE_MS) * Math.PI * 2);
             this.markerLayer.fillStyle(cfg.WARNING, 0.35 + 0.5 * pulse);
             pending.forEach((c) => {
                 if (fog && !this.scene.visible.has(`${c.gx},${c.gy}`)) return;

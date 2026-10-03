@@ -6,6 +6,7 @@ import { DEPTH, sortDepth } from './core/depth';
 import { TILE_UNIT, bodyCell, cellOf, isOpen, mazeSize as currentMazeSize, worldOf } from './core/grid';
 import type { Cell } from './core/grid';
 import type { GameOverReason, GameScene } from './scenes/GameScene';
+import { calm } from './core/comfort';
 
 interface PendingCell {
     gx: number;
@@ -322,7 +323,8 @@ export class ApartmentSystem {
 
         const cfg = GameConfig.APARTMENT.WARNING;
         const half = this.tileUnit / 2;
-        const pulse = 0.6 + 0.4 * Math.sin((time / cfg.PULSE_MS) * Math.PI * 2);
+        // Steady, not throbbing, when the screen is being kept still.
+        const pulse = calm() ? 0.8 : 0.6 + 0.4 * Math.sin((time / cfg.PULSE_MS) * Math.PI * 2);
 
         this.warningGraphics.fillStyle(cfg.COLOR, cfg.ALPHA * 0.22 * pulse);
         this.warningGraphics.lineStyle(2, cfg.COLOR, cfg.ALPHA * pulse);
@@ -842,6 +844,7 @@ export class ApartmentSystem {
      * as something heavy arriving in a place where people live.
      */
     private rattleNeighbours(cell: PendingCell): void {
+        if (calm()) return;
         const cfg = GameConfig.APARTMENT.NEIGHBOUR_SHAKE;
 
         for (let dy = -cfg.CELLS; dy <= cfg.CELLS; dy++) {
