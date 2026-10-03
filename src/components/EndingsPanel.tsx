@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { ENDING_KEYS, useRecords } from '../platform/records';
-import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme } from './theme';
+import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme, useModalKeys } from './theme';
+import Pressable from './Pressable';
 
 interface EndingsPanelProps {
     onClose: () => void;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 /**
  * Every way a run has ended for this player, and the ways it has not yet.
@@ -24,6 +25,7 @@ const MotionButton = motion.div as React.ElementType;
  * is withheld and nothing hints at how to find it.
  */
 const EndingsPanel: React.FC<EndingsPanelProps> = ({ onClose }) => {
+    useModalKeys(onClose);
     const t = useTranslation();
     const { endings } = useRecords();
     const seen = ENDING_KEYS.filter((key) => endings[key]).length;

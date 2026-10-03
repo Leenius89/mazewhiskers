@@ -28,6 +28,13 @@ export class CameraDirector {
         this.baseZoom = baseZoom;
     }
 
+    /** The window changed size, and with it the closest the city may be framed. */
+    setBaseZoom(zoom: number): void {
+        if (zoom === this.baseZoom) return;
+        this.baseZoom = zoom;
+        this.camera.setZoom(zoom);
+    }
+
     /** Hands control to (or back from) a scripted camera move. */
     setEnabled(enabled: boolean): void {
         this.enabled = enabled;

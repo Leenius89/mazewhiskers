@@ -4,6 +4,7 @@ import { X } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useRecords } from '../platform/records';
 import { formatClockShort } from '../platform/format';
+import Pressable from './Pressable';
 import {
     button,
     eyebrow,
@@ -18,14 +19,13 @@ import {
     statHeroValue,
     statLabel,
     statValue,
-    theme
-} from './theme';
+    theme, useModalKeys } from './theme';
 
 interface RecordsPanelProps {
     onClose: () => void;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 /**
  * The player's own shelf.
@@ -36,6 +36,7 @@ const MotionButton = motion.div as React.ElementType;
  * the key Toss issued them, with nothing typed in and nothing sent anywhere.
  */
 const RecordsPanel: React.FC<RecordsPanelProps> = ({ onClose }) => {
+    useModalKeys(onClose);
     const t = useTranslation();
     const records = useRecords();
 

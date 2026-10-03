@@ -6,6 +6,7 @@ import ScoreSlip from './ScoreSlip';
 import MilkOffer from './MilkOffer';
 import type { RunOutcome } from '../platform/score';
 import { formatClock } from '../platform/format';
+import Pressable from './Pressable';
 import {
     button,
     buttonRow,
@@ -37,7 +38,7 @@ interface VictoryProps {
     outcome: RunOutcome | null;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 const Victory: React.FC<VictoryProps> = ({
     onRetry,

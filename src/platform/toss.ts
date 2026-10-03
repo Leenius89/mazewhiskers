@@ -314,6 +314,8 @@ const AD_LOAD_TIMEOUT_MS = 15_000;
 const AD_APPEAR_TIMEOUT_MS = 6_000;
 /** An ad that showed but never said it closed must not hold the game forever. */
 const AD_MAX_MS = 120_000;
+/** Requested but still not on screen by now: given up on, page uncovered. */
+const AD_REQUESTED_TIMEOUT_MS = 20_000;
 
 /** Fetches an ad ahead of time. Resolves false rather than rejecting. */
 export const loadAd = (adGroupId: string): Promise<boolean> =>
@@ -372,10 +374,22 @@ export const showAd = (adGroupId: string): Promise<AdResult> =>
         let settled = false;
         let shown = false;
         let rewarded = false;
+        // Once the page has been covered, only the ad's own events (or the
+        // hard ceiling) end the wait: the WebView's timers stall under a native
+        // ad, and the appear timeout would fire on return ahead of the queued
+        // events, dropping an earned reward and unmuting the game under a live
+        // ad. A request that is slow to show gets longer, but not forever.
+        let requested = false;
+        let wentAway = false;
+        const away = (): void => {
+            if (document.hidden) wentAway = true;
+        };
+        document.addEventListener('visibilitychange', away);
         let unregister: (() => void) | undefined;
         const finish = (): void => {
             if (settled) return;
             settled = true;
+            document.removeEventListener('visibilitychange', away);
             try {
                 unregister?.();
             } catch {
@@ -388,6 +402,7 @@ export const showAd = (adGroupId: string): Promise<AdResult> =>
             unregister = showFullScreenAd({
                 options: { adGroupId },
                 onEvent: (event) => {
+                    if (event.type === 'requested') requested = true;
                     if (event.type === 'show' || event.type === 'impression') shown = true;
                     if (event.type === 'userEarnedReward') rewarded = true;
                     if (event.type === 'dismissed' || event.type === 'failedToShow') finish();
@@ -403,7 +418,10 @@ export const showAd = (adGroupId: string): Promise<AdResult> =>
         }
 
         window.setTimeout(() => {
-            if (!shown) finish();
+            if (!shown && !requested && !wentAway) finish();
         }, AD_APPEAR_TIMEOUT_MS);
+        window.setTimeout(() => {
+            if (!shown && !wentAway) finish();
+        }, AD_REQUESTED_TIMEOUT_MS);
         window.setTimeout(finish, AD_MAX_MS);
     });

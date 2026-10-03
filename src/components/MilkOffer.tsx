@@ -1,16 +1,16 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Milk } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { useAds } from '../platform/ads';
 import { button, hint, theme } from './theme';
+import Pressable from './Pressable';
 
 interface MilkOfferProps {
     /** Shows the ad. Resolves true when it was watched through. */
     onWatch: () => Promise<boolean>;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 /**
  * The ad the player chooses: watch one, set out with a second carton of milk.

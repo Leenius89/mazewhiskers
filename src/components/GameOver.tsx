@@ -9,6 +9,7 @@ import MilkOffer from './MilkOffer';
 import type { RunOutcome } from '../platform/score';
 import { formatClockShort } from '../platform/format';
 import type { GameOverPayload } from '../game/core/GameEvents';
+import Pressable from './Pressable';
 import {
     button,
     buttonRow,
@@ -56,7 +57,7 @@ const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
     idle: theme.accent
 };
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 const GameOver: React.FC<GameOverProps> = ({
     onRetry,

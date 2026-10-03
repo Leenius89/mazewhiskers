@@ -356,7 +356,10 @@ export class NarrativeOverlay {
             const finish = () => {
                 if (settled) return;
                 settled = true;
-                camera.startFollow(player, true);
+                // startFollow resets the lerp to 1 unless told otherwise, which
+                // left a phone's camera rigid for the rest of the run after the
+                // first scripted beat.
+                camera.startFollow(player, true, camera.lerp.x, camera.lerp.y);
                 this.scene.cameraDirector?.setEnabled(true);
                 resolve();
             };

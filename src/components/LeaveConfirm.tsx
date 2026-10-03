@@ -3,13 +3,14 @@ import { motion } from 'framer-motion';
 import { DoorOpen, Play } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { button, buttonRow, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
+import Pressable from './Pressable';
 
 interface LeaveConfirmProps {
     onStay: () => void;
     onLeave: () => void;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 // The library's typings and React 19's disagree about ARIA attributes.
 const MotionPanel = motion.div as React.ElementType;
 

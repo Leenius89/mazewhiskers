@@ -14,6 +14,7 @@ import { kindForDay, shortDate, todayKey } from '../game/core/daily';
 import { remember } from '../platform/toss';
 import { motion } from 'framer-motion';
 import { calm } from '../game/core/comfort';
+import Pressable from './Pressable';
 
 interface MainPageProps {
     onShowLeaderboard: () => void;
@@ -56,7 +57,7 @@ const bendAudio = (audio: HTMLAudioElement, bent: boolean): void => {
 };
 
 
-const MotionClickable = motion.div as any;
+const MotionClickable = Pressable;
 
 /**
  * Whether the opening has been seen, on this device, ever.

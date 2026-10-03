@@ -4,7 +4,8 @@ import { Home, Moon, Play, RotateCcw, Sun, Volume2, VolumeX } from 'lucide-react
 import { useSettings } from '../settings';
 import type { Appearance, Language } from '../settings';
 import { useTranslation } from '../i18n';
-import { button, buttonRow, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
+import { button, buttonRow, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme, useModalKeys } from './theme';
+import Pressable from './Pressable';
 
 interface PauseMenuProps {
     onResume: () => void;
@@ -12,7 +13,7 @@ interface PauseMenuProps {
     onMainMenu: () => void;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 /**
  * One button in the run bar, and everything behind it.
@@ -29,6 +30,8 @@ const MotionButton = motion.div as React.ElementType;
 const PauseMenu: React.FC<PauseMenuProps> = ({ onResume, onRestart, onMainMenu }) => {
     const [settings, update] = useSettings();
     const t = useTranslation();
+    // Escape resumes, as it closes every other panel.
+    useModalKeys(onResume);
 
     return (
         <div style={{ ...overlayBackdrop }}>

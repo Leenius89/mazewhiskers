@@ -51,6 +51,9 @@ export const AD_POLICY = {
 type Unit = keyof typeof AD_UNITS;
 
 const ready: Record<Unit, boolean> = { interstitial: false, rewarded: false };
+const loadedAt: Record<Unit, number> = { interstitial: 0, rewarded: 0 };
+/** A fetched ad goes stale after an hour; it is refetched a little before. */
+const AD_TTL_MS = 50 * 60 * 1000;
 const loading: Record<Unit, boolean> = { interstitial: false, rewarded: false };
 const listeners = new Set<() => void>();
 const changed = (): void => listeners.forEach((listener) => listener());
@@ -71,7 +74,28 @@ const fetchUnit = async (unit: Unit): Promise<void> => {
         : await loadAd(AD_UNITS[unit]);
     loading[unit] = false;
     ready[unit] = ok;
+    if (ok) {
+        const stamp = Date.now();
+        loadedAt[unit] = stamp;
+        // Left on a results screen for an hour, the offer would show an ad that
+        // can no longer be shown; it is swapped for a fresh one instead.
+        window.setTimeout(() => {
+            if (ready[unit] && loadedAt[unit] === stamp) expire(unit);
+        }, AD_TTL_MS);
+    }
     changed();
+};
+
+const expire = (unit: Unit): void => {
+    ready[unit] = false;
+    changed();
+    void fetchUnit(unit);
+};
+
+/** Ready, and not gone stale. Checked at use too: timers stall in the background. */
+const isReady = (unit: Unit): boolean => {
+    if (ready[unit] && Date.now() - loadedAt[unit] > AD_TTL_MS) expire(unit);
+    return ready[unit];
 };
 
 /** Starts fetching both ads. Called once the first screen is up. */
@@ -112,9 +136,17 @@ const present = async (unit: Unit): Promise<{ shown: boolean; rewarded: boolean 
     ready[unit] = false;
     changed();
 
-    const showing = isSimulated()
-        ? simulate(unit, 1500).then(() => ({ shown: true, rewarded: unit === 'rewarded' }))
-        : showAd(AD_UNITS[unit]);
+    // What an ad earns is settled inside it, before anything waiting on it
+    // goes on: a Retry held back behind the milk ad must find the milk granted
+    // and the between-runs ad already stood in for.
+    const showing = (async () => {
+        const result = isSimulated()
+            ? await simulate(unit, 1500).then(() => ({ shown: true, rewarded: unit === 'rewarded' }))
+            : await showAd(AD_UNITS[unit]);
+        if (result.shown) lastInterstitialAt = Date.now();
+        if (unit === 'rewarded' && result.rewarded) grantStartBonus(AD_POLICY.REWARD_JUMPS);
+        return result;
+    })();
     onScreen = showing;
     const result = await showing.finally(() => {
         onScreen = null;
@@ -145,15 +177,14 @@ export const betweenRuns = async (quiet: () => void, resume: () => void): Promis
 
     const due =
         available() &&
-        ready.interstitial &&
+        isReady('interstitial') &&
         runsThisVisit > AD_POLICY.FREE_RUNS &&
         Date.now() - lastInterstitialAt >= AD_POLICY.MIN_GAP_MS;
     if (!due) return;
 
     quiet();
     try {
-        const { shown } = await present('interstitial');
-        if (shown) lastInterstitialAt = Date.now();
+        await present('interstitial');
     } finally {
         resume();
     }
@@ -166,15 +197,11 @@ export const betweenRuns = async (quiet: () => void, resume: () => void): Promis
  * through one by choice and then another on the way out.
  */
 export const watchForMilk = async (quiet: () => void, resume: () => void): Promise<boolean> => {
-    if (!available() || !ready.rewarded) return false;
+    if (!available() || !isReady('rewarded')) return false;
 
     quiet();
     try {
-        const { shown, rewarded } = await present('rewarded');
-        if (shown) lastInterstitialAt = Date.now();
-        if (rewarded) {
-            grantStartBonus(AD_POLICY.REWARD_JUMPS);
-        }
+        const { rewarded } = await present('rewarded');
         return rewarded;
     } finally {
         resume();

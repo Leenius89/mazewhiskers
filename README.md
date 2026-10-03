@@ -182,7 +182,7 @@ public/sources/                 스프라이트 · 사운드 리소스
 | 역할 | 담당 |
 |---|---|
 | 기획 · 개발 · 아트 · 디자인 | 이중민 (Joongmin Lee) |
-| 음악 | [Spencer_YK](https://pixabay.com/users/spencer_yk-36670691/) — [*Little Slime's Adventure*](https://pixabay.com/music/video-games-little-slimex27s-adventure-151007/) (메뉴·플레이) · [Lesiakower](https://pixabay.com/users/lesiakower-25701529/) — *Battle Time* (추격). 둘 다 [Pixabay 콘텐츠 라이선스](https://pixabay.com/service/license-summary/) |
+| 음악 | [Spencer_YK](https://pixabay.com/users/spencer_yk-36670691/) — [*Little Slime's Adventure*](https://pixabay.com/music/video-games-little-slimex27s-adventure-151007/) (메뉴·플레이) · [Lesiakower](https://pixabay.com/users/lesiakower-25701529/) — [*Battle Time*](https://pixabay.com/music/video-games-battle-time-178551/) (추격). 둘 다 [Pixabay 콘텐츠 라이선스](https://pixabay.com/service/license-summary/) |
 | 효과음 | Pixabay |
 | Special Thanks | 알투스통합예술연구소 |
 

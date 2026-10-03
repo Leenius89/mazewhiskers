@@ -308,7 +308,12 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     // ------------------------------------------------------------------ update
 
     update(): void {
-        if (!this.active || this.isJumping) return;
+        if (!this.active) return;
+        // The tween flies it; the headlight still has to come along.
+        if (this.isJumping) {
+            this.drawCone(this.scene.runNow);
+            return;
+        }
 
         const now = this.scene.runNow;
 

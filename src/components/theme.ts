@@ -400,7 +400,10 @@ export const useModalKeys = (onClose: () => void): void => {
     useEffect(() => {
         const swallow = (e: KeyboardEvent) => {
             if (e.key === 'Escape') onClose();
-            if (e.key === 'Escape' || e.key === 'Enter' || e.key === ' ') e.stopImmediatePropagation();
+            // A focused button in the panel takes its own Enter and Space (and
+            // stops them there); anything else is kept from the screen below.
+            const onButton = (document.activeElement as HTMLElement | null)?.getAttribute('role') === 'button';
+            if (e.key === 'Escape' || (!onButton && (e.key === 'Enter' || e.key === ' '))) e.stopImmediatePropagation();
         };
         window.addEventListener('keydown', swallow, true);
         return () => window.removeEventListener('keydown', swallow, true);
