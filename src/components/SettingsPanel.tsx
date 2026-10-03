@@ -7,12 +7,13 @@ import { DIFFICULTIES, DIFFICULTY_ORDER } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
 import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme, useModalKeys } from './theme';
 import { VERSION_LABEL } from '../version';
+import Pressable from './Pressable';
 
 interface SettingsPanelProps {
     onClose: () => void;
 }
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 /**
  * Preferences, reachable before a run rather than buried in one.

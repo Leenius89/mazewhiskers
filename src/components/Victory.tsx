@@ -4,6 +4,7 @@ import { Film, Home, RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { getSettings } from '../settings';
 import { useTranslation } from '../i18n';
+import Pressable from './Pressable';
 import {
     button,
     buttonRow,
@@ -42,7 +43,7 @@ const formatTime = (ms: number) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
 };
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 const Victory: React.FC<VictoryProps> = ({
     onRetry,

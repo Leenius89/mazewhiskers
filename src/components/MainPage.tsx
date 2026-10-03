@@ -10,6 +10,7 @@ import { theme } from './theme';
 import MenuCats from './MenuCats';
 import { VERSION_LABEL } from '../version';
 import { motion } from 'framer-motion';
+import Pressable from './Pressable';
 
 interface MainPageProps {
     onShowLeaderboard: () => void;
@@ -51,7 +52,7 @@ const bendAudio = (audio: HTMLAudioElement, bent: boolean): void => {
 };
 
 
-const MotionClickable = motion.div as any;
+const MotionClickable = Pressable;
 
 /** Set once the opening has been seen, so a return to the menu is instant. */
 const SEEN_INTRO = 'mazewhiskers.seenIntro';

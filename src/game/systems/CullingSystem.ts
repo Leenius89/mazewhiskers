@@ -11,11 +11,15 @@ import { GameConfig } from '../constants/GameConfig';
  *
  * Runs on an interval rather than per frame — the view moves slowly enough that
  * a few hundred milliseconds of slack is invisible, and the padding covers it.
+ * A fast move (a scripted pan crosses the city in 700ms) outruns the padding,
+ * so the camera having moved half of it also counts as time to run.
  */
 export class CullingSystem {
     private readonly scene: Phaser.Scene;
     private readonly groups: Phaser.GameObjects.Group[] = [];
     private nextRunAt = 0;
+    private lastX = Number.NaN;
+    private lastY = Number.NaN;
 
     constructor(scene: Phaser.Scene) {
         this.scene = scene;
@@ -26,11 +30,14 @@ export class CullingSystem {
     }
 
     update(time: number): void {
-        if (time < this.nextRunAt) return;
-        this.nextRunAt = time + GameConfig.CULLING.INTERVAL_MS;
-
         const view = this.scene.cameras.main.worldView;
         const pad = GameConfig.CULLING.PADDING;
+
+        const moved = Math.max(Math.abs(view.x - this.lastX), Math.abs(view.y - this.lastY));
+        if (time < this.nextRunAt && moved < pad / 2) return;
+        this.nextRunAt = time + GameConfig.CULLING.INTERVAL_MS;
+        this.lastX = view.x;
+        this.lastY = view.y;
 
         const left = view.x - pad;
         const right = view.right + pad;

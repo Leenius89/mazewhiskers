@@ -7,6 +7,7 @@ import { useTranslation } from '../i18n';
 import { isMobileDevice } from '../game/systems/InputManager';
 import ProwlingCat from './ProwlingCat';
 import type { GameOverPayload } from '../game/core/GameEvents';
+import Pressable from './Pressable';
 import {
     button,
     buttonRow,
@@ -55,7 +56,7 @@ const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
     idle: theme.accent
 };
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 const GameOver: React.FC<GameOverProps> = ({
     onRetry,

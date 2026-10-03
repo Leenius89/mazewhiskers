@@ -380,22 +380,31 @@ export class GameScene extends Phaser.Scene {
          * the edge of the world and shows several hundred pixels of nothing
          * above the top-left corner, which is exactly where every run starts.
          */
-        const refit = () => this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
-        this.scale.on('resize', refit);
-        this.events.once('shutdown', () => this.scale.off('resize', refit));
-
         // Multiplied by the render scale so the framing is unchanged and the
         // extra canvas resolution goes into detail rather than into showing more
         // of the map. See core/renderScale.
         const baseZoom =
             (isMobileDevice() ? GameConfig.CAMERA.MOBILE.ZOOM : GameConfig.CAMERA.DESKTOP.ZOOM) * RENDER_SCALE;
-        this.cameras.main.setZoom(baseZoom);
+        // Never further out than the city fills the window: a small city (the
+        // town, the spiral) on a wide screen otherwise stopped partway across
+        // it, with bare canvas beyond its last street.
+        const fitZoom = () =>
+            Math.max(baseZoom, this.cameras.main.width / worldWidth, this.cameras.main.height / worldHeight);
+
+        const refit = () => {
+            this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+            this.cameraDirector?.setBaseZoom(fitZoom());
+        };
+        this.scale.on('resize', refit);
+        this.events.once('shutdown', () => this.scale.off('resize', refit));
+
+        this.cameras.main.setZoom(fitZoom());
         if (isMobileDevice()) {
             this.cameras.main.setLerp(GameConfig.CAMERA.MOBILE.LERP, GameConfig.CAMERA.MOBILE.LERP);
         }
 
         // The opening fly-over owns the camera until `introComplete`.
-        this.cameraDirector = new CameraDirector(this, baseZoom);
+        this.cameraDirector = new CameraDirector(this, fitZoom());
 
         setupHealthSystem(this, player, fishes);
 

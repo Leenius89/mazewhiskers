@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabaseClient';
 import { DIFFICULTY_ORDER, difficultyOf, weighted } from '../game/core/difficulty';
 import { useTranslation } from '../i18n';
 import { button, eyebrow, hazardEdge, headline, hint, overlayBackdrop, panel, theme, useModalKeys } from './theme';
+import Pressable from './Pressable';
 
 interface Score {
     id: number;
@@ -124,7 +125,7 @@ const formatTime = (ms: number) => {
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
 };
 
-const MotionButton = motion.div as React.ElementType;
+const MotionButton = Pressable;
 
 const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' }) => {
     const [active, setActive] = useState<BoardKey>(mode);

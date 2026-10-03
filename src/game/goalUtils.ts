@@ -67,8 +67,9 @@ const create8BitTransition = (scene: Phaser.Scene): Promise<void> => {
  * explains what the player is looking at, so the fly-over was the same trip
  * twice — the first one silent and unexplained.
  */
-const beginPlayImmediately = (scene: GameScene, player: Phaser.Physics.Arcade.Sprite) => {
-    scene.cameras.main.startFollow(player);
+const beginPlayImmediately = (scene: GameScene) => {
+    // The scene starts the camera following; doing it here as well only reset
+    // its rounding and lerp.
     scene.time.delayedCall(GameConfig.GOAL.INTRO.START_DELAY, () => scene.events.emit('introComplete'));
 };
 
@@ -85,7 +86,7 @@ export const createGoal = (
     // Generous on purpose — arriving home must never feel like a pixel hunt.
     setCircleBody(goal, GameConfig.HITBOX.GOAL_RADIUS);
 
-    beginPlayImmediately(scene, player);
+    beginPlayImmediately(scene);
 
     scene.physics.add.overlap(player, goal, async () => {
         // Reaching home means different things depending on where you are in
