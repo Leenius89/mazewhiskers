@@ -39,7 +39,10 @@ export default defineConfig({
         bounces: false,
         overScrollMode: 'never',
         pullToRefreshEnabled: false,
-        allowsInlineMediaPlayback: true
+        allowsInlineMediaPlayback: true,
+        // The default (true) wants a fresh tap before sound plays, so a player
+        // coming back from another app would return to a silent run.
+        mediaPlaybackRequiresUserAction: false
     },
     // Where Create React App leaves its output.
     webBundleDir: 'build'

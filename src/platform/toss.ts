@@ -47,26 +47,31 @@ const warn = (what: string, error: unknown): void => {
     console.warn(`[toss] ${what}`, error);
 };
 
-/** Runs an SDK call if there is a Toss to run it against. */
 /**
- * Calls the SDK, and gives up after `ms` (when given) rather than waiting
- * forever on a bridge that never answers.
+ * Runs an SDK call if there is a Toss to run it against, and gives up after
+ * `ms` (when given) rather than waiting forever on a bridge that never answers.
  */
 const attempt = async <T>(what: string, run: () => Promise<T> | T, fallback: T, ms?: number): Promise<T> => {
     if (!inToss()) return fallback;
 
+    let timer: number | undefined;
     try {
         if (!ms) return await run();
         return await Promise.race([
             Promise.resolve(run()),
-            new Promise<T>((resolve) => window.setTimeout(() => {
-                warn(what, `no answer in ${ms}ms`);
-                resolve(fallback);
-            }, ms))
+            new Promise<T>((resolve) => {
+                timer = window.setTimeout(() => {
+                    warn(what, `no answer in ${ms}ms`);
+                    resolve(fallback);
+                }, ms);
+            })
         ]);
     } catch (error) {
         warn(what, error);
         return fallback;
+    } finally {
+        // An answer in time must not leave a "no answer" warning behind it.
+        window.clearTimeout(timer);
     }
 };
 
@@ -309,7 +314,8 @@ export const adsSupported = (): boolean => {
     }
 };
 
-const AD_LOAD_TIMEOUT_MS = 15_000;
+/** AdMob can take up to a minute on a slow network (ad guide); nothing waits on it. */
+const AD_LOAD_TIMEOUT_MS = 60_000;
 /** If nothing has appeared by now, the run carries on without it. */
 const AD_APPEAR_TIMEOUT_MS = 6_000;
 /** An ad that showed but never said it closed must not hold the game forever. */

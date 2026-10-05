@@ -43,14 +43,17 @@ CI=false GENERATE_SOURCEMAP=false REACT_APP_TOSS_SIM=1 npx react-scripts build
 경로를 역슬래시로 적습니다. GitHub Actions(리눅스)가 만듭니다.
 
 - `toss` 브랜치에 push → 번들을 만들어 Actions 결과물로 남김
-- `toss-`로 시작하는 태그를 push → 번들을 만들어 **토스 콘솔에 업로드** (QR 테스트 가능)
+- `toss-test-`로 시작하는 태그를 push → **테스트 광고**로 번들을 만들어 토스 콘솔에 업로드 (QR 테스트용)
+- 그 밖의 `toss-` 태그를 push → **실제 광고**로 만들어 업로드 (검토 요청용). 광고 ID Variables가 비어 있으면 실패합니다.
+
+QR 테스트는 테스트 광고로, 검토는 실제 광고로 해야 해서 태그를 둘로 나눴습니다(실제 광고로 테스트하면 정책 위반).
 
 ```bash
-git tag toss-0.1.0-1
+git tag toss-test-2.1.0-1
 ```
 
 ```bash
-git push origin toss-0.1.0-1
+git push origin toss-test-2.1.0-1
 ```
 
 콘솔 업로드에는 GitHub 저장소 Secret `AIT_API_KEY`가 필요합니다
@@ -66,7 +69,7 @@ git push origin toss-0.1.0-1
 
 | 기능 | 어디 | 메모 |
 |---|---|---|
-| 오늘의 도시 20종 | `src/game/core/cityKinds.ts`(종류), `src/platform/cityPlans.ts`(순번), `src/platform/daily.ts` | 한국 날짜로 하루에 시드 하나(`daily-YYYY-MM-DD`). 미로·생선·집 위치는 모두에게 같고, 아파트는 고양이 위치를 따라 서므로 사람마다 다릅니다. 점수는 같은 토스 랭킹에 올라가고, 오늘 최고·연속 일수는 기기에 남습니다. |
+| 오늘의 도시 20종 | `src/game/core/cityKinds.ts`(종류), `src/game/core/daily.ts`(날짜·순번) | 한국 날짜로 하루에 시드 하나(`daily-YYYY-MM-DD`). 미로·생선·집 위치는 모두에게 같고, 아파트는 고양이 위치를 따라 서므로 사람마다 다릅니다. 점수는 같은 토스 랭킹에 올라가고, 오늘 최고·연속 일수는 기기에 남습니다. |
 | 엔딩 도감 | `src/components/EndingsPanel.tsx`, `records.ts` | 끝 8가지(집 도착 1 + 게임 오버 7). 본 것만 제목이 보입니다. |
 | 화면 효과 줄이기 · 진동 | `src/game/core/comfort.ts`, 설정 | 흔들림 1/4, 글리치 찢김 없음, 붉은 화면은 깜빡이지 않고 고정. 그리는 것만 바꾸고 판정은 건드리지 않습니다. 폰의 "동작 줄이기"가 켜져 있으면 자동으로 적용됩니다. |
 | 빙판 | `src/game/core/mazeGrid.ts`(생성), `src/game/systems/IceField.ts`(그리기), `Player.ts`(미끄러짐) | 아래 |
@@ -79,7 +82,7 @@ git push origin toss-0.1.0-1
 나선·격자), 크기 2종(대도시 61칸·소도시 25칸), 빙판 4종(10%·30%·55%·결빙 대로)입니다.
 
 - **20일이 한 바퀴**입니다. 한 바퀴 안에서 같은 종류가 두 번 나오지 않고, 바퀴가 바뀌면 순서가
-  다시 섞입니다(`platform/cityPlans.ts`). 기기와 무관하게 같은 날은 같은 종류입니다.
+  다시 섞입니다(`src/game/core/daily.ts`). 기기와 무관하게 같은 날은 같은 종류입니다.
 - 모양은 정사각 격자 위의 **마스크**입니다. 격자 자체는 그대로라 판정·물리·미니맵은 손대지
   않았습니다. 크기는 `plan.size`이고 `core/grid.ts`의 `setCitySize`로 미니맵·아파트·월드 경계에
   전달됩니다.
@@ -102,8 +105,8 @@ git push origin toss-0.1.0-1
   이 확률을 무시하고 그날의 종류를 씁니다.
 - 원작(`main`)에 같은 코드가 들어가 있어서 판정 일치는 그대로입니다. 대조 테스트는 빙판 칸까지
   비교합니다(`qa/parity`).
-- 종류별 비율은 `src/platform/cityPlans.ts`. 테스트 빌드에서 `?plan=glacier`로 강제할 수 있습니다
-  (출시 빌드는 무시).
+- 확률은 `GameConfig.ICE`, 뽑는 곳은 `src/game/core/cityPlan.ts`. 테스트 빌드에서 `?plan=glacier`로
+  강제할 수 있습니다(`src/game/core/daily.ts`, 출시 빌드는 무시).
 
 20종 계획: `store-assets/plan/오늘의-도시-20종.md`
 

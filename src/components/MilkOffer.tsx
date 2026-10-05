@@ -16,24 +16,27 @@ const MotionButton = Pressable;
  * The ad the player chooses: watch one, set out with a second carton of milk.
  *
  * Says plainly that it is an ad and what it pays, before anything is tapped.
- * Draws nothing at all when there is no ad to offer — an old Toss, a browser,
- * a slow network — so the results screen never carries a button that does
- * not work.
+ * Draws nothing where ads cannot run — an old Toss, a browser — so the results
+ * screen never carries a button that does not work. Where they can, the
+ * button's place is kept while the ad is still on its way: it would otherwise
+ * arrive above Retry and push the row down under a thumb already on its way.
  */
 const MilkOffer: React.FC<MilkOfferProps> = ({ onWatch }) => {
     const t = useTranslation();
-    const { rewardedReady, bonusHeld } = useAds();
+    const { supported, rewardedReady, bonusHeld } = useAds();
     const [busy, setBusy] = useState(false);
 
     if (bonusHeld) {
         return <p style={{ ...hint, color: theme.good, fontWeight: 600 }}>{t('ad.milk.held')}</p>;
     }
 
-    if (!rewardedReady && !busy) return null;
+    if (!supported) return null;
+    // Hidden, it can be neither seen, tapped nor reached with Tab.
+    const waiting = !rewardedReady && !busy;
 
     return (
         <MotionButton
-            style={button('quiet', busy)}
+            style={{ ...button('quiet', busy), visibility: waiting ? 'hidden' : 'visible' }}
             onClick={() => {
                 if (busy) return;
                 setBusy(true);

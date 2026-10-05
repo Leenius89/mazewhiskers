@@ -63,7 +63,19 @@ let lastInterstitialAt = 0;
 
 const available = (): boolean => adsSupported() || isSimulated();
 
-const fetchUnit = async (unit: Unit): Promise<void> => {
+/**
+ * Loads go one at a time, in order. The ad guide requires it ("광고 그룹 ID는
+ * 반드시 1개씩 순차적으로 로드해 주세요"): two at once are not handled, and on
+ * some Toss versions the second load never reported back.
+ */
+let loads: Promise<void> = Promise.resolve();
+
+const fetchUnit = (unit: Unit): Promise<void> => {
+    loads = loads.then(() => loadUnit(unit)).catch(() => undefined);
+    return loads;
+};
+
+const loadUnit = async (unit: Unit): Promise<void> => {
     if (!available() || ready[unit] || loading[unit]) return;
 
     loading[unit] = true;
@@ -98,10 +110,13 @@ const isReady = (unit: Unit): boolean => {
     return ready[unit];
 };
 
-/** Starts fetching both ads. Called once the first screen is up. */
+/**
+ * Starts fetching both ads, the player's own first: the milk offer is on the
+ * first results screen, the between-runs ad only from the second.
+ */
 export const warmAds = (): void => {
-    void fetchUnit('interstitial');
     void fetchUnit('rewarded');
+    void fetchUnit('interstitial');
 };
 
 /** A stand-in for an ad, for a browser. Never part of a build that ships. */
@@ -197,7 +212,9 @@ export const betweenRuns = async (quiet: () => void, resume: () => void): Promis
  * through one by choice and then another on the way out.
  */
 export const watchForMilk = async (quiet: () => void, resume: () => void): Promise<boolean> => {
-    if (!available() || !isReady('rewarded')) return false;
+    // Under an ad already on its way (a Retry's between-runs ad), this one
+    // would be refused, and the resume after it would unmute the game under it.
+    if (onScreen || !available() || !isReady('rewarded')) return false;
 
     quiet();
     try {
@@ -209,13 +226,19 @@ export const watchForMilk = async (quiet: () => void, resume: () => void): Promi
 };
 
 export interface AdState {
+    /** Ads can run here at all: a Toss new enough, or the simulator. */
+    supported: boolean;
     /** A rewarded ad is loaded and can be offered. */
     rewardedReady: boolean;
     /** The next run already has its extra milk. */
     bonusHeld: boolean;
 }
 
-const snapshot = (): AdState => ({ rewardedReady: available() && ready.rewarded, bonusHeld: startBonusHeld() });
+const snapshot = (): AdState => ({
+    supported: available(),
+    rewardedReady: available() && ready.rewarded,
+    bonusHeld: startBonusHeld()
+});
 
 export const useAds = (): AdState => {
     const [state, setState] = useState(snapshot);

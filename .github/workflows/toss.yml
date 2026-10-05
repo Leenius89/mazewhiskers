@@ -6,9 +6,15 @@ name: Toss bundle
 # files inside the bundle with backslashes in their paths
 # (static\js\main.js) and nothing says Toss's servers will unpick that.
 #
-#   push to `toss`        build, keep the .ait as a downloadable artifact
-#   push a `toss-*` tag   the same, then upload it to the Toss console,
-#                         where it appears as a new test version with a QR
+#   push to `toss`             build, keep the .ait as a downloadable artifact
+#   push a `toss-test-*` tag   the same with the SDK's TEST ads, then upload it
+#                              to the console as a test version with a QR
+#   push any other `toss-*`    the same with the REAL ad groups (required),
+#                              then upload: the bundle to send for review
+#
+# Two kinds of tag because the ad policy wants both: QR testing must use test
+# ad groups (testing with real ones breaks the policy), and review must see
+# real ones (test ads fail the checklist).
 #
 # Uploading is not releasing: a version only reaches players after it has
 # been tested, sent for review and approved in the console by hand.
@@ -23,7 +29,8 @@ on:
 
 jobs:
   bundle:
-    runs-on: ubuntu-latest
+    # Pinned: the bundle's paths and the packer's output are this image's.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 
@@ -43,7 +50,11 @@ jobs:
           REACT_APP_AD_INTERSTITIAL: ${{ vars.AD_INTERSTITIAL_ID }}
           REACT_APP_AD_REWARDED: ${{ vars.AD_REWARDED_ID }}
         run: |
-          if [ -z "$REACT_APP_AD_INTERSTITIAL" ] || [ -z "$REACT_APP_AD_REWARDED" ]; then
+          if [[ "$GITHUB_REF" == refs/tags/toss-test-* ]]; then
+            # A QR test bundle: test ads whatever the Variables say.
+            unset REACT_APP_AD_INTERSTITIAL REACT_APP_AD_REWARDED
+            echo "QR test bundle: built with the SDK's test ads."
+          elif [ -z "$REACT_APP_AD_INTERSTITIAL" ] || [ -z "$REACT_APP_AD_REWARDED" ]; then
             # A release tag uploads for review: test ads there must stop the run.
             if [[ "$GITHUB_REF" == refs/tags/toss-* ]]; then
               echo "::error::Ad group IDs are not set; a release would ship TEST ads. Set AD_INTERSTITIAL_ID and AD_REWARDED_ID in Variables."

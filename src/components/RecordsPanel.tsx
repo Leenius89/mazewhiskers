@@ -41,7 +41,7 @@ const RecordsPanel: React.FC<RecordsPanelProps> = ({ onClose }) => {
     const records = useRecords();
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={overlayBackdrop} data-modal>
             <motion.div
                 style={panel}
                 initial={{ opacity: 0, y: 18 }}

@@ -74,6 +74,8 @@ const slotFor = (owner: string): string => `mazewhiskers.records.${owner}`;
 const ANONYMOUS = 'local';
 
 let owner = ANONYMOUS;
+/** Until the slot is open, a finished run is held in memory and written with it. */
+let opened = false;
 let current: Records = empty();
 const listeners = new Set<(records: Records) => void>();
 
@@ -119,6 +121,35 @@ const dailyOf = (stored: unknown, whole: (value: unknown) => number): DailyRecor
     return { date: daily.date, best: whole(daily.best), tries: whole(daily.tries), streak: whole(daily.streak) };
 };
 
+/** Two shelves as one: counts added up, bests the better of the two. */
+const combine = (a: Records, b: Records): Records => {
+    const endings = { ...a.endings };
+    Object.entries(b.endings).forEach(([key, seen]) => {
+        endings[key] = (endings[key] ?? 0) + seen;
+    });
+    const fastest = [a.bestClearMs, b.bestClearMs].filter((ms) => ms > 0);
+
+    return {
+        runs: a.runs + b.runs,
+        clears: a.clears + b.clears,
+        bestScore: Math.max(a.bestScore, b.bestScore),
+        bestClearMs: fastest.length > 0 ? Math.min(...fastest) : 0,
+        longestMs: Math.max(a.longestMs, b.longestMs),
+        endings,
+        daily:
+            a.daily.date === b.daily.date
+                ? {
+                      date: a.daily.date,
+                      best: Math.max(a.daily.best, b.daily.best),
+                      tries: a.daily.tries + b.daily.tries,
+                      streak: Math.max(a.daily.streak, b.daily.streak)
+                  }
+                : a.daily.date > b.daily.date
+                  ? a.daily
+                  : b.daily
+    };
+};
+
 const publish = (records: Records): void => {
     current = records;
     listeners.forEach((listener) => listener(records));
@@ -133,17 +164,34 @@ const publish = (records: Records): void => {
  */
 export const openRecords = async (): Promise<void> => {
     const key = await fetchUserKey();
+    if (key) remember(KEY_OWNER, key);
+    // Offline or refused this time: fall back to whoever was here last,
+    // so a flaky start does not show a returning player an empty shelf.
+    const who = key || (await recall(KEY_OWNER)) || ANONYMOUS;
 
-    if (key) {
-        owner = key;
-        remember(KEY_OWNER, key);
-    } else {
-        // Offline or refused this time: fall back to whoever was here last,
-        // so a flaky start does not show a returning player an empty shelf.
-        owner = (await recall(KEY_OWNER)) ?? ANONYMOUS;
+    let shelf = parse(await recall(slotFor(who)));
+    let changed = false;
+
+    if (who !== ANONYMOUS) {
+        // Runs from a session Toss never said who was playing in are this player's too.
+        const stray = parse(await recall(slotFor(ANONYMOUS)));
+        if (stray.runs > 0) {
+            shelf = combine(shelf, stray);
+            remember(slotFor(ANONYMOUS), JSON.stringify(empty()));
+            changed = true;
+        }
     }
 
-    publish(parse(await recall(slotFor(owner))));
+    // Nothing awaits from here on, so no run can be filed in between. One
+    // that finished while the slot was being found is folded in, not dropped.
+    if (current.runs > 0) {
+        shelf = combine(shelf, current);
+        changed = true;
+    }
+    owner = who;
+    opened = true;
+    if (changed) remember(slotFor(owner), JSON.stringify(shelf));
+    publish(shelf);
 };
 
 export interface FinishedRun {
@@ -207,7 +255,7 @@ export const fileRun = ({ score, lastedMs, clearedMs, ending, dailyDate }: Finis
         daily
     };
 
-    remember(slotFor(owner), JSON.stringify(next));
+    if (opened) remember(slotFor(owner), JSON.stringify(next));
     publish(next);
 
     return broken;

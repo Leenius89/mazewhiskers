@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { DoorOpen, Play } from 'lucide-react';
+import { DoorOpen, X } from 'lucide-react';
 import { useTranslation } from '../i18n';
 import { button, buttonRow, eyebrow, hazardEdge, headline, overlayBackdrop, panel, theme } from './theme';
 import Pressable from './Pressable';
@@ -21,6 +21,7 @@ const MotionPanel = motion.div as React.ElementType;
  * player uses its X. The Android back button is the other way out, and once
  * a page subscribes to it the asking is the page's job. "Stay" is the loud
  * button: a stray press of back is far more common than a decision to go.
+ * It reads 닫기, as the left button of every Toss dialog does.
  */
 const LeaveConfirm: React.FC<LeaveConfirmProps> = ({ onStay, onLeave }) => {
     const t = useTranslation();
@@ -50,7 +51,7 @@ const LeaveConfirm: React.FC<LeaveConfirmProps> = ({ onStay, onLeave }) => {
 
                 <div style={buttonRow}>
                     <MotionButton style={button('primary')} onClick={onStay} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>
-                        <Play size={13} />
+                        <X size={13} />
                         {t('leave.stay')}
                     </MotionButton>
                     <MotionButton style={button('quiet')} onClick={onLeave} whileHover={{ y: -1 }} whileTap={{ y: 0 }}>

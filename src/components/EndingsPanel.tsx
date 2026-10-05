@@ -31,7 +31,7 @@ const EndingsPanel: React.FC<EndingsPanelProps> = ({ onClose }) => {
     const seen = ENDING_KEYS.filter((key) => endings[key]).length;
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={overlayBackdrop} data-modal>
             <motion.div
                 style={{ ...panel, gap: '18px' }}
                 initial={{ opacity: 0, y: 18 }}
