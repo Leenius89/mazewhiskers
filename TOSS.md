@@ -59,6 +59,21 @@ git push origin toss-test-2.1.0-1
 콘솔 업로드에는 GitHub 저장소 Secret `AIT_API_KEY`가 필요합니다
 (콘솔 → 워크스페이스 → 왼쪽 메뉴 "키"에서 발급).
 
+키가 없을 때는 로컬에서 만들어 콘솔 "앱 등록 → 번들 정보 → ait 파일 선택하기"로 직접
+올립니다(2026-10-05 QR 테스트 번들). Git Bash에서 한 줄로:
+
+```bash
+CI=false GENERATE_SOURCEMAP=false npx react-scripts build && node scripts/strip-dynamic-code.js && NODE_OPTIONS="--require ./scripts/posix-relative.cjs" npx ait build
+```
+
+- `npm run build`, `npm run build:toss`는 Windows에서 안 됩니다. npm이 cmd로 실행해서
+  `CI=false`를 명령으로 읽습니다. 단계를 `&&` 없이 따로 돌리면 실패한 빌드 대신 예전
+  `build/`가 그대로 묶이니, 올리기 전에 `build/index.html`의 시각을 확인하세요.
+- `scripts/posix-relative.cjs`가 번들 안 경로를 `/`로 맞춥니다. 확인:
+  `python -c "import zipfile; print(any(chr(92) in i.orig_filename for i in zipfile.ZipFile('mazewhiskers.ait').infolist()))"`
+  가 `False`여야 합니다(파이썬 zipfile은 Windows에서 읽을 때 `\`를 `/`로 바꿔 보여 주므로
+  `namelist()`로는 알 수 없습니다).
+
 업로드는 출시가 아닙니다. 콘솔에서 QR 테스트 → 검토 요청 → 승인 → "출시하기"를
 직접 눌러야 사용자에게 나갑니다.
 
@@ -71,7 +86,7 @@ git push origin toss-test-2.1.0-1
 |---|---|---|
 | 오늘의 도시 20종 | `src/game/core/cityKinds.ts`(종류), `src/game/core/daily.ts`(날짜·순번) | 한국 날짜로 하루에 시드 하나(`daily-YYYY-MM-DD`). 미로·생선·집 위치는 모두에게 같고, 아파트는 고양이 위치를 따라 서므로 사람마다 다릅니다. 점수는 같은 토스 랭킹에 올라가고, 오늘 최고·연속 일수는 기기에 남습니다. |
 | 엔딩 도감 | `src/components/EndingsPanel.tsx`, `records.ts` | 끝 8가지(집 도착 1 + 게임 오버 7). 본 것만 제목이 보입니다. |
-| 화면 효과 줄이기 · 진동 | `src/game/core/comfort.ts`, 설정 | 흔들림 1/4, 글리치 찢김 없음, 붉은 화면은 깜빡이지 않고 고정. 그리는 것만 바꾸고 판정은 건드리지 않습니다. 폰의 "동작 줄이기"가 켜져 있으면 자동으로 적용됩니다. |
+| 화면 효과 줄이기 · 진동 | `src/game/core/comfort.ts`, 설정 | 흔들림 1/4, 글리치 찢김 없음, 붉은 화면은 깜빡이지 않고 고정. 점프 확대, 아파트 착지 흔들림, 맞을 때 흰 깜빡임(옅은 붉은색으로), 경고선 맥동, 나이트메어 메뉴 흔들림도 없음. 그리는 것만 바꾸고 판정은 건드리지 않습니다. 폰의 "동작 줄이기"가 켜져 있으면 자동으로 적용됩니다. |
 | 빙판 | `src/game/core/mazeGrid.ts`(생성), `src/game/systems/IceField.ts`(그리기), `Player.ts`(미끄러짐) | 아래 |
 | 광고 | `src/platform/ads.ts` | 아래 |
 
