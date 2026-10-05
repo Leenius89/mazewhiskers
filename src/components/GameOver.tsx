@@ -47,15 +47,9 @@ interface GameOverProps {
  * redevelopment system is that the ways you lose are different in kind. Naming
  * the cause is the last chance the game has to say what it was about.
  */
-const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
-    health: theme.bad,
-    enemy: theme.bad,
-    'apartment:player': theme.accent,
-    'apartment:goal': theme.accent,
-    trapped: theme.accent,
-    sealed: theme.accent,
-    idle: theme.accent
-};
+// Read at render, not at import: the palette changes with light and dark.
+const endingColor = (reason: GameOverPayload['reason']): string =>
+    reason === 'health' || reason === 'enemy' ? theme.bad : theme.accent;
 
 const MotionButton = Pressable;
 
@@ -109,7 +103,7 @@ const GameOver: React.FC<GameOverProps> = ({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <p style={eyebrow}>{t('over.eyebrow')}</p>
-                    <h2 style={headline(ENDING_COLORS[reason])}>{t(`over.${reason}.title`)}</h2>
+                    <h2 style={headline(endingColor(reason))}>{t(`over.${reason}.title`)}</h2>
                     <p
                         style={{
                             margin: 0,

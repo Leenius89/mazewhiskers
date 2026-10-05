@@ -34,7 +34,7 @@ const PauseMenu: React.FC<PauseMenuProps> = ({ onResume, onRestart, onMainMenu }
     useModalKeys(onResume);
 
     return (
-        <div style={{ ...overlayBackdrop }}>
+        <div style={{ ...overlayBackdrop }} data-modal>
             <motion.div
                 style={{ ...panel }}
                 initial={{ opacity: 0, y: 18 }}

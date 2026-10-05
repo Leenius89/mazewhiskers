@@ -28,7 +28,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose }) => {
     useModalKeys(onClose);
 
     return (
-        <div style={{ ...overlayBackdrop }}>
+        <div style={{ ...overlayBackdrop }} data-modal>
             <motion.div
                 style={{ ...panel }}
                 initial={{ opacity: 0, y: 18 }}

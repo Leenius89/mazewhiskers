@@ -409,7 +409,9 @@ function App() {
         // 1. Destroy and cleanup
         destroyGame();
 
-        // 2. Reset local state
+        // 2. Reset local state. The records too: opened over the results in
+        // place of Toss's ranking, they would otherwise cover the new run.
+        setShowRecords(false);
         setIsGameOver(false);
         setIsVictory(false);
         setIsShowingCredits(false);
