@@ -5,6 +5,10 @@ import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
 
+const EIGHT_WAYS: ReadonlyArray<readonly [number, number]> = [
+    [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]
+];
+
 export class Player extends Phaser.Physics.Arcade.Sprite {
     public jumpCount = GameConfig.PLAYER.JUMP.START_STOCK;
     public isJumping = false;
@@ -124,14 +128,6 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
                 frames: [{ key: 'cat1' }, { key: 'cat2' }],
                 frameRate: 8,
                 repeat: -1
-            });
-        }
-
-        if (!this.scene.anims.exists('idle')) {
-            this.scene.anims.create({
-                key: 'idle',
-                frames: [{ key: 'cat1' }],
-                frameRate: -1
             });
         }
     }
@@ -453,6 +449,11 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private landingPointFor(direction: Phaser.Math.Vector2): Phaser.Math.Vector2 {
         const cell = this.landingCellFor(direction);
         return new Phaser.Math.Vector2(cell.gx * this.tileUnit, cell.gy * this.tileUnit);
+    }
+
+    /** Whether milk in hand would take the cat anywhere: one of the eight jumps lands. */
+    get canJumpOut(): boolean {
+        return this.jumpCount > 0 && EIGHT_WAYS.some(([x, y]) => this.canLandAt(new Phaser.Math.Vector2(x, y)));
     }
 
     /**

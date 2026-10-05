@@ -593,7 +593,10 @@ export class GameScene extends Phaser.Scene {
      */
     private checkTrapped(now: number): void {
         const player = this.player;
-        if (!player || this.narrativeActive || !this.state.is('playing')) {
+        // Mid-jump the body rides the arc above the ground, and the milk is
+        // already spent: judged then, a jump out of a cut-off pocket read as
+        // sealed and ended the run in the air.
+        if (!player || player.isJumping || this.narrativeActive || !this.state.is('playing')) {
             this.stillSince = 0;
             this.enclosedSince = 0;
             this.trapCheckAt = now + 1000;
@@ -604,8 +607,8 @@ export class GameScene extends Phaser.Scene {
         const cfg = GameConfig.TRAPPED;
         // The body's cell: the ground point rounds into a wall the cat leans on.
         const here = bodyCell(player);
-        // A cat with milk can still jump out, as canStillReachHome agrees.
-        const boxedIn = openNeighbours(this.maze, here).length === 0 && player.jumpCount === 0;
+        // A cat with milk and somewhere to land can still jump out.
+        const boxedIn = openNeighbours(this.maze, here).length === 0 && !player.canJumpOut;
 
         if (boxedIn) {
             if (this.enclosedSince === 0) this.enclosedSince = now;
@@ -752,7 +755,11 @@ export class GameScene extends Phaser.Scene {
         this.pausedAtMs = this.game.loop.time;
 
         this.scene.pause();
-        this.sound.pauseAll();
+        // Effects stop with the world; the music plays on under the menu, so
+        // a player coming back to the app hears the game again straight away.
+        this.sound.getAllPlaying().forEach((sound) => {
+            if (sound.key !== 'mainBGM' && sound.key !== 'enemySound') sound.pause();
+        });
     }
 
     private handleResumeRequest(): void {

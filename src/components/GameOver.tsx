@@ -46,15 +46,9 @@ interface GameOverProps {
  * redevelopment system is that the ways you lose are different in kind. Naming
  * the cause is the last chance the game has to say what it was about.
  */
-const ENDING_COLORS: Record<GameOverPayload['reason'], string> = {
-    health: theme.bad,
-    enemy: theme.bad,
-    'apartment:player': theme.accent,
-    'apartment:goal': theme.accent,
-    trapped: theme.accent,
-    sealed: theme.accent,
-    idle: theme.accent
-};
+// Read at render, not at import: the palette changes with light and dark.
+const endingColor = (reason: GameOverPayload['reason']): string =>
+    reason === 'health' || reason === 'enemy' ? theme.bad : theme.accent;
 
 const MotionButton = Pressable;
 
@@ -73,8 +67,6 @@ const GameOver: React.FC<GameOverProps> = ({
     const [username, setUsername] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitted, setSubmitted] = useState(false);
-    /** Recorded, but without the fields the other two boards rank by. */
-    const [partial, setPartial] = useState(false);
 
     // Space restarts, unless the player is typing their name into the form.
     useEffect(() => {
@@ -106,10 +98,9 @@ const GameOver: React.FC<GameOverProps> = ({
             // Trimmed, and capped after upper-casing: 'ß' becomes 'SS'.
             const name = username.trim().toUpperCase().slice(0, 10);
 
-            // Survival time and fish are what the other two boards rank by. They
-            // are sent as their own columns, and if the database has not been
-            // migrated yet the insert falls back to the shape it always had —
-            // a run should never fail to record because a board is new.
+            // Survival time and fish are what the boards rank by, each its own
+            // column. (A score-only retry used to follow a refusal; nothing
+            // ranks by score alone, so that row was invisible on every board.)
             const { error } = await supabase
                 .from('scores')
                 .insert([
@@ -123,20 +114,7 @@ const GameOver: React.FC<GameOverProps> = ({
                     }
                 ]);
 
-            if (error) {
-                // Any failure at all, not just an unknown column: a stale insert
-                // policy rejects the new fields as a row-level security
-                // violation, which reads nothing like a missing column and used
-                // to lose the run entirely.
-                console.warn('기록 저장 1차 실패, 축소 형태로 재시도:', error.message);
-
-                const retry = await supabase.from('scores').insert([{ username: name, score }]);
-                if (retry.error) throw retry.error;
-
-                // Saved, but only onto the score board. Saying so beats a silent
-                // success the player cannot tell apart from a real one.
-                setPartial(true);
-            }
+            if (error) throw error;
             setSubmitted(true);
         } catch (error) {
             console.error('Error submitting score:', error);
@@ -162,7 +140,7 @@ const GameOver: React.FC<GameOverProps> = ({
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <p style={eyebrow}>{t('over.eyebrow')}</p>
-                    <h2 style={headline(ENDING_COLORS[reason])}>{t(`over.${reason}.title`)}</h2>
+                    <h2 style={headline(endingColor(reason))}>{t(`over.${reason}.title`)}</h2>
                     <p
                         style={{
                             margin: 0,
@@ -193,11 +171,7 @@ const GameOver: React.FC<GameOverProps> = ({
                 </div>
 
                 {submitted ? (
-                    <p style={{ ...hint, color: partial ? theme.bad : theme.good }}>
-                        {partial
-                            ? t('over.partial')
-                            : t('over.submitted')}
-                    </p>
+                    <p style={{ ...hint, color: theme.good }}>{t('over.submitted')}</p>
                 ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                         <input

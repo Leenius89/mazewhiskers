@@ -553,9 +553,9 @@ export class ApartmentSystem {
         if (this.scene.state.hasEnded()) return;
 
         // The world holds its breath for a scripted beat, as rent and the
-        // drain do; a block due mid-beat lands just after it.
+        // drain do; a block due mid-beat lands after it.
         if (this.scene.narrativeActive) {
-            this.scene.time.delayedCall(250, () => this.clearBlock(cells));
+            this.landAfterBeat(cells);
             return;
         }
 
@@ -563,8 +563,11 @@ export class ApartmentSystem {
         cells.forEach((cell) => this.pending.delete(this.cellKey(cell.gx, cell.gy)));
 
         // Displace before building, so the shove target is judged against the
-        // grid as it stands rather than as it is about to be.
-        const doomed = cells.some((cell) => cell.gx === playerCell.gx && cell.gy === playerCell.gy);
+        // grid as it stands rather than as it is about to be. Not mid-air:
+        // enforceClearance judges the cat where it lands.
+        const doomed =
+            !this.scene.player?.isJumping &&
+            cells.some((cell) => cell.gx === playerCell.gx && cell.gy === playerCell.gy);
         if (doomed && !this.displacePlayer(playerCell, cells)) {
             this.triggerGameOver('apartment:player');
             return;
@@ -585,6 +588,19 @@ export class ApartmentSystem {
                 this.triggerGameOver('apartment:goal');
             }
         }
+    }
+
+    /**
+     * A block that came due during a scripted beat gets its whole warning
+     * again once the beat is over: the cat could not move while it was taped.
+     */
+    private landAfterBeat(cells: PendingCell[]): void {
+        if (this.scene.state.hasEnded()) return;
+        if (this.scene.narrativeActive) {
+            this.scene.time.delayedCall(250, () => this.landAfterBeat(cells));
+            return;
+        }
+        this.scene.time.delayedCall(GameConfig.APARTMENT.WARNING_MS, () => this.clearBlock(cells));
     }
 
     /**
@@ -631,7 +647,8 @@ export class ApartmentSystem {
         };
 
         const player = this.scene.player;
-        if (player) {
+        // Mid-air the cat is judged on landing, as above.
+        if (player && !player.isJumping) {
             if (inside(player)) {
                 const from = cellOf(player.x, player.groundY);
                 const exit = this.exitCell(from, this.outward(centre, player.x, player.groundY), blocked);
@@ -792,6 +809,11 @@ export class ApartmentSystem {
     }
 
     private raiseTower(cell: PendingCell, x: number, baseY: number): void {
+        // A tower on a building's cell replaces that building. Found by cell:
+        // the old search by distance also took the building one row north,
+        // leaving a hole nothing else knew about.
+        const standing = this.scene.occluders.get(this.cellKey(cell.gx, cell.gy));
+        if (standing && this.scene.walls?.contains(standing)) standing.destroy();
 
         const apartmentType = Phaser.Math.Between(1, 3);
         // Origin at the base, placed on the tile's ground line, so the tower

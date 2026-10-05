@@ -46,7 +46,7 @@ describe.each(CITY_KINDS.map((kind) => [kind.key, kind] as const))('%s', (key, k
 
         expect(once.size % 2).toBe(1);
         expect(once.maze.length).toBe(once.size);
-        if (kind.plan.size) expect(once.size).toBe(kind.plan.size);
+        expect(once.size).toBe(kind.plan.size ?? once.size);
 
         // The outer ring is always building: the city has walls.
         for (let i = 0; i < once.size; i++) {
@@ -62,11 +62,49 @@ describe.each(CITY_KINDS.map((kind) => [kind.key, kind] as const))('%s', (key, k
         expect(once.maze[centre.y][centre.x]).toBe(0);
     });
 
+    it('keeps to its outline: outside the shape, only the way in from the doorstep', () => {
+        for (let i = 0; i < 20; i++) {
+            const city = generateCity(41, seeded(`${key}-outline-${i}#1`), kind.plan);
+            const inside = maskFor(kind.plan.mask ?? 'square', city.size);
+            const outside = (x: number, y: number) => city.maze[y]?.[x] === 0 && !inside(x, y);
+
+            // The doorway: open ground outside the shape, joined to the doorstep.
+            const door = new Set<string>();
+            const todo = [start];
+            while (todo.length) {
+                const { x, y } = todo.pop()!;
+                if (door.has(`${x},${y}`) || !outside(x, y)) continue;
+                door.add(`${x},${y}`);
+                todo.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
+            }
+
+            const leaks: string[] = [];
+            for (let y = 0; y < city.size; y++) {
+                for (let x = 0; x < city.size; x++) {
+                    if (outside(x, y) && !door.has(`${x},${y}`)) leaks.push(`${i}: ${x},${y}`);
+                }
+            }
+            expect(leaks).toEqual([]);
+        }
+    });
+
+    it('freezes only walkable street, and only when asked', () => {
+        const city = generateCity(41, seeded(`${key}-ice#1`), kind.plan);
+        const onBuildings = city.ice.filter((cellKey) => {
+            const [x, y] = cellKey.split(',').map(Number);
+            return city.maze[y][x] !== 0;
+        });
+
+        expect(city.ice.length > 0).toBe(Boolean(kind.plan.ice));
+        expect(onBuildings).toEqual([]);
+    });
+});
+
+// Only the shaped kinds: caves and blocks are open ground, where braiding is noise.
+describe.each(CITY_KINDS.filter((kind) => kind.plan.mask).map((kind) => [kind.key, kind] as const))('%s', (key, kind) => {
     it('has more ways round with braiding than without', () => {
         // Braiding opens dead ends into loops. It once did nothing at all in
         // the shaped cities, which were carved on the lattice it never reads.
-        // (The caves and blocks kinds are open ground; braiding is noise there.)
-        if (!kind.plan.mask) return;
         const loops = (maze: number[][]): number => {
             let cells = 0;
             let links = 0;
@@ -87,45 +125,6 @@ describe.each(CITY_KINDS.map((kind) => [kind.key, kind] as const))('%s', (key, k
             plain += loops(generateCity(41, seeded(`${key}-braid-${i}#1`), { ...kind.plan, braid: 0 }).maze);
         }
         expect(braided).toBeGreaterThan(plain);
-    });
-
-    it('keeps to its outline: outside the shape, only the way in from the doorstep', () => {
-        for (let i = 0; i < 20; i++) {
-            const city = generateCity(41, seeded(`${key}-outline-${i}#1`), kind.plan);
-            const inside = maskFor(kind.plan.mask ?? 'square', city.size);
-            const outside = (x: number, y: number) => city.maze[y]?.[x] === 0 && !inside(x, y);
-
-            // The doorway: open ground outside the shape, joined to the doorstep.
-            const door = new Set<string>();
-            const todo = [start];
-            while (todo.length) {
-                const { x, y } = todo.pop()!;
-                if (door.has(`${x},${y}`) || !outside(x, y)) continue;
-                door.add(`${x},${y}`);
-                todo.push({ x: x + 1, y }, { x: x - 1, y }, { x, y: y + 1 }, { x, y: y - 1 });
-            }
-
-            for (let y = 0; y < city.size; y++) {
-                for (let x = 0; x < city.size; x++) {
-                    if (outside(x, y)) expect(door.has(`${x},${y}`) ? 'doorway' : `leak at ${x},${y}`).toBe('doorway');
-                }
-            }
-        }
-    });
-
-    it('freezes only walkable street, and only when asked', () => {
-        const city = generateCity(41, seeded(`${key}-ice#1`), kind.plan);
-
-        if (!kind.plan.ice) {
-            expect(city.ice).toEqual([]);
-            return;
-        }
-
-        expect(city.ice.length).toBeGreaterThan(0);
-        city.ice.forEach((cellKey) => {
-            const [x, y] = cellKey.split(',').map(Number);
-            expect(city.maze[y][x]).toBe(0);
-        });
     });
 });
 

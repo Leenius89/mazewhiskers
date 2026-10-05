@@ -15,7 +15,7 @@ export const showEndingMessages = async (
     scene: Phaser.Scene,
     width: number,
     height: number
-): Promise<{ texts: Phaser.GameObjects.Text[] }> => {
+): Promise<void> => {
     const messages = ['ending.1', 'ending.2', 'ending.3', 'ending.4', 'ending.5'].map(t);
 
     const camera = scene.cameras.main;
@@ -168,6 +168,4 @@ export const showEndingMessages = async (
         ease: 'Power2',
         onComplete: () => skipPrompt.destroy()
     });
-
-    return { texts };
 };

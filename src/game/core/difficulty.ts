@@ -3,7 +3,6 @@ import { getSettings } from '../../settings';
 export type DifficultyKey = 'easy' | 'normal' | 'hard' | 'nightmare';
 
 export interface Difficulty {
-    key: DifficultyKey;
     /** Shown on the settings panel and beside every leaderboard row. */
     label: string;
     color: string;
@@ -139,7 +138,6 @@ export interface Difficulty {
  */
 export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
     easy: {
-        key: 'easy',
         label: 'EASY',
         color: '#5cbba6',
         apartmentScale: 1,
@@ -155,7 +153,6 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         rankWeight: 1
     },
     normal: {
-        key: 'normal',
         label: 'NORMAL',
         color: '#f0b429',
         apartmentScale: 0.6,
@@ -171,7 +168,6 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
         rankWeight: 1.3
     },
     hard: {
-        key: 'hard',
         label: 'HARD',
         color: '#e8635a',
         apartmentScale: 0.36,
@@ -201,7 +197,6 @@ export const DIFFICULTIES: Record<DifficultyKey, Difficulty> = {
      * until you are standing in front of it.
      */
     nightmare: {
-        key: 'nightmare',
         label: 'NIGHTMARE',
         color: '#a06cd5',
         apartmentScale: 0.3,

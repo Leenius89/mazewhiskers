@@ -375,7 +375,9 @@ function App() {
         // 1. Destroy and cleanup
         destroyGame();
 
-        // 2. Reset local state
+        // 2. Reset local state. The leaderboard too: opened over the results,
+        // it would otherwise cover the new run.
+        setShowLeaderboard(false);
         setIsGameOver(false);
         setIsVictory(false);
         setIsShowingCredits(false);

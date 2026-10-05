@@ -16,15 +16,6 @@ export const createMilkItems = (
     const mazeSize = currentMazeSize();
     const tileUnit = tileSize * spacing;
 
-    if (!scene.anims.exists('milkFloat')) {
-        scene.anims.create({
-            key: 'milkFloat',
-            frames: [{ key: 'milk' }],
-            frameRate: 1,
-            repeat: -1
-        });
-    }
-
     for (let y = 0; y < mazeSize; y++) {
         for (let x = 0; x < mazeSize; x++) {
             const posX = x * tileUnit;

@@ -10,8 +10,6 @@ export type GameMode = 'exhibition' | 'arcade';
  * itself never branches on which one is playing.
  */
 export interface ModeSettings {
-    key: GameMode;
-
     /** Enemies in the first district. */
     enemies: number;
     /** Added per district after the first. */
@@ -41,7 +39,6 @@ export interface ModeSettings {
 }
 
 const EXHIBITION: ModeSettings = {
-    key: 'exhibition',
     enemies: 1,
     enemiesPerDistrict: 0,
     apartmentDelayScale: 1.3,
@@ -56,7 +53,6 @@ const EXHIBITION: ModeSettings = {
 };
 
 const ARCADE: ModeSettings = {
-    key: 'arcade',
     enemies: 1,
     enemiesPerDistrict: 1,
     apartmentDelayScale: 0.75,

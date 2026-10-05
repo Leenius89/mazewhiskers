@@ -203,7 +203,7 @@ export class SoundManager {
      * is holding — the swap has to be audible even if something else started a
      * second copy.
      */
-    playEnemySound(): Phaser.Sound.BaseSound | null {
+    playEnemySound(): void {
         if (this.soundsLoaded && this.sounds.enemySound) {
             try {
                 // Paused copies too: resumeAll would bring them back under it.
@@ -224,18 +224,15 @@ export class SoundManager {
                     volume: 0.3,
                     duration: 1000
                 });
-
-                return enemySound;
             } catch (error) {
                 console.error('Error playing enemySound:', error);
             }
-            return null;
+            return;
         }
 
         // Not downloaded yet. Remember the request rather than losing it.
         this.enemySwapPending = true;
         this.loadDeferredSounds();
-        return null;
     }
 
     /**

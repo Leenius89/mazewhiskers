@@ -386,18 +386,28 @@ export const button = (tone: ButtonTone, disabled = false): CSSProperties => {
 };
 
 /**
- * A panel over another screen: Escape closes it, and the screen beneath does
- * not hear Enter or Space. The menu and the results screens listen on window
- * for those, so with Settings open, Space started a run underneath it.
+ * A panel over another screen (its root marked `data-modal`): Escape closes
+ * it, and the screen beneath does not hear Enter or Space. The menu and the
+ * results screens listen on window for those, so with Settings open, Space
+ * started a run underneath it.
  */
 export const useModalKeys = (onClose: () => void): void => {
     useEffect(() => {
         const swallow = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-            // A focused button in the panel takes its own Enter and Space (and
-            // stops them there); anything else is kept from the screen below.
-            const onButton = (document.activeElement as HTMLElement | null)?.getAttribute('role') === 'button';
-            if (e.key === 'Escape' || (!onButton && (e.key === 'Enter' || e.key === ' '))) e.stopImmediatePropagation();
+            const focused = document.activeElement as HTMLElement | null;
+            if (e.key === 'Escape') {
+                // Off whatever opened the panel as well: left focused, the
+                // button would answer the next Enter, which also advances a
+                // line of dialogue, and reopen the panel instead.
+                focused?.blur();
+                e.stopImmediatePropagation();
+                onClose();
+                return;
+            }
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            // A button inside the panel takes its own key (and stops it there).
+            // One beneath it, still reachable with Tab, does not.
+            if (!focused?.closest('[data-modal]')) e.stopImmediatePropagation();
         };
         window.addEventListener('keydown', swallow, true);
         return () => window.removeEventListener('keydown', swallow, true);

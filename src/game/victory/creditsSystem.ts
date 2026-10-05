@@ -6,20 +6,13 @@ import { t } from '../../i18n';
 /** How long the roll holds the screen before it can be dismissed. */
 const SKIP_AFTER_MS = 1500;
 
-interface CreditsObjects {
-    creditsBg: Phaser.GameObjects.Graphics;
-    creditsText: Phaser.GameObjects.Text;
-    clickableArea: Phaser.GameObjects.Rectangle;
-    skipPrompt: Phaser.GameObjects.Text;
-}
-
 export const showCredits = (
     scene: Phaser.Scene,
     width: number,
     height: number,
     onStart?: () => void,
     onEnd?: () => void
-): CreditsObjects => {
+): void => {
     if (onStart) onStart();
 
     const camera = scene.cameras.main;
@@ -155,6 +148,4 @@ export const showCredits = (
 
         scene.tweens.add({ targets: skipPrompt, alpha: 1, duration: 400, ease: 'Power2' });
     });
-
-    return { creditsBg, creditsText, clickableArea, skipPrompt };
 };

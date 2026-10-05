@@ -115,7 +115,7 @@ const BOARDS: Board[] = [
 
 interface LeaderboardProps {
     onClose: () => void;
-    mode?: BoardKey;
+    mode: BoardKey;
 }
 
 const formatTime = (ms: number) => {
@@ -127,7 +127,7 @@ const formatTime = (ms: number) => {
 
 const MotionButton = Pressable;
 
-const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' }) => {
+const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode }) => {
     const [active, setActive] = useState<BoardKey>(mode);
     const t = useTranslation();
     useModalKeys(onClose);
@@ -186,23 +186,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
             if (ticket !== latest.current) return;
 
             const failure = groups.find((group) => group.error);
-            if (failure?.error) {
-                /*
-                 * A board whose column has not been migrated yet is empty, not
-                 * broken.
-                 *
-                 * PostgreSQL answers 42703 for a column that does not exist. The
-                 * closest-call board reads `health_left` off the clear table,
-                 * which only arrives with the migration; until it is applied,
-                 * "no records yet" is both true and far less alarming than a
-                 * red failure notice on a board nobody has broken.
-                 */
-                if (failure.error.code === '42703') {
-                    setScores([]);
-                    return;
-                }
-                throw failure.error;
-            }
+            if (failure?.error) throw failure.error;
 
             const ranked = groups
                 .flatMap((group) => group.data ?? [])
@@ -232,7 +216,7 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode = 'survived' })
     }, [fetchScores]);
 
     return (
-        <div style={overlayBackdrop}>
+        <div style={overlayBackdrop} data-modal>
             <motion.div
                 // Wider than a results panel: four tabs have to sit on one line,
                 // and a table of ten is a different shape from a paragraph.
