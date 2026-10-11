@@ -80,6 +80,11 @@ const Header: React.FC<HeaderProps> = ({ onOpenMenu, milkCount, fishCount, score
                 // Inside Toss the bar is taller, and the button can be the size
                 // a thumb actually needs.
                 padding: hosted ? '13px' : tight ? '7px' : '6px 11px',
+                // A thumb's worth even on a narrow phone, where the padding
+                // alone left a 29px square outside Toss.
+                minWidth: '36px',
+                minHeight: '36px',
+                justifyContent: 'center',
                 background: 'transparent',
                 border: `1px solid ${theme.rule}`,
                 borderRadius: '4px',
