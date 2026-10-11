@@ -2,6 +2,9 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { setFootBody } from '../core/bodies';
 import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
+import { STANDING, steer } from '../core/steer';
+import type { Steering, Street } from '../core/steer';
+import { TILE_UNIT } from '../core/grid';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
 import { calm } from '../core/comfort';
@@ -9,6 +12,20 @@ import { calm } from '../core/comfort';
 const EIGHT_WAYS: ReadonlyArray<readonly [number, number]> = [
     [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]
 ];
+
+const { WIDTH, HEIGHT, FOOT_INSET } = GameConfig.HITBOX.PLAYER;
+/** The feet's box around the feet, as `setFootBody` lays it out. */
+const FOOT_BOX = { left: -WIDTH / 2, right: WIDTH / 2, top: -(HEIGHT + FOOT_INSET), bottom: -FOOT_INSET };
+const { STEER } = GameConfig.PLAYER;
+const STEERING = {
+    speed: GameConfig.PLAYER.SPEED,
+    keepDeg: STEER.KEEP_DEG,
+    sideShare: STEER.SIDE_SHARE,
+    bufferMs: STEER.BUFFER_MS,
+    assistPx: STEER.ASSIST_PX,
+    centring: STEER.CENTRING,
+    edgePx: STEER.EDGE_PX
+};
 
 export class Player extends Phaser.Physics.Arcade.Sprite {
     public jumpCount = GameConfig.PLAYER.JUMP.START_STOCK;
@@ -38,6 +55,15 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
      */
     private slide: Phaser.Math.Vector2 | null = null;
     private jumpArc: Phaser.Tweens.Tween | null = null;
+
+    /** What walking remembers between frames: the way along, and a turn held. See core/steer. */
+    private steering: Steering = STANDING;
+
+    /** The streets as walking sees them: a tower is as closed as a building. */
+    private readonly street: Street = {
+        unit: TILE_UNIT,
+        open: (gx, gy) => this.scene.maze?.[gy]?.[gx] === 0 && !this.scene.apartmentSystem?.isCellBuilt(gx, gy)
+    };
 
 
 
@@ -319,23 +345,37 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // or a hit also takes the cat off whatever it was sliding along.
         if (this.scene.runNow < this.recoveryUntil) {
             this.slide = null;
+            this.steering = STANDING;
             return;
         }
 
         // The ice has the cat: input only counts where a side street opens.
         if (this.slide) {
+            this.steering = STANDING;
             this.keepSliding(moveDirection);
             return;
         }
 
-        const moving = moveDirection.lengthSq() > 0;
+        // The push read as a way along the streets, not taken literally.
+        const step = steer(
+            { x: this.x, y: this.groundY },
+            moveDirection,
+            this.steering,
+            this.street,
+            FOOT_BOX,
+            (this.body as Phaser.Physics.Arcade.Body).blocked,
+            this.scene.runNow,
+            STEERING
+        );
+        this.steering = step.steering;
+        if (step.facing) {
+            this.facing.set(step.facing.x, step.facing.y);
+            if (step.facing.x !== 0) this.setFlipX(step.facing.x < 0);
+        }
 
-        if (moving) {
-            this.setVelocity(moveDirection.x * this.speed, moveDirection.y * this.speed);
-            this.facing.copy(moveDirection).normalize();
+        if (step.velocity.x !== 0 || step.velocity.y !== 0) {
+            this.setVelocity(step.velocity.x, step.velocity.y);
             this.anims.play('walk', true);
-
-            if (moveDirection.x !== 0) this.setFlipX(moveDirection.x < 0);
         } else {
             this.setVelocity(0);
             this.anims.stop();

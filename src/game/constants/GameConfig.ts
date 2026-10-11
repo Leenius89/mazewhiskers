@@ -417,6 +417,21 @@ export const GameConfig = {
     PLAYER: {
         SCALE: 0.08,
         SPEED: 160,
+        /** Reading a push as a way along the streets. See core/steer. */
+        STEER: {
+            /** Degrees past halfway the direction being walked is kept, so a wobbling thumb does not flip it. */
+            KEEP_DEG: 15,
+            /** A diagonal's smaller part, as a share of the push, that asks to turn where a street opens: 30°. */
+            SIDE_SHARE: 0.5,
+            /** A turn pressed before its street opens is held this long while the cat carries on. */
+            BUFFER_MS: 300,
+            /** Furthest the cat is slid sideways to line up with an opening it was pressed into. */
+            ASSIST_PX: 24,
+            /** Per second: how hard a walking cat is eased to the middle of its street. */
+            CENTRING: 8,
+            /** Clearance kept from a wall when judging whether the feet fit a street. */
+            EDGE_PX: 1
+        },
         JUMP: {
             HEIGHT: 150,
             /**
