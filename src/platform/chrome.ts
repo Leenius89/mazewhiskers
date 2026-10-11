@@ -45,11 +45,24 @@ export const isSimulated = (): boolean => {
 
 const SIMULATED: Insets = { top: 47, right: 0, bottom: 34, left: 0 };
 
+/** `&simInsets=59,0,34,0` (top, right, bottom, left) stands in for one particular phone. */
+const simulatedInsets = (): Insets => {
+    try {
+        const [top, right, bottom, left] = (new URLSearchParams(window.location.search).get('simInsets') ?? '')
+            .split(',')
+            .map(Number);
+        if ([top, right, bottom, left].every((n) => Number.isFinite(n) && n >= 0)) return { top, right, bottom, left };
+    } catch {
+        // An address that cannot be read keeps the default phone.
+    }
+    return SIMULATED;
+};
+
 const withNav = (insets: Insets): Chrome => ({ ...insets, navBand: NAV_BAND, navReserve: NAV_RESERVE });
 
 const measure = (): Chrome => {
     if (inToss()) return withNav(readInsets());
-    if (isSimulated()) return withNav(SIMULATED);
+    if (isSimulated()) return withNav(simulatedInsets());
     return NONE;
 };
 
