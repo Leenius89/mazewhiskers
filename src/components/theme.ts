@@ -166,6 +166,9 @@ export const textInput: CSSProperties = {} as CSSProperties;
 export const buttonRow: CSSProperties = {} as CSSProperties;
 export const hint: CSSProperties = {} as CSSProperties;
 
+/** A panel's top and bottom padding; the hazard stripe above it has to match. */
+const PANEL_PAD_Y = 'clamp(22px, 4vh, 34px)';
+
 /** Every derived style, rebuilt from whichever palette is in force. */
 const derive = (): Record<string, CSSProperties> => ({
     overlayBackdrop: {
@@ -210,13 +213,20 @@ const derive = (): Record<string, CSSProperties> => ({
          * the stripe still reaches the corners.
          */
         maxWidth: '520px',
+        // Centred by its own margins, not by the backdrop: a panel taller than
+        // the screen (an iPhone SE, a folded Fold8) then starts at the top of
+        // the scroll, instead of spilling upward past an edge no scroll can
+        // reach — under the status bar, and in Toss under its close button.
+        margin: 'auto',
         background: theme.surface,
         border: `1px solid ${theme.rule}`,
         borderRadius: '10px',
-        padding: '34px 32px',
+        // Tighter on a short screen, where the results ran past the bottom;
+        // unchanged from about 840px tall up.
+        padding: `${PANEL_PAD_Y} 32px`,
         display: 'flex',
         flexDirection: 'column',
-        gap: '26px',
+        gap: 'clamp(14px, 3.1vh, 26px)',
         fontFamily: theme.body,
         color: theme.ink,
         boxShadow: theme.panelShadow
@@ -225,7 +235,7 @@ const derive = (): Record<string, CSSProperties> => ({
         height: '4px',
         // Matched to the panel's padding above, so the stripe spans the full
         // width and sits flush with the top edge.
-        margin: '-34px -32px 0',
+        margin: `calc(-1 * ${PANEL_PAD_Y}) -32px 0`,
         borderRadius: '10px 10px 0 0',
         background: `repeating-linear-gradient(115deg, ${theme.accent} 0 10px, ${theme.ground} 10px 20px)`
     },
