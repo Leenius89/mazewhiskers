@@ -252,7 +252,8 @@ const Leaderboard: React.FC<LeaderboardProps> = ({ onClose, mode }) => {
                                 style={{
                                     flex: '1 1 130px',
                                     minWidth: 0,
-                                    padding: '8px 6px',
+                                    // 36px tall with the text: a tab is pressed with a thumb.
+                                    padding: '10px 6px',
                                     borderRadius: '5px',
                                     textAlign: 'center',
                                     cursor: 'pointer',

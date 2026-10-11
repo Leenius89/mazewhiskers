@@ -129,8 +129,13 @@ const Header: React.FC<HeaderProps> = ({ onOpenMenu, milkCount, fishCount, score
                     style={{
                         display: 'flex',
                         alignItems: 'center',
+                        justifyContent: 'center',
                         gap: '6px',
                         padding: tight ? '7px' : '6px 11px',
+                        // A thumb's worth even on a narrow phone, where the
+                        // padding alone left a 29px square.
+                        minWidth: '36px',
+                        minHeight: '36px',
                         background: 'transparent',
                         border: `1px solid ${theme.rule}`,
                         borderRadius: '4px',
