@@ -77,6 +77,15 @@ interface Props {
     size?: number;
 }
 
+/** Height a line of speech takes above the cat. */
+const SPEECH_ROOM = 36;
+
+/** The strip at the top that belongs to the status bar and, in Toss, its two buttons. */
+const reservedTop = (): number => {
+    const css = getComputedStyle(document.documentElement);
+    return (parseFloat(css.getPropertyValue('--mw-top')) || 0) + (parseFloat(css.getPropertyValue('--mw-nav')) || 0);
+};
+
 const ProwlingCat: React.FC<Props> = ({ perchSelector, mood = 'idle', size = 92 }) => {
     const t = useTranslation();
 
@@ -123,6 +132,10 @@ const ProwlingCat: React.FC<Props> = ({ perchSelector, mood = 'idle', size = 92 
             if (!el) return null;
             const box = el.getBoundingClientRect();
             if (box.width < 40) return null;
+            // Only with room above the panel for the cat and what it says. On a
+            // short screen the panel reaches the top, and up there the cat sat
+            // under the status bar and, in Toss, on top of the close button.
+            if (box.top - size - SPEECH_ROOM < reservedTop()) return null;
             // Measured from the bottom, which is the axis the cat moves on.
             return { top: window.innerHeight - box.top, left: box.left, right: box.right };
         };
@@ -232,7 +245,7 @@ const ProwlingCat: React.FC<Props> = ({ perchSelector, mood = 'idle', size = 92 
             window.clearTimeout(next);
             window.clearTimeout(hideAt);
         };
-    }, [t, mood, perchSelector]);
+    }, [t, mood, perchSelector, size]);
 
     return (
         <div

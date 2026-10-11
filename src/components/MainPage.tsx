@@ -498,9 +498,14 @@ const MainPage: React.FC<MainPageProps> = ({
                              *
                              * Desktop is capped against the viewport for the same
                              * reason at the other end.
+                             *
+                             * And against the height on a touch screen held wide —
+                             * an opened fold, a tablet on its side — where the
+                             * width alone set the title so large it took the top
+                             * half of the screen.
                              */
                             fontSize: isMobile
-                                ? 'clamp(1.9rem, 9.6vw, 5.85rem)'
+                                ? 'clamp(1.9rem, min(9.6vw, 7vh), 5.85rem)'
                                 : 'min(5.85rem, 9.2vw)',
                             fontFamily: "'Press Start 2P', 'Pretendard', sans-serif",
                             textShadow: '4px 4px 0px rgba(0, 0, 0, 0.2)',

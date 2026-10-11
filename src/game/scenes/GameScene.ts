@@ -27,6 +27,7 @@ import { PlayerStatusBar } from '../systems/PlayerStatusBar';
 import { bodyCell, cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
 import { RENDER_SCALE } from '../core/renderScale';
+import { baseZoom } from '../core/uiScale';
 import { ThreatFeedback } from '../systems/ThreatFeedback';
 import { NarrativeOverlay } from '../systems/NarrativeOverlay';
 import { IceField } from '../systems/IceField';
@@ -383,13 +384,17 @@ export class GameScene extends Phaser.Scene {
         // Multiplied by the render scale so the framing is unchanged and the
         // extra canvas resolution goes into detail rather than into showing more
         // of the map. See core/renderScale.
-        const baseZoom =
-            (isMobileDevice() ? GameConfig.CAMERA.MOBILE.ZOOM : GameConfig.CAMERA.DESKTOP.ZOOM) * RENDER_SCALE;
+        // Read again on every resize: an opened fold or a turned tablet is a
+        // different screen and gets its own zoom. See core/uiScale.
         // Never further out than the city fills the window: a small city (the
         // town, the spiral) on a wide screen otherwise stopped partway across
         // it, with bare canvas beyond its last street.
         const fitZoom = () =>
-            Math.max(baseZoom, this.cameras.main.width / worldWidth, this.cameras.main.height / worldHeight);
+            Math.max(
+                baseZoom(this.cameras.main) * RENDER_SCALE,
+                this.cameras.main.width / worldWidth,
+                this.cameras.main.height / worldHeight
+            );
 
         const refit = () => {
             this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);

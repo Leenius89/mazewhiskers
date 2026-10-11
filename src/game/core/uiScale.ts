@@ -19,9 +19,27 @@ export const REFERENCE_WIDTH = 768;
  */
 const MAX_SCALE = 1.55;
 
-/** Camera zoom the scene starts at, before any punch-in or punch-out. */
-const baseZoom = (): number =>
-    isMobileDevice() ? GameConfig.CAMERA.MOBILE.ZOOM : GameConfig.CAMERA.DESKTOP.ZOOM;
+/** The widest phone there is, in CSS pixels: the Pro Max line. */
+const WIDEST_PHONE = 440;
+
+/**
+ * Camera zoom a run is played at, before any punch-in or punch-out, in CSS terms.
+ *
+ * A phone gets the mobile zoom, as it always has. A bigger touch screen — an
+ * opened fold, a tablet — used to get the same 0.5, and with it two or three
+ * times the city a phone shows: a small cat in a big map, the black cat seen
+ * from half the city away, and an easier run on a board phones share. Past the
+ * widest phone the zoom grows with the screen's short side, so no screen sees
+ * more streets across than that phone does, until it reaches the desktop's 1.
+ */
+export const baseZoom = (camera?: Phaser.Cameras.Scene2D.Camera): number => {
+    const { MOBILE, DESKTOP } = GameConfig.CAMERA;
+    if (!isMobileDevice()) return DESKTOP.ZOOM;
+    if (!camera) return MOBILE.ZOOM;
+
+    const shortSide = Math.min(camera.width, camera.height) / RENDER_SCALE;
+    return Phaser.Math.Clamp((shortSide / WIDEST_PHONE) * MOBILE.ZOOM, MOBILE.ZOOM, DESKTOP.ZOOM);
+};
 
 /** CSS pixels across, whatever resolution the canvas is drawn at. */
 const cssWidth = (camera: Phaser.Cameras.Scene2D.Camera): number => camera.width / RENDER_SCALE;
@@ -61,7 +79,7 @@ export const uiScale = (camera: Phaser.Cameras.Scene2D.Camera): number =>
  * camera sits at 0.5 and nothing compensated for it.
  */
 export const worldUiScale = (camera: Phaser.Cameras.Scene2D.Camera): number =>
-    camera ? layoutScale(camera) / baseZoom() : 1;
+    camera ? layoutScale(camera) / baseZoom(camera) : 1;
 
 /** Any screen-pinned interface length at this screen's size. */
 export const ui = (base: number, camera: Phaser.Cameras.Scene2D.Camera): number => base * uiScale(camera);
@@ -93,7 +111,7 @@ export const fontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera, damp
 
 /** Font size for an element that lives in the world. */
 export const worldFontPx = (base: number, camera: Phaser.Cameras.Scene2D.Camera, damping = 1): string =>
-    camera ? `${Math.round((base * textScale(camera, damping)) / baseZoom())}px` : `${base}px`;
+    camera ? `${Math.round((base * textScale(camera, damping)) / baseZoom(camera))}px` : `${base}px`;
 
 /**
  * How much of the correction each kind of text takes. Named so the call sites
