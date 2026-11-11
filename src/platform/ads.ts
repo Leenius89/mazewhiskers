@@ -40,10 +40,14 @@ export const AD_UNITS = {
 };
 
 export const AD_POLICY = {
-    /** Runs finished this visit before the first between-runs ad. */
-    FREE_RUNS: 1,
-    /** Least time between two between-runs ads. */
-    MIN_GAP_MS: 150_000,
+    /** Runs finished this visit before the first between-runs ad: none, one after every run. */
+    FREE_RUNS: 0,
+    /**
+     * Least time between two between-runs ads. Only a floor for runs that end
+     * in seconds — dying straight back into the black cat should not be an ad
+     * every ten seconds, which Toss's ad guide warns against.
+     */
+    MIN_GAP_MS: 30_000,
     /** Jumps added to the next run by a watched rewarded ad. */
     REWARD_JUMPS: 1
 } as const;
