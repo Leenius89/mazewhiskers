@@ -449,7 +449,19 @@ export class GameScene extends Phaser.Scene {
         this.culling = new CullingSystem(this);
         this.culling.watch(walls);
         this.culling.watch(this.apartmentSystem.group);
-        this.stacks = isStackEnabled() ? new SpriteStack(this, walls) : null;
+        if (isStackEnabled()) {
+            const children = (group?: Phaser.GameObjects.Group | null) =>
+                (group?.getChildren() ?? []) as Phaser.GameObjects.Sprite[];
+            this.stacks = new SpriteStack(this, {
+                blocks: () => [...children(this.walls), ...children(this.apartmentSystem?.group)],
+                tokens: () => [
+                    ...(this.player ? [this.player] : []),
+                    ...this.enemies,
+                    ...children(this.fishes),
+                    ...children(this.milks)
+                ]
+            });
+        }
 
         if (isDebugEnabled()) {
             this.debugOverlay = new DebugOverlay(this);
