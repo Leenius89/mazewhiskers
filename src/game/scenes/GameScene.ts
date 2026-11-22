@@ -463,7 +463,12 @@ export class GameScene extends Phaser.Scene {
                     ...this.enemies,
                     ...children(this.fishes),
                     ...children(this.milks)
-                ]
+                ],
+                maze: () => this.maze,
+                towerAt: (gx, gy) => {
+                    const standing = this.occluders.get(`${gx},${gy}`);
+                    return !!standing?.active && String(standing.texture.key).startsWith('apt');
+                }
             });
         }
 

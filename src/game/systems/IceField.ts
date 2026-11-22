@@ -3,6 +3,7 @@ import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { TILE_UNIT } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
+import { drawPixelIce, isStackEnabled } from './SpriteStack';
 
 /**
  * The frozen streets, drawn flat on the road.
@@ -19,6 +20,8 @@ export class IceField {
     private readonly scene: GameScene;
     private readonly layer: Phaser.GameObjects.Graphics;
     private lastBuilt = -1;
+    /** With `?stack`: the ice as pixel art instead of the vector sheet. */
+    private pixels: Phaser.GameObjects.Image | null = null;
 
     constructor(scene: GameScene) {
         this.scene = scene;
@@ -58,6 +61,12 @@ export class IceField {
 
         const iced = (gx: number, gy: number): boolean => this.scene.isIce(gx, gy);
 
+        if (isStackEnabled()) {
+            this.pixels?.destroy();
+            this.pixels = drawPixelIce(this.scene, this.scene.maze?.length ?? 0, frozen, iced);
+            return;
+        }
+
         frozen.forEach(({ left, top }) => {
             this.layer.fillStyle(look.FILL, look.FILL_ALPHA);
             this.layer.fillRect(left, top, TILE_UNIT, TILE_UNIT);
@@ -95,6 +104,7 @@ export class IceField {
     }
 
     destroy(): void {
+        this.pixels?.destroy();
         this.layer.destroy();
     }
 }

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
-import { sortDepth } from '../core/depth';
+import { DEPTH, sortDepth } from '../core/depth';
+import { TILE_UNIT } from '../core/grid';
 
 /**
  * Trial: the city drawn as stacked slices. Only with `?stack` in the address.
@@ -27,8 +28,14 @@ import { sortDepth } from '../core/depth';
 const TILT = 0.55;
 /** How far a slice leans per pixel of height and pixel off the screen's middle. */
 const LEAN = 0.0012;
-/** Drawn height of a block as a share of its drawing's drawn height. */
-const HEIGHT_SHARE = 0.75;
+/** Drawn height of a block as a share of its drawing's drawn height. Houses sit low. */
+const HEIGHT_SHARE = { building: 0.45, apt: 0.75, goal: 0.75 };
+/**
+ * Towers that fill a 2x2 square of cells are drawn as one tower over all four,
+ * the size of four houses. One tower per cell drawn that big would overlap its
+ * neighbours into one smear; this keeps each tower on its own ground.
+ */
+const COMPLEX = { footprint: 0.92, height: 1.5 };
 /** Slice texture size. */
 const SLICE_PX = 96;
 /** Slices per kind of drawing: enough for its floors to read. */
@@ -40,9 +47,12 @@ interface TokenStyle {
     step: number;
     /** Scale of the top copy against the bottom one: below 1 piles into a mound. */
     taper: number;
+    /** Drawn bigger than the sprite the game plays with. */
+    grow: number;
 }
-const TOKEN: TokenStyle = { layers: 4, step: 1.5, taper: 1 };
-const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7 };
+const TOKEN: TokenStyle = { layers: 4, step: 1.5, taper: 1, grow: 1 };
+const CAT: TokenStyle = { layers: 4, step: 2.2, taper: 1, grow: 1.5 };
+const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7, grow: 1 };
 
 export const isStackEnabled = (): boolean => {
     try {
@@ -66,6 +76,7 @@ type Source = Phaser.GameObjects.Sprite;
 /** A drawing cut into slices, made once per texture. */
 interface Cut {
     key: string;
+    family: Family;
     slices: number;
     /** The drawing's opaque box, as a share of the whole picture. */
     widthShare: number;
@@ -81,6 +92,10 @@ interface Pile {
 export interface StackSources {
     blocks: () => Source[];
     tokens: () => Source[];
+    /** The city's grid, for the ground under it. */
+    maze: () => number[][] | undefined;
+    /** Whether a tower stands on a cell. */
+    towerAt: (gx: number, gy: number) => boolean;
 }
 
 const shade = (amount: number): number => {
@@ -95,6 +110,8 @@ const shade = (amount: number): number => {
 const setDepthIfChanged = (object: Phaser.GameObjects.Image, depth: number): void => {
     if (object.depth !== depth) object.setDepth(depth);
 };
+
+const isCat = (source: Source): boolean => /^(cat|enemy)/.test(String(source.texture.key));
 
 const familyOf = (key: string): Family =>
     key.startsWith('apt') ? 'apt' : key === 'building4' ? 'goal' : 'building';
@@ -114,6 +131,8 @@ export class SpriteStack {
         this.sources = sources;
         this.lean = isFlat() ? 0 : LEAN;
         this.cameraId = scene.cameras.main.id;
+
+        makePixelGround(scene, sources.maze());
 
         // Dust is made and thrown away as towers land, outside any group.
         scene.sys.events.on(Phaser.Scenes.Events.ADDED_TO_SCENE, this.onAdded, this);
@@ -171,7 +190,8 @@ export class SpriteStack {
         const boxHeight = bottom - top + 1;
         const widthShare = boxWidth / width;
 
-        const slices = SLICES[familyOf(textureKey)];
+        const family = familyOf(textureKey);
+        const slices = SLICES[family];
         // In texture pixels, a touch more than shows, so no gap opens between strips.
         const strip = Math.max(2, Math.ceil((riseShare / widthShare) * SLICE_PX) + 1);
         const roof = this.roofColour(pixels, width, spans, top, boxHeight);
@@ -233,7 +253,7 @@ export class SpriteStack {
             texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
 
-        const cut = { key, slices, widthShare, heightShare: boxHeight / height };
+        const cut = { key, family, slices, widthShare, heightShare: boxHeight / height };
         this.cuts.set(textureKey, cut);
         return cut;
     }
@@ -282,7 +302,7 @@ export class SpriteStack {
             family === 'building'
                 ? source.width * source.scaleX * GameConfig.BUILDING_HEIGHT.MAX
                 : source.displayHeight;
-        const riseShare = (tallest * HEIGHT_SHARE * TILT) / SLICES[family] / source.displayWidth;
+        const riseShare = (tallest * HEIGHT_SHARE[family] * TILT) / SLICES[family] / source.displayWidth;
         const cut = this.cutOf(key, riseShare);
 
         this.making = true;
@@ -326,7 +346,7 @@ export class SpriteStack {
             seen.add(source);
             let pile = this.piles.get(source);
             if (!pile) {
-                pile = this.makeToken(source, this.dust.has(source) ? DUST : TOKEN);
+                pile = this.makeToken(source, this.dust.has(source) ? DUST : isCat(source) ? CAT : TOKEN);
                 this.piles.set(source, pile);
             }
             const inView =
@@ -344,12 +364,23 @@ export class SpriteStack {
 
     private placeBlock(source: Source, pile: Pile, cx: number, cy: number): void {
         const cut = pile.cut as Cut;
-        const shown = source.active && source.visible && source.alpha > 0;
-        const footprint = source.displayWidth * cut.widthShare;
-        const height = source.displayHeight * cut.heightShare * HEIGHT_SHARE;
+        let shown = source.active && source.visible && source.alpha > 0;
+        let footprint = source.displayWidth * cut.widthShare;
+        let height = source.displayHeight * cut.heightShare * HEIGHT_SHARE[cut.family];
         // The ground line under the drawing, and the footprint's middle behind it.
-        const base = source.y + source.displayHeight * (1 - source.originY);
-        const x = source.x;
+        let base = source.y + source.displayHeight * (1 - source.originY);
+        let x = source.x;
+
+        if (cut.family === 'apt') {
+            const complex = this.complexOf(source, base);
+            if (complex === 'covered') shown = false;
+            else if (complex) {
+                ({ x, base } = complex);
+                footprint = 2 * TILE_UNIT * COMPLEX.footprint;
+                height *= COMPLEX.height;
+            }
+        }
+
         const y = base - footprint / 2;
         const depth = sortDepth(base);
 
@@ -365,12 +396,27 @@ export class SpriteStack {
         });
     }
 
+    /**
+     * A tower whose 2x2 square (squares start on even cells) is all towers:
+     * the square's corner draws the big one, the other three draw nothing.
+     */
+    private complexOf(source: Source, base: number): { x: number; base: number } | 'covered' | null {
+        const gx = Math.round(source.x / TILE_UNIT);
+        const gy = Math.round((base - TILE_UNIT / 2) / TILE_UNIT);
+        const ax = gx - (((gx % 2) + 2) % 2);
+        const ay = gy - (((gy % 2) + 2) % 2);
+        const at = this.sources.towerAt;
+        if (!(at(ax, ay) && at(ax + 1, ay) && at(ax, ay + 1) && at(ax + 1, ay + 1))) return null;
+        if (gx !== ax || gy !== ay) return 'covered';
+        return { x: (ax + 0.5) * TILE_UNIT, base: (ay + 1) * TILE_UNIT + TILE_UNIT / 2 };
+    }
+
     private placeToken(source: Source, pile: Pile, cx: number, cy: number, inView: boolean): void {
         const style = pile.style as TokenStyle;
         const shown = inView && source.active && source.visible && source.alpha > 0;
         const top = pile.copies.length - 1;
         // Lean the drawing as the city leans at its middle height.
-        const mid = source.displayHeight / 2;
+        const mid = (source.displayHeight * style.grow) / 2;
         const dx = (source.x - cx) * mid * this.lean;
         const dy = (source.y - cy) * mid * this.lean;
 
@@ -380,7 +426,7 @@ export class SpriteStack {
             const taper = 1 - (1 - style.taper) * (i / top);
             copy.setTexture(source.texture.key, source.frame.name);
             copy.setOrigin(source.originX, source.originY);
-            copy.setScale(source.scaleX * taper, source.scaleY * taper);
+            copy.setScale(source.scaleX * taper * style.grow, source.scaleY * taper * style.grow);
             copy.setFlip(source.flipX, source.flipY);
             copy.setAngle(source.angle);
             copy.setAlpha(source.alpha);
@@ -402,3 +448,160 @@ export class SpriteStack {
         this.piles.clear();
     }
 }
+
+// ------------------------------------------------------------ pixel ground
+
+/** Texels per cell: the ground is pixel art drawn at 32 to a cell, shown at 3x. */
+const TEXELS = 32;
+
+/** A small seeded generator, so a city's ground looks the same every time. */
+const noise = (seed: number) => {
+    let t = seed >>> 0;
+    return (): number => {
+        t = (t + 0x6d2b79f5) >>> 0;
+        let r = Math.imul(t ^ (t >>> 15), 1 | t);
+        r ^= r + Math.imul(r ^ (r >>> 7), 61 | r);
+        return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+};
+
+const pixel = (ctx: CanvasRenderingContext2D, colour: string, x: number, y: number, w = 1, h = 1): void => {
+    ctx.fillStyle = colour;
+    ctx.fillRect(x, y, w, h);
+};
+
+const spot = (rand: () => number, span = TEXELS): number => Math.floor(rand() * span);
+
+/** One cell of asphalt: speckle, the odd patch and crack. */
+const drawAsphalt = (ctx: CanvasRenderingContext2D, ox: number, oy: number, rand: () => number): void => {
+    pixel(ctx, '#4b4e55', ox, oy, TEXELS, TEXELS);
+    for (let i = 0; i < 70; i++) {
+        const c = rand();
+        pixel(ctx, c < 0.45 ? '#43464c' : c < 0.9 ? '#555960' : '#62666d', ox + spot(rand), oy + spot(rand));
+    }
+    if (rand() < 0.25) {
+        const w = 6 + spot(rand, 8);
+        const h = 4 + spot(rand, 6);
+        pixel(ctx, '#45484e', ox + spot(rand, TEXELS - w), oy + spot(rand, TEXELS - h), w, h);
+    }
+    if (rand() < 0.35) {
+        let x = ox + 4 + spot(rand, 24);
+        let y = oy + 4 + spot(rand, 24);
+        for (let i = 0; i < 7; i++) {
+            pixel(ctx, '#393b40', x, y);
+            x += rand() < 0.5 ? 1 : 0;
+            y += rand() < 0.5 ? 1 : -1;
+        }
+    }
+};
+
+/** Pavement under and between the houses: square slabs with joints. */
+const drawPavement = (ctx: CanvasRenderingContext2D, ox: number, oy: number, rand: () => number): void => {
+    pixel(ctx, '#8b8d92', ox, oy, TEXELS, TEXELS);
+    for (let k = 0; k < TEXELS; k += 8) {
+        pixel(ctx, '#77797e', ox + k, oy, 1, TEXELS);
+        pixel(ctx, '#77797e', ox, oy + k, TEXELS, 1);
+    }
+    for (let i = 0; i < 18; i++) pixel(ctx, rand() < 0.5 ? '#94969b' : '#808287', ox + spot(rand), oy + spot(rand));
+};
+
+/** A canvas the size of the city at a texel a cell-thirty-second, shown at the city's scale. */
+const bakeCity = (
+    scene: Phaser.Scene,
+    key: string,
+    size: number,
+    depth: number,
+    paint: (ctx: CanvasRenderingContext2D) => void
+): Phaser.GameObjects.Image => {
+    const canvas = document.createElement('canvas');
+    canvas.width = size * TEXELS;
+    canvas.height = size * TEXELS;
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    paint(ctx);
+
+    if (scene.textures.exists(key)) scene.textures.remove(key);
+    scene.textures.addCanvas(key, canvas)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+    return scene.add
+        .image(-TILE_UNIT / 2, -TILE_UNIT / 2, key)
+        .setOrigin(0, 0)
+        .setScale(TILE_UNIT / TEXELS)
+        .setDepth(depth);
+};
+
+/**
+ * The road as one picture: asphalt in the streets, pavement where the houses
+ * stand, and a kerb wherever a street meets a block. Baked once, so it costs
+ * one draw a frame.
+ */
+const makePixelGround = (scene: Phaser.Scene, maze: number[][] | undefined): void => {
+    if (!maze) return;
+    const open = (gx: number, gy: number): boolean => maze[gy]?.[gx] === 0;
+
+    bakeCity(scene, 'stack-ground', maze.length, DEPTH.GROUND - 1, (ctx) => {
+        for (let gy = 0; gy < maze.length; gy++) {
+            for (let gx = 0; gx < maze.length; gx++) {
+                const rand = noise(gx * 7919 + gy * 104729);
+                const ox = gx * TEXELS;
+                const oy = gy * TEXELS;
+                if (!open(gx, gy)) {
+                    drawPavement(ctx, ox, oy, rand);
+                    continue;
+                }
+                drawAsphalt(ctx, ox, oy, rand);
+                // Kerbs: a light edge and a dark lip where the road meets a block.
+                const end = TEXELS - 3;
+                if (!open(gx, gy - 1)) {
+                    pixel(ctx, '#a3a5aa', ox, oy, TEXELS, 2);
+                    pixel(ctx, '#2e3034', ox, oy + 2, TEXELS, 1);
+                }
+                if (!open(gx, gy + 1)) {
+                    pixel(ctx, '#2e3034', ox, oy + end, TEXELS, 1);
+                    pixel(ctx, '#a3a5aa', ox, oy + end + 1, TEXELS, 2);
+                }
+                if (!open(gx - 1, gy)) {
+                    pixel(ctx, '#a3a5aa', ox, oy, 2, TEXELS);
+                    pixel(ctx, '#2e3034', ox + 2, oy, 1, TEXELS);
+                }
+                if (!open(gx + 1, gy)) {
+                    pixel(ctx, '#2e3034', ox + end, oy, 1, TEXELS);
+                    pixel(ctx, '#a3a5aa', ox + end + 1, oy, 2, TEXELS);
+                }
+            }
+        }
+    });
+};
+
+/**
+ * Frozen streets in the same pixels: pale ice with darker drifts, glints and a
+ * white crack, and a rim where the sheet ends.
+ */
+export const drawPixelIce = (
+    scene: Phaser.Scene,
+    size: number,
+    frozen: { gx: number; gy: number }[],
+    iced: (gx: number, gy: number) => boolean
+): Phaser.GameObjects.Image =>
+    bakeCity(scene, 'stack-ice', size, DEPTH.GROUND + 1, (ctx) => {
+        for (const { gx, gy } of frozen) {
+            const rand = noise(gx * 15485863 + gy * 32452843);
+            const ox = gx * TEXELS;
+            const oy = gy * TEXELS;
+            pixel(ctx, '#8fd4e8', ox, oy, TEXELS, TEXELS);
+            for (let i = 0; i < 5; i++) {
+                const w = 4 + spot(rand, 10);
+                pixel(ctx, '#7cc4dd', ox + spot(rand, TEXELS - w), oy + spot(rand, 30), w, 2);
+            }
+            for (let i = 0; i < 6; i++) pixel(ctx, '#e6f8ff', ox + spot(rand), oy + spot(rand));
+            // One crack, stepped the way pixels step.
+            let x = ox + 3 + spot(rand, 26);
+            for (let y = oy + 3; y < oy + TEXELS - 3; y++) {
+                pixel(ctx, '#f4fcff', x, y);
+                const turn = rand();
+                x = Math.min(ox + TEXELS - 2, Math.max(ox + 1, x + (turn < 0.33 ? -1 : turn < 0.66 ? 1 : 0)));
+            }
+            if (!iced(gx, gy - 1)) pixel(ctx, '#d8f2fb', ox, oy, TEXELS, 2);
+            if (!iced(gx, gy + 1)) pixel(ctx, '#5fa9c4', ox, oy + TEXELS - 2, TEXELS, 2);
+            if (!iced(gx - 1, gy)) pixel(ctx, '#d8f2fb', ox, oy, 2, TEXELS);
+            if (!iced(gx + 1, gy)) pixel(ctx, '#5fa9c4', ox + TEXELS - 2, oy, 2, TEXELS);
+        }
+    });
