@@ -453,7 +453,11 @@ export class GameScene extends Phaser.Scene {
             const children = (group?: Phaser.GameObjects.Group | null) =>
                 (group?.getChildren() ?? []) as Phaser.GameObjects.Sprite[];
             this.stacks = new SpriteStack(this, {
-                blocks: () => [...children(this.walls), ...children(this.apartmentSystem?.group)],
+                blocks: () => [
+                    ...children(this.walls),
+                    ...children(this.apartmentSystem?.group),
+                    ...(this.goal ? [this.goal] : [])
+                ],
                 tokens: () => [
                     ...(this.player ? [this.player] : []),
                     ...this.enemies,
@@ -1186,6 +1190,8 @@ export class GameScene extends Phaser.Scene {
 
         this.apartmentSystem?.destroy();
         this.apartmentSystem = null;
+        this.stacks?.destroy();
+        this.stacks = null;
         this.barks?.destroy();
         this.barks = null;
 
