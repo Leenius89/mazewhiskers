@@ -23,6 +23,7 @@ import { Atmosphere } from '../systems/Atmosphere';
 import { BarkSystem } from '../systems/BarkSystem';
 import { SweatDrops } from '../systems/SweatDrops';
 import { CullingSystem } from '../systems/CullingSystem';
+import { SpriteStack, isStackEnabled } from '../systems/SpriteStack';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
 import { bodyCell, cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
@@ -218,6 +219,7 @@ export class GameScene extends Phaser.Scene {
     public hud: HudOverlay | null = null;
     private atmosphere: Atmosphere | null = null;
     private culling: CullingSystem | null = null;
+    private stacks: SpriteStack | null = null;
     private statusBar: PlayerStatusBar | null = null;
     private threat: ThreatFeedback | null = null;
 
@@ -447,6 +449,7 @@ export class GameScene extends Phaser.Scene {
         this.culling = new CullingSystem(this);
         this.culling.watch(walls);
         this.culling.watch(this.apartmentSystem.group);
+        this.stacks = isStackEnabled() ? new SpriteStack(this, walls) : null;
 
         if (isDebugEnabled()) {
             this.debugOverlay = new DebugOverlay(this);
@@ -859,6 +862,7 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.cameraDirector?.update(this.controls.move);
+        this.stacks?.update();
 
         // After the actors move, so the silhouette matches this frame.
         this.occlusion?.update();
