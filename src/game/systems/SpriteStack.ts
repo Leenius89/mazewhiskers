@@ -49,9 +49,16 @@ interface TokenStyle {
     taper: number;
     /** Drawn bigger than the sprite the game plays with. */
     grow: number;
+    /**
+     * Solid colours for the copies under the top one, bottom first. Darkening
+     * a black drawing changes nothing, so the black cat's layers are filled
+     * with greys instead: still a black cat, with a body under it.
+     */
+    fills?: number[];
 }
 const TOKEN: TokenStyle = { layers: 4, step: 1.5, taper: 1, grow: 1 };
-const CAT: TokenStyle = { layers: 4, step: 2.2, taper: 1, grow: 1.5 };
+const CAT: TokenStyle = { layers: 4, step: 1.8, taper: 1, grow: 1 };
+const BLACK_CAT: TokenStyle = { ...CAT, step: 2.6, fills: [0x2e2b3a, 0x46425a, 0x625d7d, 0x8a84a8] };
 const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7, grow: 1 };
 
 export const isStackEnabled = (): boolean => {
@@ -94,8 +101,10 @@ export interface StackSources {
     tokens: () => Source[];
     /** The city's grid, for the ground under it. */
     maze: () => number[][] | undefined;
-    /** Whether a tower stands on a cell. */
-    towerAt: (gx: number, gy: number) => boolean;
+    /** The tower standing on a cell, if any. */
+    towerAt: (gx: number, gy: number) => Source | null;
+    /** Whether a cell is taped off for a tower that has not landed yet. */
+    pendingAt: (gx: number, gy: number) => boolean;
 }
 
 const shade = (amount: number): number => {
@@ -346,7 +355,7 @@ export class SpriteStack {
             seen.add(source);
             let pile = this.piles.get(source);
             if (!pile) {
-                pile = this.makeToken(source, this.dust.has(source) ? DUST : isCat(source) ? CAT : TOKEN);
+                pile = this.makeToken(source, this.dust.has(source) ? DUST : isCat(source) ? (String(source.texture.key).startsWith('enemy') ? BLACK_CAT : CAT) : TOKEN);
                 this.piles.set(source, pile);
             }
             const inView =
@@ -365,6 +374,7 @@ export class SpriteStack {
     private placeBlock(source: Source, pile: Pile, cx: number, cy: number): void {
         const cut = pile.cut as Cut;
         let shown = source.active && source.visible && source.alpha > 0;
+        let alpha = source.alpha;
         let footprint = source.displayWidth * cut.widthShare;
         let height = source.displayHeight * cut.heightShare * HEIGHT_SHARE[cut.family];
         // The ground line under the drawing, and the footprint's middle behind it.
@@ -376,6 +386,7 @@ export class SpriteStack {
             if (complex === 'covered') shown = false;
             else if (complex) {
                 ({ x, base } = complex);
+                alpha = complex.alpha;
                 footprint = 2 * TILE_UNIT * COMPLEX.footprint;
                 height *= COMPLEX.height;
             }
@@ -391,24 +402,34 @@ export class SpriteStack {
             slice.setDisplaySize(footprint, footprint);
             slice.setPosition(x + (x - cx) * h * this.lean, y + (y - cy) * h * this.lean - h * TILT);
             setDepthIfChanged(slice, depth + i * 0.001);
-            slice.setAlpha(source.alpha);
+            slice.setAlpha(alpha);
             slice.setAngle(source.angle);
         });
     }
 
     /**
-     * A tower whose 2x2 square (squares start on even cells) is all towers:
-     * the square's corner draws the big one, the other three draw nothing.
+     * Towers come in 2x2 squares (squares start on even cells; with `?stack`
+     * the blocks are laid on that grid). Once every cell of a square is a tower
+     * or taped for one, its first standing tower draws one tower over all four
+     * and the rest draw nothing, so a block never shows small towers among big.
      */
-    private complexOf(source: Source, base: number): { x: number; base: number } | 'covered' | null {
+    private complexOf(source: Source, base: number): { x: number; base: number; alpha: number } | 'covered' | null {
         const gx = Math.round(source.x / TILE_UNIT);
         const gy = Math.round((base - TILE_UNIT / 2) / TILE_UNIT);
         const ax = gx - (((gx % 2) + 2) % 2);
         const ay = gy - (((gy % 2) + 2) % 2);
-        const at = this.sources.towerAt;
-        if (!(at(ax, ay) && at(ax + 1, ay) && at(ax, ay + 1) && at(ax + 1, ay + 1))) return null;
-        if (gx !== ax || gy !== ay) return 'covered';
-        return { x: (ax + 0.5) * TILE_UNIT, base: (ay + 1) * TILE_UNIT + TILE_UNIT / 2 };
+        const cells = [
+            [ax, ay],
+            [ax + 1, ay],
+            [ax, ay + 1],
+            [ax + 1, ay + 1]
+        ];
+        const towers = cells.map(([x, y]) => this.sources.towerAt(x, y));
+        if (cells.some(([x, y], i) => !towers[i] && !this.sources.pendingAt(x, y))) return null;
+        if (towers.find((t) => t) !== source) return 'covered';
+        // Fade in with whichever of its towers has landed furthest.
+        const alpha = Math.max(...towers.map((t) => (t ? t.alpha : 0)));
+        return { x: (ax + 0.5) * TILE_UNIT, base: (ay + 1) * TILE_UNIT + TILE_UNIT / 2, alpha };
     }
 
     private placeToken(source: Source, pile: Pile, cx: number, cy: number, inView: boolean): void {
@@ -436,6 +457,8 @@ export class SpriteStack {
             if (i === top) {
                 if (source.isTinted) copy.setTint(source.tintTopLeft);
                 else copy.clearTint();
+            } else if (style.fills) {
+                copy.setTintFill(style.fills[Math.min(i, style.fills.length - 1)]);
             } else {
                 copy.setTint(shade(0.35 + (0.35 * i) / top));
             }

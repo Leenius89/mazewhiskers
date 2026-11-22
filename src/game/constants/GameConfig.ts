@@ -65,7 +65,7 @@ export const GameConfig = {
      */
     ICE: {
         /** Slide speed, against a walk of 160. Fast enough to feel taken. */
-        SPEED: 250,
+        SPEED: 360,
         /**
          * How often an ordinary city wakes up frozen.
          *

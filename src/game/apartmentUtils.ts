@@ -6,6 +6,10 @@ import { DEPTH, sortDepth } from './core/depth';
 import { TILE_UNIT, bodyCell, cellOf, isOpen, mazeSize as currentMazeSize, worldOf } from './core/grid';
 import type { Cell } from './core/grid';
 import type { GameOverReason, GameScene } from './scenes/GameScene';
+import { isStackEnabled } from './systems/SpriteStack';
+
+/** With `?stack`: cells on a side of an apartment complex — 3 towers of 2 cells. */
+const STACK_COMPLEX_CELLS = 6;
 
 interface PendingCell {
     gx: number;
@@ -193,10 +197,20 @@ export class ApartmentSystem {
         const playerCell = cellOf(this.player.x, this.scene.player?.groundY ?? this.player.y);
 
         for (let attempt = 0; attempt < cfg.PLACEMENT_ATTEMPTS; attempt++) {
-            const width = Phaser.Math.Between(cfg.MIN_SIZE, Math.max(cfg.MIN_SIZE, maxSize));
-            const height = Phaser.Math.Between(cfg.MIN_SIZE, Math.max(cfg.MIN_SIZE, maxSize));
-            const gx = Phaser.Math.Between(0, this.mazeSize - width);
-            const gy = Phaser.Math.Between(0, this.mazeSize - height);
+            let width = Phaser.Math.Between(cfg.MIN_SIZE, Math.max(cfg.MIN_SIZE, maxSize));
+            let height = Phaser.Math.Between(cfg.MIN_SIZE, Math.max(cfg.MIN_SIZE, maxSize));
+            let gx = Phaser.Math.Between(0, this.mazeSize - width);
+            let gy = Phaser.Math.Between(0, this.mazeSize - height);
+            // Trial (`?stack`): a block is a complex of 3x3 towers, each tower
+            // the size of 2x2 houses, laid on the 2x2 grid the stacked city
+            // draws its towers on.
+            if (isStackEnabled()) {
+                width = STACK_COMPLEX_CELLS;
+                height = STACK_COMPLEX_CELLS;
+                gx -= gx % 2;
+                gy -= gy % 2;
+                if (gx + width > this.mazeSize || gy + height > this.mazeSize) continue;
+            }
 
             const distance = Phaser.Math.Distance.Between(
                 gx + width / 2,

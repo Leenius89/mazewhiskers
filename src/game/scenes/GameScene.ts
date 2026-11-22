@@ -467,8 +467,9 @@ export class GameScene extends Phaser.Scene {
                 maze: () => this.maze,
                 towerAt: (gx, gy) => {
                     const standing = this.occluders.get(`${gx},${gy}`);
-                    return !!standing?.active && String(standing.texture.key).startsWith('apt');
-                }
+                    return standing?.active && String(standing.texture.key).startsWith('apt') ? standing : null;
+                },
+                pendingAt: (gx, gy) => !!this.apartmentSystem?.isPendingCell(gx, gy)
             });
         }
 
