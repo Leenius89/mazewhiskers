@@ -33,6 +33,8 @@ export class WorldFog {
     private readonly scene: GameScene;
     private readonly layer: Phaser.GameObjects.Graphics;
     private dirty = true;
+    /** A light cuts the lit part out, so every cell gets fog under it. */
+    private lit = false;
 
     constructor(scene: GameScene) {
         this.scene = scene;
@@ -41,6 +43,13 @@ export class WorldFog {
         // unseen street is hidden by this as surely as the street is. Below
         // the screen effects, which are the game talking rather than the world.
         this.layer = scene.add.graphics().setDepth(DEPTH.OVERLAY - 20);
+    }
+
+    /** Fog over every cell, with the lit part cut out by `hole`. */
+    lightWith(hole: Phaser.Display.Masks.GeometryMask): void {
+        this.lit = true;
+        this.layer.setMask(hole);
+        this.dirty = true;
     }
 
     /** Marks the fog for a redraw. Called when the cat moves or turns. */
@@ -77,7 +86,7 @@ export class WorldFog {
         for (let gy = 0; gy < size; gy++) {
             for (let gx = 0; gx < size; gx++) {
                 const key = `${gx},${gy}`;
-                if (this.scene.visible.has(key)) continue;
+                if (!this.lit && this.scene.visible.has(key)) continue;
 
                 const remembered = this.scene.visited.has(key);
                 this.layer.fillStyle(cfg.COLOR, remembered ? cfg.REMEMBERED_ALPHA : cfg.UNKNOWN_ALPHA);

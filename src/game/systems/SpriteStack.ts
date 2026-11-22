@@ -131,6 +131,8 @@ export class SpriteStack {
     private readonly piles = new Map<Source, Pile>();
     private readonly cuts = new Map<string, Cut>();
     private readonly dust = new Set<Source>();
+    /** How far each standing block's top is drawn above its ground, by cell. */
+    private readonly rises = new Map<string, number>();
     private readonly lean: number;
     private readonly cameraId: number;
     private making = false;
@@ -392,6 +394,15 @@ export class SpriteStack {
             }
         }
 
+        if (shown) {
+            const gx = Math.round((x - (footprint > TILE_UNIT ? TILE_UNIT / 2 : 0)) / TILE_UNIT);
+            const gy = Math.round((base - TILE_UNIT / 2) / TILE_UNIT);
+            const span = footprint > TILE_UNIT ? 2 : 1;
+            for (let i = 0; i < span; i++) {
+                for (let j = 0; j < span; j++) this.rises.set(`${gx + i},${gy - j}`, height * TILT);
+            }
+        }
+
         const y = base - footprint / 2;
         const depth = sortDepth(base);
 
@@ -463,6 +474,11 @@ export class SpriteStack {
                 copy.setTint(shade(0.35 + (0.35 * i) / top));
             }
         });
+    }
+
+    /** The drawn height of the block on a cell, for the light to climb. */
+    riseAt(gx: number, gy: number): number {
+        return this.rises.get(`${gx},${gy}`) ?? TILE_UNIT * 0.5;
     }
 
     destroy(): void {

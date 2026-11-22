@@ -16,6 +16,7 @@ import { OcclusionSystem } from '../systems/OcclusionSystem';
 import { Dread } from '../systems/Dread';
 import { Vignette } from '../systems/Vignette';
 import { WorldFog } from '../systems/WorldFog';
+import { Flashlight } from '../systems/Flashlight';
 import { InputManager, isMobileDevice } from '../systems/InputManager';
 import { CameraDirector } from '../systems/CameraDirector';
 import { HudOverlay } from '../systems/HudOverlay';
@@ -220,6 +221,7 @@ export class GameScene extends Phaser.Scene {
     private atmosphere: Atmosphere | null = null;
     private culling: CullingSystem | null = null;
     private stacks: SpriteStack | null = null;
+    private flashlight: Flashlight | null = null;
     private statusBar: PlayerStatusBar | null = null;
     private threat: ThreatFeedback | null = null;
 
@@ -421,7 +423,8 @@ export class GameScene extends Phaser.Scene {
         this.vignette = new Vignette(
             this,
             GameConfig.ATMOSPHERE.VIGNETTE.FROM,
-            currentDifficulty().visionTightness
+            // With `?stack` nightmare's torch is what limits sight, not the frame.
+            currentDifficulty().visionTightness * (isStackEnabled() && this.fogOfWar ? 0.3 : 1)
         );
         this.atmosphere = new Atmosphere(this, this.vignette);
 
@@ -471,6 +474,12 @@ export class GameScene extends Phaser.Scene {
                 },
                 pendingAt: (gx, gy) => !!this.apartmentSystem?.isPendingCell(gx, gy)
             });
+            // Nightmare's dark, lit by a torch that knows the buildings are tall.
+            if (this.worldFog) {
+                const stacks = this.stacks;
+                this.flashlight = new Flashlight(this, (gx, gy) => stacks.riseAt(gx, gy));
+                this.worldFog.lightWith(this.flashlight.hole);
+            }
         }
 
         if (isDebugEnabled()) {
@@ -885,6 +894,7 @@ export class GameScene extends Phaser.Scene {
 
         this.cameraDirector?.update(this.controls.move);
         this.stacks?.update();
+        this.flashlight?.update();
 
         // After the actors move, so the silhouette matches this frame.
         this.occlusion?.update();
@@ -1196,6 +1206,8 @@ export class GameScene extends Phaser.Scene {
 
         this.apartmentSystem?.destroy();
         this.apartmentSystem = null;
+        this.flashlight?.destroy();
+        this.flashlight = null;
         this.stacks?.destroy();
         this.stacks = null;
         this.barks?.destroy();
