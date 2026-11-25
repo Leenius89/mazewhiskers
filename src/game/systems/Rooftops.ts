@@ -506,37 +506,39 @@ const windowsOf = (mini: Uint8ClampedArray, px: number, rows: number, rand: () =
     return lit;
 };
 
+/** Roofs painted per drawing, so a block of one drawing does not wear one roof. */
+export const ROOF_VARIANTS = 3;
+
 /** Frames sit side by side with a clear texel round each, so none bleeds into the next. */
 export const frameX = (i: number, px: number): number => i * (px + 2) + 1;
 
 /**
  * A drawing cut into slices: one canvas, a `px` square frame per slice from
- * the ground up (at `frameX`, y 1), and a last frame for the roof.
+ * the ground up (at `frameX`, y 1), then `ROOF_VARIANTS` roofs to choose from.
  */
 export const paintSlices = (art: Art, spec: SliceSpec): HTMLCanvasElement => {
     const { px, slices, rowsPerSlice: k } = spec;
     const rows = slices * k;
     const mini = shrink(art, px, rows);
     const palette = paletteOf(mini, px, rows);
-    const rand = random(hash(spec.seed));
     const squares = Array.from({ length: slices }, (_, i) => squareOf(mini, px, rows - (i + 1) * k, k));
     const roof = squares.reduce<Square | null>((last, s) => s || last, null) ?? { at: 0, side: px, col: 0 };
 
     const style: HouseRoof = hash(spec.seed) % 2 ? 'flat' : 'tiles';
     const flat = spec.kind !== 'building' || style === 'flat';
-    const plate =
-        spec.kind === 'apt'
-            ? towerRoof(palette, px, roof, rand)
-            : spec.kind === 'goal'
-              ? gardenRoof(palette, px, roof, rand)
-              : houseRoof(style, palette, px, roof, rand);
+    const plates = Array.from({ length: ROOF_VARIANTS }, (_, v) => {
+        const rand = random(hash(`${spec.seed}:${v}`));
+        if (spec.kind === 'apt') return towerRoof(palette, px, roof, rand);
+        if (spec.kind === 'goal') return gardenRoof(palette, px, roof, rand);
+        return houseRoof(style, palette, px, roof, rand);
+    });
     const parapet = mix(palette.light, palette.concrete, 0.4);
-    const lit = spec.glow ? windowsOf(mini, px, rows, rand) : null;
+    const lit = spec.glow ? windowsOf(mini, px, rows, random(hash(`${spec.seed}:windows`))) : null;
     // Pulled towards the drawing's darkest colour, so a white wall's edge is as crisp as a brick one's.
     const edge = (c: RGB) => tone(mix(c, palette.dark, 0.5), OUTLINE);
 
     const canvas = document.createElement('canvas');
-    canvas.width = frameX(slices + 1, px) - 1;
+    canvas.width = frameX(slices + ROOF_VARIANTS, px) - 1;
     canvas.height = px + 2;
     const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
     const image = ctx.createImageData(canvas.width, canvas.height);
@@ -575,7 +577,7 @@ export const paintSlices = (art: Art, spec: SliceSpec): HTMLCanvasElement => {
                 }
             }
             // The top of this slice: roof, under the parapet's and the part above's shadows.
-            const c = plate.at(x, y);
+            const c = plates[0].at(x, y);
             const shaded =
                 (depth === rim && (face === 'N' || face === 'W')) ||
                 (!inside(above, x, y) && (inside(above, x - 1, y - 1) || inside(above, x - 2, y - 2)));
@@ -583,15 +585,17 @@ export const paintSlices = (art: Art, spec: SliceSpec): HTMLCanvasElement => {
         });
     });
 
-    // The roof: a dark edge, and on a flat roof a parapet lit on its north-west and its shadow inside.
-    walk(roof, (x, y, _du, _dv, depth, face) => {
-        const c = plate.at(x, y);
-        const sunny = face === 'N' || face === 'W';
-        if (depth === 0) put(slices, x, y, edge(c));
-        else if (flat && roof.side >= 8 && depth === 1) put(slices, x, y, tone(parapet, sunny ? 1.12 : 0.82));
-        else if (flat && roof.side >= 8 && depth === 2 && sunny) put(slices, x, y, tone(c, 0.74));
-        else put(slices, x, y, c);
-    });
+    // The roofs: a dark edge, and on a flat roof a parapet lit on its north-west and its shadow inside.
+    plates.forEach((plate, v) =>
+        walk(roof, (x, y, _du, _dv, depth, face) => {
+            const c = plate.at(x, y);
+            const sunny = face === 'N' || face === 'W';
+            if (depth === 0) put(slices + v, x, y, edge(c));
+            else if (flat && roof.side >= 8 && depth === 1) put(slices + v, x, y, tone(parapet, sunny ? 1.12 : 0.82));
+            else if (flat && roof.side >= 8 && depth === 2 && sunny) put(slices + v, x, y, tone(c, 0.74));
+            else put(slices + v, x, y, c);
+        })
+    );
 
     ctx.putImageData(image, 0, 0);
     return canvas;

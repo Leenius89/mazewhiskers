@@ -3,7 +3,7 @@ import { GameConfig } from '../constants/GameConfig';
 import { DEPTH, sortDepth } from '../core/depth';
 import { currentDifficulty } from '../core/difficulty';
 import { TILE_UNIT } from '../core/grid';
-import { frameX, paintSlices, readArt, shrink } from './Rooftops';
+import { ROOF_VARIANTS, frameX, paintSlices, readArt, shrink } from './Rooftops';
 import type { Art } from './Rooftops';
 
 /**
@@ -188,7 +188,7 @@ export class SpriteStack {
             ? this.scene.textures.get(key)
             : this.scene.textures.addCanvas(key, paintSlices(art, { kind: family, px, slices, rowsPerSlice, seed: textureKey, glow }));
         if (texture) {
-            for (let i = 0; i <= slices; i++) if (!texture.has(String(i))) texture.add(i, 0, frameX(i, px), 1, px, px);
+            for (let i = 0; i < slices + ROOF_VARIANTS; i++) if (!texture.has(String(i))) texture.add(i, 0, frameX(i, px), 1, px, px);
             texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
 
@@ -227,9 +227,11 @@ export class SpriteStack {
         const slices = Math.max(1, Math.round(rise / ((footprint / px) * ROWS_PER_SLICE[family])));
         const cut = this.cutOf(key, family, art, px, slices);
 
+        // Which of the drawing's roofs, by where it stands.
+        const roof = cut.slices + (Math.abs(Math.round(source.x / TILE_UNIT) * 7 + Math.round(source.y / TILE_UNIT) * 13) % ROOF_VARIANTS);
         this.making = true;
         const copies: Phaser.GameObjects.Image[] = [];
-        for (let i = 0; i <= cut.slices; i++) copies.push(this.scene.add.image(source.x, source.y, cut.key, i));
+        for (let i = 0; i <= cut.slices; i++) copies.push(this.scene.add.image(source.x, source.y, cut.key, i < cut.slices ? i : roof));
         this.making = false;
 
         this.hide(source);
