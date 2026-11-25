@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { DEPTH, sortDepth } from '../core/depth';
 import { TILE_UNIT } from '../core/grid';
+import { isFigure, placeFigure } from './TokenVolume';
 
 /**
  * Trial: the city drawn as stacked slices. Only with `?stack` in the address.
@@ -18,8 +19,10 @@ import { TILE_UNIT } from '../core/grid';
  * middle of the screen, the visible strip of each rim is that band, and the
  * strips together redraw the facade on the walls the camera can see.
  *
- * Tokens (cats, milk, fish, dust) keep their drawing, stacked a few times with
- * the lower copies darker, and lean with the city at their middle height.
+ * Cats and fish are drawn as solid little figures (see TokenVolume), the cats
+ * in more poses than their two walk drawings (see CatPoses). Milk and dust keep
+ * their drawing, stacked a few times with the lower copies darker. Every token
+ * leans with the city at its middle height.
  *
  * `?stack=flat` drops the lean, to compare.
  */
@@ -49,16 +52,8 @@ interface TokenStyle {
     taper: number;
     /** Drawn bigger than the sprite the game plays with. */
     grow: number;
-    /**
-     * Solid colours for the copies under the top one, bottom first. Darkening
-     * a black drawing changes nothing, so the black cat's layers are filled
-     * with greys instead: still a black cat, with a body under it.
-     */
-    fills?: number[];
 }
 const TOKEN: TokenStyle = { layers: 4, step: 1.5, taper: 1, grow: 1 };
-const CAT: TokenStyle = { layers: 4, step: 1.8, taper: 1, grow: 1 };
-const BLACK_CAT: TokenStyle = { ...CAT, step: 2.6, fills: [0x2e2b3a, 0x46425a, 0x625d7d, 0x8a84a8] };
 const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7, grow: 1 };
 
 export const isStackEnabled = (): boolean => {
@@ -93,6 +88,7 @@ interface Cut {
 interface Pile {
     copies: Phaser.GameObjects.Image[];
     cut?: Cut;
+    /** A token's stacking; a figure has none, and one copy. */
     style?: TokenStyle;
 }
 
@@ -119,8 +115,6 @@ const shade = (amount: number): number => {
 const setDepthIfChanged = (object: Phaser.GameObjects.Image, depth: number): void => {
     if (object.depth !== depth) object.setDepth(depth);
 };
-
-const isCat = (source: Source): boolean => /^(cat|enemy)/.test(String(source.texture.key));
 
 const familyOf = (key: string): Family =>
     key.startsWith('apt') ? 'apt' : key === 'building4' ? 'goal' : 'building';
@@ -325,10 +319,10 @@ export class SpriteStack {
         return { copies, cut };
     }
 
-    private makeToken(source: Source, style: TokenStyle): Pile {
+    private makeToken(source: Source, style?: TokenStyle): Pile {
         this.making = true;
         const copies: Phaser.GameObjects.Image[] = [];
-        for (let i = 0; i <= style.layers; i++) copies.push(this.scene.add.image(source.x, source.y, source.texture.key));
+        for (let i = 0; i <= (style?.layers ?? 0); i++) copies.push(this.scene.add.image(source.x, source.y, source.texture.key));
         this.making = false;
         this.hide(source);
         return { copies, style };
@@ -357,7 +351,7 @@ export class SpriteStack {
             seen.add(source);
             let pile = this.piles.get(source);
             if (!pile) {
-                pile = this.makeToken(source, this.dust.has(source) ? DUST : isCat(source) ? (String(source.texture.key).startsWith('enemy') ? BLACK_CAT : CAT) : TOKEN);
+                pile = this.makeToken(source, this.dust.has(source) ? DUST : isFigure(source) ? undefined : TOKEN);
                 this.piles.set(source, pile);
             }
             const inView =
@@ -444,13 +438,22 @@ export class SpriteStack {
     }
 
     private placeToken(source: Source, pile: Pile, cx: number, cy: number, inView: boolean): void {
-        const style = pile.style as TokenStyle;
+        const style = pile.style;
         const shown = inView && source.active && source.visible && source.alpha > 0;
         const top = pile.copies.length - 1;
         // Lean the drawing as the city leans at its middle height.
-        const mid = (source.displayHeight * style.grow) / 2;
+        const mid = (source.displayHeight * (style?.grow ?? 1)) / 2;
         const dx = (source.x - cx) * mid * this.lean;
         const dy = (source.y - cy) * mid * this.lean;
+
+        if (!style) {
+            const figure = pile.copies[0];
+            figure.setVisible(shown);
+            if (!shown) return;
+            placeFigure(figure, source, source.x + dx, source.y + dy);
+            setDepthIfChanged(figure, source.depth);
+            return;
+        }
 
         pile.copies.forEach((copy, i) => {
             copy.setVisible(shown);
@@ -468,8 +471,6 @@ export class SpriteStack {
             if (i === top) {
                 if (source.isTinted) copy.setTint(source.tintTopLeft);
                 else copy.clearTint();
-            } else if (style.fills) {
-                copy.setTintFill(style.fills[Math.min(i, style.fills.length - 1)]);
             } else {
                 copy.setTint(shade(0.35 + (0.35 * i) / top));
             }
