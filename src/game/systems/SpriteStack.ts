@@ -278,11 +278,13 @@ export class SpriteStack {
         });
     }
 
-    private placeBlock(source: Source, pile: Pile, cx: number, cy: number): void {
-        const cut = pile.cut as Cut;
-        let shown = source.active && source.visible && source.alpha > 0;
+    /**
+     * Where a block stands and how tall it is drawn, or null for a tower another
+     * tower of its square draws. One sum for the slices and the shade under them.
+     */
+    private footprintOf(source: Source, cut: Cut): { x: number; base: number; size: number; height: number; alpha: number } | null {
         let alpha = source.alpha;
-        let footprint = source.displayWidth * cut.widthShare;
+        let size = source.displayWidth * cut.widthShare;
         // The ground line under the drawing, and the footprint's middle behind it.
         let base = source.y + source.displayHeight * (1 - source.originY);
         let x = source.x;
@@ -290,11 +292,10 @@ export class SpriteStack {
 
         if (cut.family === 'apt') {
             const complex = this.complexOf(source, base);
-            if (complex === 'covered') shown = false;
-            else if (complex) {
-                ({ x, base } = complex);
-                alpha = complex.alpha;
-                footprint = COMPLEX_FOOTPRINT;
+            if (complex === 'covered') return null;
+            if (complex) {
+                ({ x, base, alpha } = complex);
+                size = COMPLEX_FOOTPRINT;
             } else lone = true;
         }
         // Each slice rises a whole number of its texels. A lone tower (by home,
@@ -302,25 +303,34 @@ export class SpriteStack {
         // keeps its own height: its slices' top rows carry on into the gap.
         const height = lone
             ? source.displayHeight * cut.heightShare * HEIGHT_SHARE.apt
-            : (cut.rows * footprint) / cut.px / TILT;
+            : (cut.rows * size) / cut.px / TILT;
+        return { x, base, size, height, alpha };
+    }
 
-        if (shown) {
-            const gx = Math.round((x - (footprint > TILE_UNIT ? TILE_UNIT / 2 : 0)) / TILE_UNIT);
-            const gy = Math.round((base - TILE_UNIT / 2) / TILE_UNIT);
-            const span = footprint > TILE_UNIT ? 2 : 1;
-            for (let i = 0; i < span; i++) {
-                for (let j = 0; j < span; j++) this.rises.set(`${gx + i},${gy - j}`, height * TILT);
-            }
+    private placeBlock(source: Source, pile: Pile, cx: number, cy: number): void {
+        const cut = pile.cut as Cut;
+        const at = this.footprintOf(source, cut);
+        const shown = !!at && source.active && source.visible && source.alpha > 0;
+        if (!at || !shown) {
+            pile.copies.forEach((slice) => slice.setVisible(false));
+            return;
+        }
+        const { x, base, size, height, alpha } = at;
+
+        const gx = Math.round((x - (size > TILE_UNIT ? TILE_UNIT / 2 : 0)) / TILE_UNIT);
+        const gy = Math.round((base - TILE_UNIT / 2) / TILE_UNIT);
+        const span = size > TILE_UNIT ? 2 : 1;
+        for (let i = 0; i < span; i++) {
+            for (let j = 0; j < span; j++) this.rises.set(`${gx + i},${gy - j}`, height * TILT);
         }
 
-        const y = base - footprint / 2;
+        const y = base - size / 2;
         const depth = sortDepth(base);
 
         pile.copies.forEach((slice, i) => {
-            slice.setVisible(shown);
-            if (!shown) return;
+            slice.setVisible(true);
             const h = (height * i) / cut.slices;
-            slice.setDisplaySize(footprint, footprint);
+            slice.setDisplaySize(size, size);
             slice.setPosition(x + (x - cx) * h * this.lean, y + (y - cy) * h * this.lean - h * TILT);
             setDepthIfChanged(slice, depth + i * 0.001);
             slice.setAlpha(alpha);
@@ -406,22 +416,9 @@ export class SpriteStack {
      */
     forEachFootprint(visit: (x: number, y: number, size: number, rise: number) => void): void {
         this.piles.forEach((pile, source) => {
-            const cut = pile.cut;
-            if (!cut || !source.active) return;
-            let footprint = source.displayWidth * cut.widthShare;
-            let height = source.displayHeight * cut.heightShare * HEIGHT_SHARE[cut.family];
-            let base = source.y + source.displayHeight * (1 - source.originY);
-            let x = source.x;
-            if (cut.family === 'apt') {
-                const complex = this.complexOf(source, base);
-                if (complex === 'covered') return;
-                if (complex) {
-                    ({ x, base } = complex);
-                    footprint = 2 * TILE_UNIT * COMPLEX.footprint;
-                    height *= COMPLEX.height;
-                }
-            }
-            visit(x, base - footprint / 2, footprint, height * TILT);
+            if (!pile.cut || !source.active) return;
+            const at = this.footprintOf(source, pile.cut);
+            if (at) visit(at.x, at.base - at.size / 2, at.size, at.height * TILT);
         });
     }
 
