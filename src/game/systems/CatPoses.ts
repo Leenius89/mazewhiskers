@@ -11,8 +11,7 @@ import type { Pixels } from './TokenVolume';
  * legs apart (a stride's contact), the second has them gathered (passing).
  *
  * - The body above the belly can be raised or lowered column by column: legs
- *   stretch or fold to meet it, which is a step's bob, a crouch, a breath or an
- *   arched back.
+ *   stretch or fold to meet it, which is a crouch, a breath or an arched back.
  * - Legs can be spread, hind legs back and front legs forward.
  * - Ears can be pinned or perked, eyes squeezed shut, the tail lifted.
  *
@@ -22,9 +21,7 @@ import type { Pixels } from './TokenVolume';
 
 export type Pose =
     | 'contact'
-    | 'down'
     | 'passing'
-    | 'up'
     | 'stand'
     | 'inhale'
     | 'crouch'
@@ -136,9 +133,7 @@ export const derivePoses = (apart: Pixels, gathered: Pixels): Record<Pose, Pixel
     });
     return {
         contact: apart,
-        down: rise(apart, 1),
         passing: gathered,
-        up: rise(gathered, -1),
         stand: gathered,
         inhale: rise(gathered, -1, 4, 8),
         crouch: rise(gathered, 2),
@@ -162,9 +157,8 @@ export interface Moment {
     dashing: boolean;
     hurt: boolean;
     alert: boolean;
-    /** Which walk drawing is up, and whether it is past halfway through its turn. */
+    /** Which walk drawing is up. */
     stride: 0 | 1;
-    late: boolean;
 }
 
 /** What a cat's pose remembers between frames. */
@@ -181,8 +175,6 @@ const CROUCH_MS = 110;
 const LAND_MS = 170;
 /** Half a breath, in and out, matching the sprite's own breathing squash. */
 const BREATH_MS = 715;
-/** Contact, down, passing, up: a stride is the two drawings with a bob between. */
-const STRIDE: readonly Pose[] = ['contact', 'down', 'passing', 'up'];
 
 export const choosePose = (m: Moment, memory: PoseMemory): Pose => {
     if (m.jumping && !memory.airborne) memory.tookOffAt = m.now;
@@ -195,6 +187,7 @@ export const choosePose = (m: Moment, memory: PoseMemory): Pose => {
     if (m.alert) return 'alert';
     if (m.dashing) return 'leap';
     if (m.moving && !m.walking) return 'slide';
-    if (m.moving) return STRIDE[m.stride * 2 + (m.late ? 1 : 0)];
+    // A stride is the two drawings and nothing between: in-betweens read as a shiver.
+    if (m.moving) return m.stride ? 'passing' : 'contact';
     return Math.floor(m.now / BREATH_MS) % 2 ? 'inhale' : 'stand';
 };

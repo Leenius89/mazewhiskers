@@ -337,7 +337,12 @@ export class PixelFx {
         if (!player) return;
         const x = player.x;
         const y = player.y - player.displayHeight / 2;
-        for (const [dx, dy, delay] of FIREWORKS) this.spawn('fx-burst', x + dx, y + dy, CHEER, delay);
+        // Home is often by the city's edge, where the camera stops short of the cat.
+        const view = this.scene.cameras.main.worldView;
+        const inside = (v: number, from: number, to: number) => Phaser.Math.Clamp(v, from + 40, to - 40);
+        for (const [dx, dy, delay] of FIREWORKS) {
+            this.spawn('fx-burst', inside(x + dx, view.x, view.right), inside(y + dy, view.y, view.bottom), CHEER, delay);
+        }
         for (let i = 0; i < 40; i++) {
             const angle = Math.random() * Math.PI * 2;
             const speed = Phaser.Math.Between(80, 230);

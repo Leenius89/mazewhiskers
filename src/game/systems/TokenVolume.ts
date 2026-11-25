@@ -5,9 +5,8 @@ import { choosePose, derivePoses, freshMemory } from './CatPoses';
 import type { Moment, Pose, PoseMemory } from './CatPoses';
 
 /**
- * Trial (`?stack`): the cats and the fish as solid little figures rather than
- * a pile of copies. Milk's lettering is finer than its art pixels, so milk
- * stays a pile.
+ * Trial (`?stack`): the cats, the fish and the milk as solid little figures
+ * rather than a pile of copies.
  *
  * Each drawing is read at its own resolution, a texel per art pixel, and
  * sculpted once into a figure as the city's camera sees it, from in front and
@@ -27,6 +26,10 @@ import type { Moment, Pose, PoseMemory } from './CatPoses';
  *
  * A black cat cannot be shaded darker, so its light is a cool violet-grey: a
  * rim on the edges turned to the light and a lit back, the body still black.
+ *
+ * Milk's lettering is finer than its art pixels and would break up read at
+ * them, so the bottle is sculpted plain and the lettering laid over its front
+ * at the drawing's own size (see `letter`).
  *
  * A cat is drawn in the pose CatPoses picks for what it is doing. Each pose is
  * baked the first time it is needed, facing each way, so the light stays on
@@ -182,32 +185,74 @@ export const sculpt = (art: Pixels, look: Look, flip = false): Pixels => {
     return { width: w, height: h + lift, data: out };
 };
 
+/** Under this brightness a pixel of an item is lettering, not the thing. */
+const INK = 80;
+/** Times finer than its art pixels a lettered figure is drawn. */
+const FINE = 10;
+const isInk = (p: Pixels, at: number): boolean =>
+    p.data[at + 3] > SOLID && p.data[at] * 0.3 + p.data[at + 1] * 0.59 + p.data[at + 2] * 0.11 < INK;
+
+/** The drawing with its lettering painted out in the colour beside it. */
+export const unlettered = (art: Pixels): Pixels => {
+    const data = art.data.slice();
+    // Not spread: an ImageData's sizes are not its own properties.
+    const plain = { width: art.width, height: art.height, data };
+    for (let at = 4; at < data.length; at += 4) {
+        if (at % (art.width * 4) && isInk(plain, at)) data.copyWithin(at, at - 4, at);
+    }
+    return plain;
+};
+
+/**
+ * `figure` drawn `fine` times finer, with the lettering of `fineArt` (the
+ * drawing read that much finer) laid on its front, `lift` rows down.
+ */
+export const letter = (figure: Pixels, fineArt: Pixels, fine: number, lift: number): Pixels => {
+    const width = figure.width * fine;
+    const height = figure.height * fine;
+    const data = new Uint8ClampedArray(width * height * 4);
+    for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width; x++) {
+            const from = (Math.floor(y / fine) * figure.width + Math.floor(x / fine)) * 4;
+            data.set(figure.data.subarray(from, from + 4), (y * width + x) * 4);
+        }
+    }
+    for (let at = 0; at < fineArt.data.length; at += 4) {
+        if (!isInk(fineArt, at)) continue;
+        const p = at / 4;
+        const x = p % fineArt.width;
+        const y = (p - x) / fineArt.width + lift * fine;
+        if (y < height) data.set(fineArt.data.subarray(at, at + 4), (y * width + x) * 4);
+    }
+    return { width, height, data };
+};
+
 // ------------------------------------------------------------ in play
 
 type Sprite = Phaser.GameObjects.Sprite;
 /** What a pose reads off the player and the black cat, where they have it. */
 type Cat = Sprite &
     Partial<Pick<Player, 'isJumping' | 'isInvulnerable' | 'isRecovering' | 'isDashing'>> &
-    Partial<Pick<Enemy, 'awareness'>>;
+    Partial<Pick<Enemy, 'awareness' | 'isSliding'>>;
 
-/** Tokens drawn as figures. Milk's lettering is finer than its art pixels, so it stays a pile. */
-export const isFigure = (source: Sprite): boolean => /^(cat|enemy|fish)/.test(String(source.texture.key));
+/** Drawings with lettering finer than their art pixels. */
+const LETTERED = /^milk/;
 
 const familyOf = (key: string): string => (key.startsWith('enemy') ? 'enemy' : key.startsWith('cat') ? 'cat' : key);
 const LOOKS: Record<string, Look> = { cat: ORANGE, enemy: BLACK };
 
-/** A drawing read at a texel per art pixel. */
-const readArt = (scene: Phaser.Scene, textureKey: string): Pixels => {
+/** A drawing read at a texel per art pixel, or `across` texels across. */
+const readArt = (scene: Phaser.Scene, textureKey: string, across = ART): Pixels => {
     const frame = scene.textures.getFrame(textureKey);
-    const rows = Math.round((ART * frame.cutHeight) / frame.cutWidth);
+    const rows = Math.round((across * frame.cutHeight) / frame.cutWidth);
     const canvas = document.createElement('canvas');
-    canvas.width = ART;
+    canvas.width = across;
     canvas.height = rows;
     const ctx = canvas.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
     // Nearest sampling lands in the middle of each art pixel.
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, ART, rows);
-    return ctx.getImageData(0, 0, ART, rows);
+    ctx.drawImage(frame.source.image as CanvasImageSource, frame.cutX, frame.cutY, frame.cutWidth, frame.cutHeight, 0, 0, across, rows);
+    return ctx.getImageData(0, 0, across, rows);
 };
 
 /** Each cat's poses, made from its two walk drawings (`cat1`, `cat2`) the first time. */
@@ -230,8 +275,7 @@ const moment: Moment = {
     dashing: false,
     hurt: false,
     alert: false,
-    stride: 0,
-    late: false
+    stride: 0
 };
 
 const poseOf = (cat: Cat): Pose => {
@@ -242,13 +286,13 @@ const poseOf = (cat: Cat): Pose => {
     moment.now = cat.scene.time.now;
     moment.jumping = !!cat.isJumping;
     moment.moving = !!body && body.velocity.lengthSq() > 64;
-    moment.walking = anims.isPlaying;
+    // The black cat's legs keep walking while the ice carries it.
+    moment.walking = anims.isPlaying && !cat.isSliding;
     moment.dashing = !!cat.isDashing;
     // The hit's white flash, then the shove that follows it.
     moment.hurt = cat.tintFill || (!!cat.isInvulnerable && !!cat.isRecovering && !cat.isDashing);
     moment.alert = cat.awareness === 'telegraph';
     moment.stride = String(cat.texture.key).endsWith('2') ? 1 : 0;
-    moment.late = anims.isPlaying && anims.accumulator * 2 > anims.nextTick;
     return choosePose(moment, memory);
 };
 
@@ -268,7 +312,10 @@ const figureOf = (source: Sprite): string => {
 
     const made = `figure-${family}-${pose}-${left ? 'left' : 'right'}`;
     if (!scene.textures.exists(made)) {
-        const figure = sculpt(look ? posesOf(scene, family)[pose as Pose] : readArt(scene, key), look ?? ITEM, !!left);
+        const lettered = !look && LETTERED.test(key);
+        const art = look ? posesOf(scene, family)[pose as Pose] : readArt(scene, key);
+        let figure = sculpt(lettered ? unlettered(art) : art, look ?? ITEM, !!left);
+        if (lettered) figure = letter(figure, readArt(scene, key, ART * FINE), FINE, ITEM.depth);
         const canvas = document.createElement('canvas');
         canvas.width = figure.width;
         canvas.height = figure.height;
@@ -289,8 +336,8 @@ const figureOf = (source: Sprite): string => {
 export const placeFigure = (copy: Phaser.GameObjects.Image, source: Sprite, x: number, y: number): void => {
     const key = figureOf(source);
     if (copy.texture.key !== key) copy.setTexture(key);
-    // Source pixels per art pixel, and art rows in the drawing.
-    const texel = source.frame.cutWidth / ART;
+    // Source pixels per texel of the figure, and the drawing's rows of them.
+    const texel = source.frame.cutWidth / copy.frame.width;
     const rows = source.frame.cutHeight / texel;
     copy.setOrigin(source.flipX ? 1 - source.originX : source.originX, 1 - (rows * (1 - source.originY)) / copy.frame.height);
     copy.setScale(source.scaleX * texel, source.scaleY * texel);

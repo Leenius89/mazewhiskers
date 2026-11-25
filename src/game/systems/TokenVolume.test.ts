@@ -1,5 +1,5 @@
 import { choosePose, derivePoses, freshMemory, type Moment } from './CatPoses';
-import { BLACK, sculpt, type Pixels } from './TokenVolume';
+import { BLACK, ITEM, letter, sculpt, unlettered, type Pixels } from './TokenVolume';
 
 // Phaser is only touched when figures are put into textures.
 jest.mock('phaser', () => ({}));
@@ -71,13 +71,12 @@ describe('derivePoses', () => {
         for (const pose of Object.values(poses)) expect([pose.width, pose.height]).toEqual([20, 20]);
     });
 
-    it('bobs the body up and down over the legs, and crouches lower still', () => {
-        expect(topRow(poses.contact, 5)).toBe(8);
-        expect(topRow(poses.up, 5)).toBe(7);
-        expect(topRow(poses.down, 5)).toBe(9);
+    it('raises the back to breathe, lowers it to crouch, and keeps the legs on the ground', () => {
+        expect(topRow(poses.stand, 5)).toBe(8);
+        expect(topRow(poses.inhale, 5)).toBe(7);
         expect(topRow(poses.crouch, 5)).toBe(10);
-        expect(alpha(poses.up, 5, 19)).toBe(0);
-        expect(alpha(poses.up, 6, 19)).toBe(255);
+        expect(alpha(poses.inhale, 5, 19)).toBe(0);
+        expect(alpha(poses.inhale, 6, 19)).toBe(255);
     });
 
     it('spreads the legs to leap', () => {
@@ -97,7 +96,6 @@ describe('choosePose', () => {
         hurt: false,
         alert: false,
         stride: 0,
-        late: false,
         ...over
     });
 
@@ -109,15 +107,36 @@ describe('choosePose', () => {
         expect(choosePose(at(2000), memory)).toBe('stand');
     });
 
-    it('strides in four, slides when the ice has it, and flinches when hurt', () => {
+    it('strides with the two drawings, slides when the ice has it, and flinches when hurt', () => {
         const memory = freshMemory();
         const walk = { moving: true, walking: true } as const;
         expect(choosePose(at(0, { ...walk, stride: 0 }), memory)).toBe('contact');
-        expect(choosePose(at(0, { ...walk, stride: 0, late: true }), memory)).toBe('down');
         expect(choosePose(at(0, { ...walk, stride: 1 }), memory)).toBe('passing');
-        expect(choosePose(at(0, { ...walk, stride: 1, late: true }), memory)).toBe('up');
         expect(choosePose(at(0, { moving: true }), memory)).toBe('slide');
         expect(choosePose(at(0, { ...walk, hurt: true }), memory)).toBe('hurt');
         expect(choosePose(at(0, { alert: true }), memory)).toBe('alert');
+    });
+});
+
+describe('letter', () => {
+    // A light bottle, two pixels across, with an ink stroke half a pixel wide.
+    const art = blank(2, 2);
+    paint(art, 0, 0, 1, 1, [230, 230, 230]);
+    const fine = blank(4, 4);
+    paint(fine, 0, 0, 3, 3, [230, 230, 230]);
+    paint(fine, 1, 1, 1, 2);
+    art.data.set([0, 0, 0, 255], (1 * 2 + 1) * 4);
+
+    it('paints the coarse ink out, then lays the fine ink back over the front', () => {
+        expect(red(art, 1, 1)).toBe(0);
+        expect(red(unlettered(art), 1, 1)).toBe(230);
+        const figure = sculpt(unlettered(art), ITEM);
+        const lettered = letter(figure, fine, 2, ITEM.depth);
+        expect([lettered.width, lettered.height]).toEqual([4, (2 + ITEM.depth) * 2]);
+        const front = ITEM.depth * 2;
+        expect(red(lettered, 1, front + 1)).toBe(0);
+        expect(red(lettered, 1, front + 2)).toBe(0);
+        expect(red(lettered, 2, front + 1)).toBeGreaterThan(100);
+        expect(red(lettered, 0, front)).toBe(red(figure, 0, ITEM.depth));
     });
 });

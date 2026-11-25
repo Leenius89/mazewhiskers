@@ -57,6 +57,11 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
      */
     private slide: Phaser.Math.Vector2 | null = null;
 
+    /** The ice is carrying it. */
+    get isSliding(): boolean {
+        return this.slide !== null;
+    }
+
     private path: Cell[] = [];
     /** The cell the current path was worked out to. */
     private pathTo = '';

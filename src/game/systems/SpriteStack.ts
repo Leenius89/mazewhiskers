@@ -3,9 +3,9 @@ import { GameConfig } from '../constants/GameConfig';
 import { sortDepth } from '../core/depth';
 import { currentDifficulty } from '../core/difficulty';
 import { TILE_UNIT } from '../core/grid';
-import { ROOF_VARIANTS, frameX, paintSlices, readArt, shrink } from './Rooftops';
+import { ROOF_VARIANTS, frameX, paintSlices, readArt } from './Rooftops';
 import type { Art } from './Rooftops';
-import { isFigure, placeFigure } from './TokenVolume';
+import { placeFigure } from './TokenVolume';
 
 /**
  * Trial: the city drawn as stacked slices. Only with `?stack` in the address.
@@ -22,10 +22,10 @@ import { isFigure, placeFigure } from './TokenVolume';
  * middle of the screen, the visible strip of each rim is that band, and the
  * strips together redraw the facade on the walls the camera can see.
  *
- * Cats and fish are drawn as solid little figures (see TokenVolume), the cats
- * in more poses than their two walk drawings (see CatPoses). Milk and dust keep
- * their drawing, stacked a few times with the lower copies darker. Every token
- * leans with the city at its middle height.
+ * Cats, fish and milk are drawn as solid little figures (see TokenVolume), the
+ * cats in more poses than their two walk drawings (see CatPoses). Dust keeps
+ * its drawing, stacked a few times into a mound with the lower copies darker.
+ * Every token leans with the city at its middle height.
  *
  * `?stack=flat` drops the lean, to compare.
  */
@@ -61,11 +61,8 @@ interface TokenStyle {
     step: number;
     /** Scale of the top copy against the bottom one: below 1 piles into a mound. */
     taper: number;
-    /** Drawn bigger than the sprite the game plays with. */
-    grow: number;
 }
-const TOKEN: TokenStyle = { layers: 4, step: 1.5, taper: 1, grow: 1 };
-const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7, grow: 1 };
+const DUST: TokenStyle = { layers: 6, step: 4, taper: 0.7 };
 
 export const isStackEnabled = (): boolean => {
     try {
@@ -94,14 +91,15 @@ interface Cut {
     /** Texels across a frame, and rows of facade up all the slices. */
     px: number;
     rows: number;
-    /** The drawing's opaque box, as a share of the whole picture. */
+    /** The drawing's opaque width, as a share of the whole picture. */
     widthShare: number;
-    heightShare: number;
 }
 
 interface Pile {
     copies: Phaser.GameObjects.Image[];
     cut?: Cut;
+    /** A tower cut for its own cell, not for a square of four. */
+    lone?: boolean;
     /** A token's stacking; a figure has none, and one copy. */
     style?: TokenStyle;
 }
@@ -171,7 +169,7 @@ export class SpriteStack {
      */
     private cutOf(textureKey: string, family: Family, art: Art, px: number, slices: number): Cut {
         const glow = currentDifficulty().dread;
-        const key = `stack-${textureKey}-${slices}${glow ? '-lit' : ''}`;
+        const key = `stack-${textureKey}-${px}-${slices}${glow ? '-lit' : ''}`;
         const known = this.cuts.get(key);
         if (known) return known;
 
@@ -184,7 +182,7 @@ export class SpriteStack {
             texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
 
-        const cut = { key, family, slices, px, rows: slices * rowsPerSlice, widthShare: art.widthShare, heightShare: art.heightShare };
+        const cut = { key, family, slices, px, rows: slices * rowsPerSlice, widthShare: art.widthShare };
         this.cuts.set(key, cut);
         return cut;
     }
@@ -197,27 +195,34 @@ export class SpriteStack {
         source.cameraFilter |= this.cameraId;
     }
 
-    private makeBlock(source: Source): Pile {
-        const artOf = (key: string) => readArt(this.scene.textures.get(key).getSourceImage() as HTMLImageElement);
-        // The first block of a run: shrink the towers' drawings now, under the
-        // opening fly-over, not in the frame the first tower lands.
+    /** The cut for a block of `key`'s drawing shown `width` by `height`. */
+    private cutFor(key: string, width: number, height: number, lone = false): Cut {
+        const family = familyOf(key);
+        const art = readArt(this.scene.textures.get(key).getSourceImage() as HTMLImageElement);
+        // Towers are cut for the complex of four cells nearly all of them stand
+        // in; one by home, where a square cannot fill, for its own cell.
+        const tower = family === 'apt' && !lone;
+        const footprint = tower ? COMPLEX_FOOTPRINT : width * art.widthShare;
+        const rise = height * art.heightShare * HEIGHT_SHARE[family] * (tower ? COMPLEX.height : 1) * TILT;
+        const px = Math.round(footprint / TEXEL);
+        const slices = Math.max(1, Math.round(rise / ((footprint / px) * ROWS_PER_SLICE[family])));
+        return this.cutOf(key, family, art, px, slices);
+    }
+
+    private makeBlock(source: Source, lone = false): Pile {
+        // The first block of a run: cut the towers now, under the opening
+        // fly-over, not in the frame the first one lands (tens of milliseconds
+        // each). They are drawn as the tower system sizes them.
         if (!this.cuts.size) {
-            const towerPx = Math.round(COMPLEX_FOOTPRINT / TEXEL);
+            const width = TILE_UNIT * GameConfig.APARTMENT.TILE_OVERLAP;
             this.scene.textures.getTextureKeys().forEach((k) => {
-                if (familyOf(k) === 'apt') shrink(artOf(k), towerPx, 1);
+                if (familyOf(k) !== 'apt') return;
+                const image = this.scene.textures.get(k).getSourceImage();
+                this.cutFor(k, width, (width * image.height * GameConfig.APARTMENT.HEIGHT_SCALE) / image.width);
             });
         }
 
-        const key = String(source.texture.key);
-        const family = familyOf(key);
-        const art = artOf(key);
-        // Towers are cut for the complex of four cells nearly all of them stand in.
-        const tower = family === 'apt';
-        const footprint = tower ? COMPLEX_FOOTPRINT : source.displayWidth * art.widthShare;
-        const rise = source.displayHeight * art.heightShare * HEIGHT_SHARE[family] * (tower ? COMPLEX.height : 1) * TILT;
-        const px = Math.round(footprint / TEXEL);
-        const slices = Math.max(1, Math.round(rise / ((footprint / px) * ROWS_PER_SLICE[family])));
-        const cut = this.cutOf(key, family, art, px, slices);
+        const cut = this.cutFor(String(source.texture.key), source.displayWidth, source.displayHeight, lone);
 
         // Which of the drawing's roofs, by where it stands.
         const roof = cut.slices + (Math.abs(Math.round(source.x / TILE_UNIT) * 7 + Math.round(source.y / TILE_UNIT) * 13) % ROOF_VARIANTS);
@@ -227,7 +232,7 @@ export class SpriteStack {
         this.making = false;
 
         this.hide(source);
-        return { copies, cut };
+        return { copies, cut, lone };
     }
 
     private makeToken(source: Source, style?: TokenStyle): Pile {
@@ -262,7 +267,7 @@ export class SpriteStack {
             seen.add(source);
             let pile = this.piles.get(source);
             if (!pile) {
-                pile = this.makeToken(source, this.dust.has(source) ? DUST : isFigure(source) ? undefined : TOKEN);
+                pile = this.makeToken(source, this.dust.has(source) ? DUST : undefined);
                 this.piles.set(source, pile);
             }
             const inView =
@@ -282,7 +287,10 @@ export class SpriteStack {
      * Where a block stands and how tall it is drawn, or null for a tower another
      * tower of its square draws. One sum for the slices and the shade under them.
      */
-    private footprintOf(source: Source, cut: Cut): { x: number; base: number; size: number; height: number; alpha: number } | null {
+    private footprintOf(
+        source: Source,
+        cut: Cut
+    ): { x: number; base: number; size: number; height: number; alpha: number; lone: boolean } | null {
         let alpha = source.alpha;
         let size = source.displayWidth * cut.widthShare;
         // The ground line under the drawing, and the footprint's middle behind it.
@@ -298,18 +306,20 @@ export class SpriteStack {
                 size = COMPLEX_FOOTPRINT;
             } else lone = true;
         }
-        // Each slice rises a whole number of its texels. A lone tower (by home,
-        // where a square cannot fill) is drawn from the complex's cut, finer, and
-        // keeps its own height: its slices' top rows carry on into the gap.
-        const height = lone
-            ? source.displayHeight * cut.heightShare * HEIGHT_SHARE.apt
-            : (cut.rows * size) / cut.px / TILT;
-        return { x, base, size, height, alpha };
+        // Each slice rises a whole number of its texels.
+        const height = (cut.rows * size) / cut.px / TILT;
+        return { x, base, size, height, alpha, lone };
     }
 
     private placeBlock(source: Source, pile: Pile, cx: number, cy: number): void {
+        let at = this.footprintOf(source, pile.cut as Cut);
+        // A tower whose square stopped (or started) filling is cut again for its ground.
+        if (at && at.lone !== !!pile.lone) {
+            pile.copies.forEach((copy) => copy.destroy());
+            Object.assign(pile, this.makeBlock(source, at.lone));
+            at = this.footprintOf(source, pile.cut as Cut);
+        }
         const cut = pile.cut as Cut;
-        const at = this.footprintOf(source, cut);
         const shown = !!at && source.active && source.visible && source.alpha > 0;
         if (!at || !shown) {
             pile.copies.forEach((slice) => slice.setVisible(false));
@@ -368,7 +378,7 @@ export class SpriteStack {
         const shown = inView && source.active && source.visible && source.alpha > 0;
         const top = pile.copies.length - 1;
         // Lean the drawing as the city leans at its middle height.
-        const mid = (source.displayHeight * (style?.grow ?? 1)) / 2;
+        const mid = source.displayHeight / 2;
         const dx = (source.x - cx) * mid * this.lean;
         const dy = (source.y - cy) * mid * this.lean;
 
@@ -387,7 +397,7 @@ export class SpriteStack {
             const taper = 1 - (1 - style.taper) * (i / top);
             copy.setTexture(source.texture.key, source.frame.name);
             copy.setOrigin(source.originX, source.originY);
-            copy.setScale(source.scaleX * taper * style.grow, source.scaleY * taper * style.grow);
+            copy.setScale(source.scaleX * taper, source.scaleY * taper);
             copy.setFlip(source.flipX, source.flipY);
             copy.setAngle(source.angle);
             copy.setAlpha(source.alpha);
