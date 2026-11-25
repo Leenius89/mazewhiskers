@@ -25,13 +25,15 @@ describe('sculpt', () => {
 
     it('keeps the drawing, and adds only the back over it', () => {
         expect(figure.height).toBe(art.height + lift);
+        const wrong: string[] = [];
         for (let y = 0; y < art.height; y++) {
             for (let x = 0; x < art.width; x++) {
                 const under = [0, 1, 2].some((k) => y + k < art.height && alpha(art, x, y + k) > 0);
-                if (alpha(art, x, y)) expect(alpha(figure, x, y + lift)).toBe(255);
-                else if (!under) expect(alpha(figure, x, y + lift)).toBe(0);
+                const want = alpha(art, x, y) ? 255 : under ? null : 0;
+                if (want !== null && alpha(figure, x, y + lift) !== want) wrong.push(`${x},${y}`);
             }
         }
+        expect(wrong).toEqual([]);
     });
 
     it('shows a lit back over a thick part, but not over a thin one', () => {

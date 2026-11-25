@@ -1,7 +1,10 @@
 import Phaser from 'phaser';
 import { GameConfig } from '../constants/GameConfig';
 import { sortDepth } from '../core/depth';
+import { currentDifficulty } from '../core/difficulty';
 import { TILE_UNIT } from '../core/grid';
+import { ROOF_VARIANTS, frameX, paintSlices, readArt, shrink } from './Rooftops';
+import type { Art } from './Rooftops';
 import { isFigure, placeFigure } from './TokenVolume';
 
 /**
@@ -39,11 +42,19 @@ const HEIGHT_SHARE = { building: 0.45, apt: 0.75, goal: 0.75 };
  * neighbours into one smear; this keeps each tower on its own ground.
  */
 const COMPLEX = { footprint: 0.92, height: 1.5 };
-/** Slice texture size. */
-const SLICE_PX = 96;
-/** Slices per kind of drawing: enough for its floors to read. */
-const SLICES = { building: 10, apt: 22, goal: 16 };
-type Family = keyof typeof SLICES;
+const COMPLEX_FOOTPRINT = 2 * TILE_UNIT * COMPLEX.footprint;
+/**
+ * World units to a texel of a block's slices: the ground's (32 to a cell), so
+ * facades, roofs and road are drawn in one size of pixel.
+ */
+const TEXEL = TILE_UNIT / 32;
+/**
+ * Texel rows of facade per slice. A block's height is rounded so each slice
+ * rises exactly this many texels, and its pixels stay square. Two keeps the
+ * piles short; home has a chimney and a railing to step in, so it gets one.
+ */
+const ROWS_PER_SLICE = { building: 2, apt: 2, goal: 1 };
+type Family = keyof typeof ROWS_PER_SLICE;
 
 interface TokenStyle {
     layers: number;
@@ -80,6 +91,9 @@ interface Cut {
     key: string;
     family: Family;
     slices: number;
+    /** Texels across a frame, and rows of facade up all the slices. */
+    px: number;
+    rows: number;
     /** The drawing's opaque box, as a share of the whole picture. */
     widthShare: number;
     heightShare: number;
@@ -116,8 +130,9 @@ const setDepthIfChanged = (object: Phaser.GameObjects.Image, depth: number): voi
     if (object.depth !== depth) object.setDepth(depth);
 };
 
+// Home's drawing is building4.png, loaded under the key 'goal'.
 const familyOf = (key: string): Family =>
-    key.startsWith('apt') ? 'apt' : key === 'building4' ? 'goal' : 'building';
+    key.startsWith('apt') ? 'apt' : key === 'goal' || key === 'building4' ? 'goal' : 'building';
 
 export class SpriteStack {
     private readonly scene: Phaser.Scene;
@@ -149,144 +164,29 @@ export class SpriteStack {
     // ------------------------------------------------------------ cutting art
 
     /**
-     * Cuts a front drawing into rim-painted slices: one texture, a frame per
-     * slice, the last a plain roof. `riseShare` is how far each slice's strip
-     * shows on screen, as a share of the drawing's drawn width, for the tallest
-     * block that will use it.
+     * Cuts a front drawing into slices (see Rooftops): one texture, a `px`
+     * square frame per slice from the ground up, the last the roof. Made once
+     * per drawing and number of slices — houses come in a few heights — and
+     * with lit windows on nightmare.
      */
-    private cutOf(textureKey: string, riseShare: number): Cut {
-        const known = this.cuts.get(textureKey);
+    private cutOf(textureKey: string, family: Family, art: Art, px: number, slices: number): Cut {
+        const glow = currentDifficulty().dread;
+        const key = `stack-${textureKey}-${slices}${glow ? '-lit' : ''}`;
+        const known = this.cuts.get(key);
         if (known) return known;
 
-        const image = this.scene.textures.get(textureKey).getSourceImage() as HTMLImageElement;
-        const width = image.width;
-        const height = image.height;
-        const read = document.createElement('canvas');
-        read.width = width;
-        read.height = height;
-        const readCtx = read.getContext('2d', { willReadFrequently: true }) as CanvasRenderingContext2D;
-        readCtx.drawImage(image, 0, 0);
-        const pixels = readCtx.getImageData(0, 0, width, height).data;
-
-        // Each row's opaque span, and the drawing's opaque box.
-        let top = height;
-        let bottom = -1;
-        let left = width;
-        let right = -1;
-        const spans: Array<[number, number] | null> = [];
-        for (let y = 0; y < height; y++) {
-            let a = -1;
-            let b = -1;
-            for (let x = 0; x < width; x++) {
-                if (pixels[(y * width + x) * 4 + 3] <= 24) continue;
-                if (a < 0) a = x;
-                b = x;
-            }
-            spans.push(a < 0 ? null : [a, b]);
-            if (a < 0) continue;
-            top = Math.min(top, y);
-            bottom = y;
-            left = Math.min(left, a);
-            right = Math.max(right, b);
-        }
-        const boxWidth = right - left + 1;
-        const boxHeight = bottom - top + 1;
-        const widthShare = boxWidth / width;
-
-        const family = familyOf(textureKey);
-        const slices = SLICES[family];
-        // In texture pixels, a touch more than shows, so no gap opens between strips.
-        const strip = Math.max(2, Math.ceil((riseShare / widthShare) * SLICE_PX) + 1);
-        const roof = this.roofColour(pixels, width, spans, top, boxHeight);
-
-        const canvas = document.createElement('canvas');
-        canvas.width = SLICE_PX * (slices + 1);
-        canvas.height = SLICE_PX;
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-        ctx.imageSmoothingEnabled = false;
-
-        for (let i = 0; i <= slices; i++) {
-            const isRoof = i === slices;
-            // The band of the drawing this slice carries, counted from the ground.
-            const bandBottom = bottom + 1 - Math.round((boxHeight * i) / slices);
-            const bandTop = isRoof ? top : bottom + 1 - Math.round((boxHeight * (i + 1)) / slices);
-            const rows = isRoof ? [top] : Array.from({ length: bandBottom - bandTop }, (_, k) => bandTop + k);
-
-            let a = right;
-            let b = left;
-            for (const y of rows) {
-                const span = spans[y];
-                if (!span) continue;
-                a = Math.min(a, span[0]);
-                b = Math.max(b, span[1]);
-            }
-            if (b < a) continue;
-
-            const side = Math.max(4, Math.round((SLICE_PX * (b - a + 1)) / boxWidth));
-            const x0 = i * SLICE_PX + Math.round((SLICE_PX - side) / 2);
-            const y0 = Math.round((SLICE_PX - side) / 2);
-
-            ctx.fillStyle = roof;
-            ctx.fillRect(x0, y0, side, side);
-            if (isRoof) continue;
-
-            const t = Math.min(strip, Math.floor(side / 2));
-            const draw = (dx: number, dy: number) =>
-                ctx.drawImage(image, a, bandTop, b - a + 1, Math.max(1, bandBottom - bandTop), dx, dy, side, t);
-
-            draw(x0, y0 + side - t); // south
-            draw(x0, y0); // north
-            for (const [centreX, turn] of [
-                [x0 + t / 2, Math.PI / 2],
-                [x0 + side - t / 2, -Math.PI / 2]
-            ]) {
-                // West and east: the band turned on its side.
-                ctx.save();
-                ctx.translate(centreX, y0 + side / 2);
-                ctx.rotate(turn);
-                draw(-side / 2, -t / 2);
-                ctx.restore();
-            }
-        }
-
-        const key = `stack-${textureKey}`;
-        const texture = this.scene.textures.exists(key) ? this.scene.textures.get(key) : this.scene.textures.addCanvas(key, canvas);
+        const rowsPerSlice = ROWS_PER_SLICE[family];
+        const texture = this.scene.textures.exists(key)
+            ? this.scene.textures.get(key)
+            : this.scene.textures.addCanvas(key, paintSlices(art, { kind: family, px, slices, rowsPerSlice, seed: textureKey, glow }));
         if (texture) {
-            for (let i = 0; i <= slices; i++) if (!texture.has(String(i))) texture.add(i, 0, i * SLICE_PX, 0, SLICE_PX, SLICE_PX);
+            for (let i = 0; i < slices + ROOF_VARIANTS; i++) if (!texture.has(String(i))) texture.add(i, 0, frameX(i, px), 1, px, px);
             texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
 
-        const cut = { key, family, slices, widthShare, heightShare: boxHeight / height };
-        this.cuts.set(textureKey, cut);
+        const cut = { key, family, slices, px, rows: slices * rowsPerSlice, widthShare: art.widthShare, heightShare: art.heightShare };
+        this.cuts.set(key, cut);
         return cut;
-    }
-
-    /** The top of the drawing, toned down towards concrete: what a roof looks like from above. */
-    private roofColour(
-        pixels: Uint8ClampedArray,
-        width: number,
-        spans: Array<[number, number] | null>,
-        top: number,
-        boxHeight: number
-    ): string {
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        let n = 0;
-        for (let y = top; y < top + Math.max(1, Math.round(boxHeight * 0.08)); y++) {
-            const span = spans[y];
-            if (!span) continue;
-            for (let x = span[0]; x <= span[1]; x++) {
-                const at = (y * width + x) * 4;
-                if (pixels[at + 3] <= 24) continue;
-                r += pixels[at];
-                g += pixels[at + 1];
-                b += pixels[at + 2];
-                n++;
-            }
-        }
-        const mix = (v: number) => Math.round(((n ? v / n : 128) + 138) / 2);
-        return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
     }
 
     // ----------------------------------------------------------------- piles
@@ -298,19 +198,32 @@ export class SpriteStack {
     }
 
     private makeBlock(source: Source): Pile {
+        const artOf = (key: string) => readArt(this.scene.textures.get(key).getSourceImage() as HTMLImageElement);
+        // The first block of a run: shrink the towers' drawings now, under the
+        // opening fly-over, not in the frame the first tower lands.
+        if (!this.cuts.size) {
+            const towerPx = Math.round(COMPLEX_FOOTPRINT / TEXEL);
+            this.scene.textures.getTextureKeys().forEach((k) => {
+                if (familyOf(k) === 'apt') shrink(artOf(k), towerPx, 1);
+            });
+        }
+
         const key = String(source.texture.key);
         const family = familyOf(key);
-        // Houses come in random heights; cut for the tallest so no strip falls short.
-        const tallest =
-            family === 'building'
-                ? source.width * source.scaleX * GameConfig.BUILDING_HEIGHT.MAX
-                : source.displayHeight;
-        const riseShare = (tallest * HEIGHT_SHARE[family] * TILT) / SLICES[family] / source.displayWidth;
-        const cut = this.cutOf(key, riseShare);
+        const art = artOf(key);
+        // Towers are cut for the complex of four cells nearly all of them stand in.
+        const tower = family === 'apt';
+        const footprint = tower ? COMPLEX_FOOTPRINT : source.displayWidth * art.widthShare;
+        const rise = source.displayHeight * art.heightShare * HEIGHT_SHARE[family] * (tower ? COMPLEX.height : 1) * TILT;
+        const px = Math.round(footprint / TEXEL);
+        const slices = Math.max(1, Math.round(rise / ((footprint / px) * ROWS_PER_SLICE[family])));
+        const cut = this.cutOf(key, family, art, px, slices);
 
+        // Which of the drawing's roofs, by where it stands.
+        const roof = cut.slices + (Math.abs(Math.round(source.x / TILE_UNIT) * 7 + Math.round(source.y / TILE_UNIT) * 13) % ROOF_VARIANTS);
         this.making = true;
         const copies: Phaser.GameObjects.Image[] = [];
-        for (let i = 0; i <= cut.slices; i++) copies.push(this.scene.add.image(source.x, source.y, cut.key, i));
+        for (let i = 0; i <= cut.slices; i++) copies.push(this.scene.add.image(source.x, source.y, cut.key, i < cut.slices ? i : roof));
         this.making = false;
 
         this.hide(source);
@@ -370,10 +283,10 @@ export class SpriteStack {
         let shown = source.active && source.visible && source.alpha > 0;
         let alpha = source.alpha;
         let footprint = source.displayWidth * cut.widthShare;
-        let height = source.displayHeight * cut.heightShare * HEIGHT_SHARE[cut.family];
         // The ground line under the drawing, and the footprint's middle behind it.
         let base = source.y + source.displayHeight * (1 - source.originY);
         let x = source.x;
+        let lone = false;
 
         if (cut.family === 'apt') {
             const complex = this.complexOf(source, base);
@@ -381,10 +294,15 @@ export class SpriteStack {
             else if (complex) {
                 ({ x, base } = complex);
                 alpha = complex.alpha;
-                footprint = 2 * TILE_UNIT * COMPLEX.footprint;
-                height *= COMPLEX.height;
-            }
+                footprint = COMPLEX_FOOTPRINT;
+            } else lone = true;
         }
+        // Each slice rises a whole number of its texels. A lone tower (by home,
+        // where a square cannot fill) is drawn from the complex's cut, finer, and
+        // keeps its own height: its slices' top rows carry on into the gap.
+        const height = lone
+            ? source.displayHeight * cut.heightShare * HEIGHT_SHARE.apt
+            : (cut.rows * footprint) / cut.px / TILT;
 
         if (shown) {
             const gx = Math.round((x - (footprint > TILE_UNIT ? TILE_UNIT / 2 : 0)) / TILE_UNIT);
