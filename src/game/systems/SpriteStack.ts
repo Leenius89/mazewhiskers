@@ -24,8 +24,9 @@ import { placeFigure } from './TokenVolume';
  *
  * Cats, fish and milk are drawn as solid little figures (see TokenVolume), the
  * cats in more poses than their two walk drawings (see CatPoses). Dust keeps
- * its drawing, stacked a few times into a mound with the lower copies darker.
- * Every token leans with the city at its middle height.
+ * its drawing, stacked a few times into a mound with the lower copies darker,
+ * and leans with the city at its middle height. Figures stand on their feet,
+ * unleaned, so they stay on their shadows.
  *
  * `?stack=flat` drops the lean, to compare.
  */
@@ -377,19 +378,23 @@ export class SpriteStack {
         const style = pile.style;
         const shown = inView && source.active && source.visible && source.alpha > 0;
         const top = pile.copies.length - 1;
-        // Lean the drawing as the city leans at its middle height.
-        const mid = source.displayHeight / 2;
-        const dx = (source.x - cx) * mid * this.lean;
-        const dy = (source.y - cy) * mid * this.lean;
 
         if (!style) {
             const figure = pile.copies[0];
             figure.setVisible(shown);
             if (!shown) return;
-            placeFigure(figure, source, source.x + dx, source.y + dy);
+            // Not leaned: its feet are on the ground, where the city does not
+            // lean, and shifted whole it drifted off its shadow towards the
+            // screen's edges and looked to float.
+            placeFigure(figure, source, source.x, source.y);
             setDepthIfChanged(figure, source.depth);
             return;
         }
+
+        // Lean the drawing as the city leans at its middle height.
+        const mid = source.displayHeight / 2;
+        const dx = (source.x - cx) * mid * this.lean;
+        const dy = (source.y - cy) * mid * this.lean;
 
         pile.copies.forEach((copy, i) => {
             copy.setVisible(shown);

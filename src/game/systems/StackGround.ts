@@ -189,8 +189,9 @@ export const contactShadow = (scene: Phaser.Scene, width: number): Phaser.GameOb
         scene.textures.addCanvas(key, canvas)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
     }
 
-    // Most of it below the feet, where the stacked token does not cover it.
-    return scene.add.image(0, 0, key).setOrigin(0.5, 0.4).setDepth(CONTACT_DEPTH);
+    // Centred a little behind the feet, under the body: mostly below them, it
+    // read as the cat standing in front of its shadow, off the ground.
+    return scene.add.image(0, 0, key).setOrigin(0.5, 0.6).setDepth(CONTACT_DEPTH);
 };
 
 export class StackGround {
