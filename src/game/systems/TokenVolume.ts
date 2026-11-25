@@ -296,6 +296,24 @@ const poseOf = (cat: Cat): Pose => {
     return choosePose(moment, memory);
 };
 
+/** An item's figure: lettering laid over a plain bottle where it has any. */
+const sculptItem = (scene: Phaser.Scene, key: string, flip = false): Pixels => {
+    const art = readArt(scene, key);
+    if (!LETTERED.test(key)) return sculpt(art, ITEM, flip);
+    return letter(sculpt(unlettered(art), ITEM, flip), readArt(scene, key, ART * FINE), FINE, ITEM.depth);
+};
+
+const addFigure = (scene: Phaser.Scene, key: string, figure: Pixels): void => {
+    const canvas = document.createElement('canvas');
+    canvas.width = figure.width;
+    canvas.height = figure.height;
+    const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
+    const image = ctx.createImageData(figure.width, figure.height);
+    image.data.set(figure.data);
+    ctx.putImageData(image, 0, 0);
+    scene.textures.addCanvas(key, canvas)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+};
+
 const figureOf = (source: Sprite): string => {
     const scene = source.scene;
     const key = String(source.texture.key);
@@ -312,20 +330,17 @@ const figureOf = (source: Sprite): string => {
 
     const made = `figure-${family}-${pose}-${left ? 'left' : 'right'}`;
     if (!scene.textures.exists(made)) {
-        const lettered = !look && LETTERED.test(key);
-        const art = look ? posesOf(scene, family)[pose as Pose] : readArt(scene, key);
-        let figure = sculpt(lettered ? unlettered(art) : art, look ?? ITEM, !!left);
-        if (lettered) figure = letter(figure, readArt(scene, key, ART * FINE), FINE, ITEM.depth);
-        const canvas = document.createElement('canvas');
-        canvas.width = figure.width;
-        canvas.height = figure.height;
-        const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
-        const image = ctx.createImageData(figure.width, figure.height);
-        image.data.set(figure.data);
-        ctx.putImageData(image, 0, 0);
-        scene.textures.addCanvas(made, canvas)?.setFilter(Phaser.Textures.FilterMode.NEAREST);
+        addFigure(scene, made, look ? sculpt(posesOf(scene, family)[pose as Pose], look, !!left) : sculptItem(scene, key, !!left));
     }
     return (sides[left] = made);
+};
+
+/** An item's figure (a fish, a bottle of milk) by its texture, facing right: for the stacked ending's piles. */
+export const itemFigure = (scene: Phaser.Scene, textureKey: string): string => {
+    // Named as figureOf names it, so the two share it.
+    const made = `figure-${textureKey}-${textureKey}-right`;
+    if (!scene.textures.exists(made)) addFigure(scene, made, sculptItem(scene, textureKey));
+    return made;
 };
 
 /**

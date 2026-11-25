@@ -100,6 +100,11 @@ export class Vignette {
         this.image.setDisplaySize(viewport.width * viewport.scale, viewport.height * viewport.scale);
     }
 
+    /** How far the frame closes in, as when made. */
+    setTightness(tightness: number): void {
+        this.image.setTexture(Vignette.ensureTexture(this.scene, tightness));
+    }
+
     setStrength(strength: number): void {
         this.image.setAlpha(Phaser.Math.Clamp(strength, 0, 1));
     }

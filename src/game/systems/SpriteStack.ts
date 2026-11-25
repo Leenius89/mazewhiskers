@@ -35,6 +35,8 @@ import { placeFigure } from './TokenVolume';
 const TILT = 0.55;
 /** How far a slice leans per pixel of height and pixel off the screen's middle. */
 const LEAN = 0.0012;
+/** Windows lit on nightmare's city, as a share. */
+const NIGHT_WINDOWS = 0.3;
 /** Drawn height of a block as a share of its drawing's drawn height. Houses sit low. */
 const HEIGHT_SHARE = { building: 0.45, apt: 0.75, goal: 0.75 };
 /**
@@ -94,6 +96,8 @@ interface Cut {
     rows: number;
     /** The drawing's opaque width, as a share of the whole picture. */
     widthShare: number;
+    /** The drawing it was cut from, to cut it again with other windows lit. */
+    art: Art;
 }
 
 interface Pile {
@@ -143,6 +147,8 @@ export class SpriteStack {
     private readonly rises = new Map<string, number>();
     private readonly lean: number;
     private readonly cameraId: number;
+    /** The share of windows lit across the city. */
+    private glow = currentDifficulty().dread ? NIGHT_WINDOWS : 0;
     private making = false;
 
     constructor(scene: Phaser.Scene, sources: StackSources) {
@@ -168,9 +174,8 @@ export class SpriteStack {
      * per drawing and number of slices — houses come in a few heights — and
      * with lit windows on nightmare.
      */
-    private cutOf(textureKey: string, family: Family, art: Art, px: number, slices: number): Cut {
-        const glow = currentDifficulty().dread;
-        const key = `stack-${textureKey}-${px}-${slices}${glow ? '-lit' : ''}`;
+    private cutOf(textureKey: string, family: Family, art: Art, px: number, slices: number, glow = this.glow): Cut {
+        const key = `stack-${textureKey}-${px}-${slices}${glow ? `-lit${glow}` : ''}`;
         const known = this.cuts.get(key);
         if (known) return known;
 
@@ -183,7 +188,7 @@ export class SpriteStack {
             texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
         }
 
-        const cut = { key, family, slices, px, rows: slices * rowsPerSlice, widthShare: art.widthShare };
+        const cut = { key, family, slices, px, rows: slices * rowsPerSlice, widthShare: art.widthShare, art };
         this.cuts.set(key, cut);
         return cut;
     }
@@ -415,6 +420,23 @@ export class SpriteStack {
             } else {
                 copy.setTint(shade(0.35 + (0.35 * i) / top));
             }
+        });
+    }
+
+    /**
+     * Lights `share` of a block's windows, or of every block's without a
+     * `source`: the same cut with other windows lit, swapped in slice by slice.
+     * Every drawing is cut afresh, tens of milliseconds each, so the ending does
+     * it for the city under a flash.
+     */
+    setWindows(share: number, source?: Source): void {
+        if (!source) this.glow = share;
+        this.piles.forEach((pile, block) => {
+            const cut = pile.cut;
+            if (!cut || (source && block !== source)) return;
+            const lit = this.cutOf(String(block.texture.key), cut.family, cut.art, cut.px, cut.slices, share);
+            pile.cut = lit;
+            pile.copies.forEach((slice) => slice.setTexture(lit.key, slice.frame.name));
         });
     }
 

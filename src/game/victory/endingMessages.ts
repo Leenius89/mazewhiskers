@@ -11,10 +11,18 @@ import { t } from '../../i18n';
  */
 const SKIP_AFTER_MS = 1500;
 
+export interface EndingOptions {
+    /** Called as each line is shown in full, typed or skipped to. */
+    onLine?: (index: number) => void;
+    /** A shadow under the lines, for the stacked ending's city behind them. */
+    shadow?: boolean;
+}
+
 export const showEndingMessages = async (
     scene: Phaser.Scene,
     width: number,
-    height: number
+    height: number,
+    options: EndingOptions = {}
 ): Promise<void> => {
     const messages = ['ending.1', 'ending.2', 'ending.3', 'ending.4', 'ending.5'].map(t);
 
@@ -44,6 +52,7 @@ export const showEndingMessages = async (
         const text = scene.add.text(0, 0, message, textStyle);
         text.setOrigin(0.5, 0);
         text.setDepth(2);
+        if (options.shadow) text.setShadow(0, 2, '#000000', 8, false, true);
         return text;
     });
 
@@ -141,10 +150,12 @@ export const showEndingMessages = async (
     for (let i = 0; i < messages.length; i++) {
         if (skipped) {
             texts[i].setText(messages[i]);
+            options.onLine?.(i);
             continue;
         }
 
         await typewriteText(messages[i], texts[i]);
+        options.onLine?.(i);
         if (i < messages.length - 1) await hold(700);
     }
 

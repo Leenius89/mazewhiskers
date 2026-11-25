@@ -3,7 +3,7 @@ import { GameConfig } from '../constants/GameConfig';
 import { currentDifficulty } from '../core/difficulty';
 import { setFootBody } from '../core/bodies';
 import { DEPTH, sortDepth } from '../core/depth';
-import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
+import { TILE_UNIT, bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
 import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
@@ -200,6 +200,32 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         });
 
         this.syncGroundVisuals();
+    }
+
+    /**
+     * The stacked ending: turns its back on home and walks off, fading, over
+     * `ms`. Physics is stopped by then, so the walk is a tween; the velocity
+     * set is only what its pose reads.
+     */
+    retreat(homeX: number, ms: number): void {
+        const away = this.x < homeX ? -1 : 1;
+        this.awareness = 'chase';
+        this.slide = null;
+        this.cone.clear();
+        this.setFlipX(away < 0);
+        this.play('enemyWalk', true);
+        (this.body as Phaser.Physics.Arcade.Body).velocity.set(away * 80, 0);
+        this.scene.tweens.add({
+            targets: this,
+            x: this.x + away * TILE_UNIT * 1.5,
+            alpha: 0,
+            duration: ms,
+            onUpdate: () => {
+                this.syncGroundVisuals();
+                this.shadow.setAlpha(this.shadowAlpha * this.alpha);
+            },
+            onComplete: () => this.setVisible(false)
+        });
     }
 
     /** Sorts by the feet and keeps the shadow on the ground, as the player does. */

@@ -185,6 +185,13 @@ export class Flashlight {
         };
     }
 
+    /** Switched off: nothing lit, the fog over everything. */
+    out(): void {
+        this.dark.setVisible(false);
+        this.glow.setVisible(false);
+        this.shape.clear();
+    }
+
     destroy(): void {
         this.dark.destroy();
         this.glow.destroy();

@@ -174,6 +174,12 @@ export class Dread {
         }
     }
 
+    /** Ended mid-scene (the stacked ending wakes from it): the warp comes off the camera too. */
+    end(): void {
+        if (this.barrel) this.scene.cameras.main.postFX.remove(this.barrel);
+        this.destroy();
+    }
+
     destroy(): void {
         this.scene.scale?.off(Phaser.Scale.Events.RESIZE, this.resize, this);
         this.wash.destroy();

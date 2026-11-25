@@ -2,6 +2,10 @@ import Phaser from 'phaser';
 import { showEndingMessages } from './endingMessages';
 import { showCredits } from './creditsSystem';
 import { GameEventBus } from '../core/GameEvents';
+import type { GameScene } from '../scenes/GameScene';
+
+/** The stacked ending's rise off the city, from the first line to near the last. */
+const PULL_BACK_MS = 10000;
 
 export class VictoryScene extends Phaser.Scene {
     /** Guards against a second credits roll while one is already on screen. */
@@ -14,6 +18,8 @@ export class VictoryScene extends Phaser.Scene {
     private healthLeft: number = 0;
     private blackOverlay: Phaser.GameObjects.Graphics | undefined;
     private background: Phaser.GameObjects.Image | undefined;
+    /** With `?stack`: the city stays behind the lines, and the results are staged in it. */
+    private stacked = false;
 
     constructor() {
         super('VictoryScene');
@@ -31,7 +37,8 @@ export class VictoryScene extends Phaser.Scene {
         }
     }
 
-    init(data: { milkCount?: number; fishCount?: number; healthLeft?: number; timeMs: number }) {
+    init(data: { milkCount?: number; fishCount?: number; healthLeft?: number; timeMs: number; stacked?: boolean }) {
+        this.stacked = !!data.stacked;
         this.milkCount = data.milkCount || 0;
         this.fishCount = data.fishCount || 0;
         this.healthLeft = data.healthLeft || 0;
@@ -60,6 +67,11 @@ export class VictoryScene extends Phaser.Scene {
         this.background.setOrigin(0, 0);
         this.background.setDisplaySize(width, height);
         this.background.setAlpha(0);
+
+        if (this.stacked) {
+            await this.endInTheCity(width, height);
+            return;
+        }
 
         // Show ending messages
         await showEndingMessages(this, width, height);
@@ -91,6 +103,32 @@ export class VictoryScene extends Phaser.Scene {
                     });
                 }
             }
+        });
+    }
+
+    /**
+     * The stacked ending (see StackEnding): the first line on black, then the
+     * black thins and the city is seen from ever higher while the rest are
+     * read; then down to home, where the results are staged, and the panel.
+     */
+    private async endInTheCity(width: number, height: number): Promise<void> {
+        const ending = (this.scene.get('GameScene') as GameScene).ending;
+        await showEndingMessages(this, width, height, {
+            shadow: true,
+            onLine: (i) => {
+                if (i !== 0) return;
+                this.tweens.add({ targets: this.blackOverlay, alpha: 0.42, duration: 2200, ease: 'Sine.easeInOut' });
+                void ending?.pullBack(PULL_BACK_MS);
+            }
+        });
+
+        this.tweens.add({ targets: this.blackOverlay, alpha: 0, duration: 1200, ease: 'Sine.easeInOut' });
+        await ending?.tableau(this.fishCount, this.milkCount);
+        this.bus.emit('victory', {
+            timeMs: this.timeMs,
+            milkCount: this.milkCount,
+            fishCount: this.fishCount,
+            healthLeft: this.healthLeft
         });
     }
 

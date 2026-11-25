@@ -139,7 +139,8 @@ export class SoundManager {
     }
 
     /** Returns to the main theme, silencing anything else looping. */
-    playMainBGM() {
+    /** `plain`: in tune even on nightmare, for the stacked ending that wakes from it. */
+    playMainBGM(plain = false) {
         // A swap still waiting on its download must not fire after the win.
         this.enemySwapPending = false;
 
@@ -165,7 +166,7 @@ export class SoundManager {
 
                 this.sounds.mainBGM.play();
                 // Nightmare hears the same tune played wrong.
-                bendSound(this.sounds.mainBGM, currentDifficulty().dread);
+                bendSound(this.sounds.mainBGM, !plain && currentDifficulty().dread);
             } catch (error) {
                 console.error('Error playing mainBGM:', error);
             }

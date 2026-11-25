@@ -234,6 +234,13 @@ export class StackGround {
         if (object instanceof Phaser.GameObjects.Sprite && String(object.texture.key).startsWith('apt')) this.stale = true;
     }
 
+    /** The sun out (the stacked ending, waking from nightmare) or in: the shade is drawn again. */
+    setSun(sun: boolean): void {
+        if (this.sources.sun === sun) return;
+        this.sources.sun = sun;
+        this.stale = true;
+    }
+
     /** After the stacked city's own update, so it reads this frame's blocks. */
     update(): void {
         this.placeFloating();

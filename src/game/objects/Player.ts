@@ -768,6 +768,20 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.goalIndicator.strokePath();
     }
 
+    /**
+     * The stacked ending, once play has stopped calling update: on its feet and
+     * breathing, its shadow kept under it, no arrow home and no landing ring.
+     */
+    standForEnding(): void {
+        this.goalIndicator.clear();
+        this.landingPreview.clear();
+        this.groundY = this.y;
+        this.syncGroundVisuals();
+        // Fades with the cat as it goes in at the door.
+        this.shadow.setAlpha(this.shadowAlpha * this.alpha);
+        this.updateProceduralMotion();
+    }
+
     destroy(fromScene?: boolean) {
         this.shadow.destroy();
         this.goalIndicator.destroy();

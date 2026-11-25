@@ -73,6 +73,14 @@ const beginPlayImmediately = (scene: GameScene) => {
     scene.time.delayedCall(GameConfig.GOAL.INTRO.START_DELAY, () => scene.events.emit('introComplete'));
 };
 
+/** What the results screen is told about the run. */
+const results = (scene: GameScene) => ({
+    timeMs: Math.round(scene.totalElapsedMs),
+    milkCount: scene.registry.get('milkCount') || 0,
+    fishCount: scene.registry.get('fishCount') || 0,
+    healthLeft: Math.max(0, Math.round(scene.health))
+});
+
 export const createGoal = (
     scene: GameScene,
     player: Phaser.Physics.Arcade.Sprite,
@@ -116,6 +124,19 @@ export const createGoal = (
         try {
             scene.soundManager?.stopAllSounds();
 
+            // With `?stack` the end of the run is staged in the city instead of
+            // wiped to black (see StackEnding); the scene keeps running under the
+            // closing lines, since the ending moves its camera.
+            const ending = finishing ? scene.ending : null;
+            if (ending) {
+                await ending.homecoming();
+                scene.soundManager?.playMainBGM(true);
+                scene.time.delayedCall(GameConfig.GOAL.VICTORY_DELAY, () =>
+                    scene.scene.launch('VictoryScene', { ...results(scene), stacked: true })
+                );
+                return;
+            }
+
             await create8BitTransition(scene);
 
             // Another district to go: keep the totals and rebuild the city.
@@ -130,12 +151,7 @@ export const createGoal = (
             scene.soundManager?.playMainBGM();
 
             scene.time.delayedCall(GameConfig.GOAL.VICTORY_DELAY, () => {
-                scene.scene.launch('VictoryScene', {
-                    timeMs: Math.round(scene.totalElapsedMs),
-                    milkCount: scene.registry.get('milkCount') || 0,
-                    fishCount: scene.registry.get('fishCount') || 0,
-                    healthLeft: Math.max(0, Math.round(scene.health))
-                });
+                scene.scene.launch('VictoryScene', results(scene));
                 scene.scene.pause();
             });
         } catch (error) {

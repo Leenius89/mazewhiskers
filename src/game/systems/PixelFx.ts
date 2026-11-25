@@ -145,7 +145,7 @@ export class PixelFx {
     private readonly feet = new Map<Actor, { x: number; y: number; next: number }>();
     private readonly flakes: Flake[] = [];
     private readonly reducedMotion = prefersReducedMotion();
-    private readonly weather: 'snow' | 'drizzle' | null;
+    private weather: 'snow' | 'drizzle' | null;
     private alerting: { mote: Mote; enemy: Enemy } | null = null;
     /** Moving effects hold still until then: the hit-stop reaches them too. */
     private frozenUntil = 0;
@@ -330,8 +330,12 @@ export class PixelFx {
         }
     }
 
-    /** Home: fireworks and confetti round the cat, over the wipe that ends the district. */
-    private cheer(): void {
+    /**
+     * Home: fireworks and confetti round the cat, over the wipe that ends a
+     * district. At the end of the run the stacked ending calls it, when the
+     * lights come on.
+     */
+    cheer(): void {
         this.cheered = true;
         const player = this.scene.player;
         if (!player) return;
@@ -365,7 +369,7 @@ export class PixelFx {
         const now = this.scene.time.now;
         const dt = Math.min(delta, 50) / 1000;
 
-        if (!this.cheered && this.scene.state.is('clearing', 'victory')) this.cheer();
+        if (!this.cheered && this.scene.state.is('clearing')) this.cheer();
         if (now >= this.frozenUntil) this.move(dt);
         this.holdAlert(now);
 
@@ -456,6 +460,14 @@ export class PixelFx {
     }
 
     // --------------------------------------------------------------- weather
+
+    /** Nightmare's drizzle stops (the stacked ending); snow keeps falling. */
+    clearSkies(): void {
+        if (this.weather !== 'drizzle') return;
+        this.weather = null;
+        this.flakes.forEach((f) => f.image.destroy());
+        this.flakes.length = 0;
+    }
 
     private makeWeather(): void {
         if (!this.weather) return;

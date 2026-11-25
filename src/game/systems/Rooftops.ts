@@ -50,8 +50,8 @@ export interface SliceSpec {
     rowsPerSlice: number;
     /** Same seed, same roof. */
     seed: string;
-    /** Nightmare: some windows lit from inside. */
-    glow: boolean;
+    /** The share of windows lit from inside: some on nightmare, all at home when the cat is in. */
+    glow: number;
 }
 
 /** Below this a drawing's pixel is empty. */
@@ -480,7 +480,7 @@ const squareOf = (mini: Uint8ClampedArray, px: number, row: number, k: number): 
 };
 
 /** Small patches of the facade's darkest fifth (its glass), some of which nightmare lights. */
-const windowsOf = (mini: Uint8ClampedArray, px: number, rows: number, rand: () => number): Uint8Array => {
+const windowsOf = (mini: Uint8ClampedArray, px: number, rows: number, rand: () => number, share: number): Uint8Array => {
     const lit = new Uint8Array(px * rows);
     const lumas: number[] = [];
     for (let o = 0; o < mini.length; o += 4) if (mini[o + 3]) lumas.push(luma(mini[o], mini[o + 1], mini[o + 2]));
@@ -501,7 +501,7 @@ const windowsOf = (mini: Uint8ClampedArray, px: number, rows: number, rand: () =
                 patch.push(j);
             }
         }
-        if (patch.length >= 2 && patch.length <= 12 && rand() < 0.3) patch.forEach((i) => (lit[i] = 1));
+        if (patch.length >= 2 && patch.length <= 12 && rand() < share) patch.forEach((i) => (lit[i] = 1));
     }
     return lit;
 };
@@ -533,7 +533,7 @@ export const paintSlices = (art: Art, spec: SliceSpec): HTMLCanvasElement => {
         return houseRoof(style, palette, px, roof, rand);
     });
     const parapet = mix(palette.light, palette.concrete, 0.4);
-    const lit = spec.glow ? windowsOf(mini, px, rows, random(hash(`${spec.seed}:windows`))) : null;
+    const lit = spec.glow ? windowsOf(mini, px, rows, random(hash(`${spec.seed}:windows`)), spec.glow) : null;
     // Pulled towards the drawing's darkest colour, so a white wall's edge is as crisp as a brick one's.
     const edge = (c: RGB) => tone(mix(c, palette.dark, 0.5), OUTLINE);
 

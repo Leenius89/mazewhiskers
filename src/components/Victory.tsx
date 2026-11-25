@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Film, Home, RotateCcw, Trophy } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { getSettings } from '../settings';
+import { isStackEnabled } from '../game/systems/SpriteStack';
 import { useTranslation } from '../i18n';
 import Pressable from './Pressable';
 import {
@@ -13,6 +14,7 @@ import {
     headline,
     hint,
     overlayBackdrop,
+    overlayBackdropSoft,
     panel,
     statCell,
     statGrid,
@@ -122,10 +124,22 @@ const Victory: React.FC<VictoryProps> = ({
 
     const canSubmit = !isSubmitting && username.trim().length > 0;
 
+    // With `?stack` the results are staged in the city behind this (see
+    // StackEnding): a lighter scrim, and the panel beside them on a wide screen,
+    // under them on a narrow one, where the top of the screen is left clear.
+    const stacked = isStackEnabled();
+    const beside = stacked && window.innerWidth >= 960;
+    const backdrop = !stacked
+        ? overlayBackdrop
+        : beside
+          ? { ...overlayBackdropSoft, background: 'rgba(6, 8, 12, 0.3)', justifyContent: 'flex-end' }
+          : { ...overlayBackdropSoft, background: 'linear-gradient(to bottom, rgba(6, 8, 12, 0.08) 30%, rgba(6, 8, 12, 0.72) 45%)' };
+    const panelStyle = !stacked ? panel : { ...panel, margin: beside ? 'auto 6vw auto auto' : 'auto auto 0' };
+
     return (
-        <div style={overlayBackdrop}>
+        <div style={backdrop}>
             <motion.div
-                style={panel}
+                style={panelStyle}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.28, ease: 'easeOut' }}

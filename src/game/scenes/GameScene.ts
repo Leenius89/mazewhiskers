@@ -17,6 +17,7 @@ import { Dread } from '../systems/Dread';
 import { Vignette } from '../systems/Vignette';
 import { WorldFog } from '../systems/WorldFog';
 import { Flashlight } from '../systems/Flashlight';
+import { StackEnding } from '../systems/StackEnding';
 import { InputManager, isMobileDevice } from '../systems/InputManager';
 import { CameraDirector } from '../systems/CameraDirector';
 import { HudOverlay } from '../systems/HudOverlay';
@@ -229,6 +230,8 @@ export class GameScene extends Phaser.Scene {
     private threat: ThreatFeedback | null = null;
     /** Pixel effects, with `?stack`. Public: the cats and the towers call it. */
     public fx: PixelFx | null = null;
+    /** With `?stack`: the end of the run, staged in the stacked city. */
+    public ending: StackEnding | null = null;
 
     /**
      * The timer that charges rent. Also what the HUD counts down.
@@ -491,6 +494,32 @@ export class GameScene extends Phaser.Scene {
                 maze: () => this.maze,
                 pickups: () => [...children(this.fishes), ...children(this.milks)],
                 sun: !this.flashlight
+            });
+            this.ending = new StackEnding(this, {
+                stacks: this.stacks,
+                ground: this.stackGround,
+                flashlight: this.flashlight,
+                fog: this.worldFog,
+                quiet: () => {
+                    this.statusBar?.setVisible(false);
+                    this.hud?.destroy();
+                    this.hud = null;
+                    this.occlusion?.hide();
+                    // Once each, for their end-of-run branch: the red wash and the bubbles go.
+                    this.threat?.update(this.runNow);
+                    this.barks?.update(this.runNow);
+                },
+                wake: () => {
+                    this.worldFog?.destroy();
+                    this.worldFog = null;
+                    this.flashlight?.destroy();
+                    this.flashlight = null;
+                    this.dread?.end();
+                    this.dread = null;
+                    // The frame as it is on a setting without a torch.
+                    this.vignette?.setTightness(0);
+                },
+                cull: () => this.culling?.update(this.runNow)
             });
         }
 
@@ -883,6 +912,9 @@ export class GameScene extends Phaser.Scene {
         // acting, which is also the only time they do anything.
         this.controls?.setControlsVisible(this.state.is('playing') && !this.narrativeActive);
 
+        // Notes the cat's way in play; after it, keeps the stacked ending drawn.
+        this.ending?.update();
+
         if (!this.player || this.state.hasEnded()) return;
 
         this.controls.update();
@@ -1232,6 +1264,7 @@ export class GameScene extends Phaser.Scene {
         this.sweat?.destroy();
         this.sweat = null;
         this.fx = null;
+        this.ending = null;
 
         // Only the sounds need stopping — Phaser destroys the sprites with the
         // scene, and by the time this runs its plugins are already torn down.
