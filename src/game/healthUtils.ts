@@ -51,7 +51,7 @@ export const setupHealthSystem = (
 
         scene.applyHealth(atRisk ? GameConfig.FISH.RISK_HEAL_AMOUNT : GameConfig.FISH.HEAL_AMOUNT);
         scene.soundManager?.playFishSound();
-        scene.events.emit('collectFish');
+        scene.events.emit('collectFish', fish);
 
         fish.destroy();
     });
