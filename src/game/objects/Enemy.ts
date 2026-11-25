@@ -311,6 +311,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.telegraphUntil = this.scene.runNow + GameConfig.ENEMY.TELEGRAPH.DURATION_MS;
         this.setVelocity(0, 0);
         this.scene.soundManager?.playEnemyAlert();
+        this.scene.fx?.alert(this);
     }
 
     // ------------------------------------------------------------------ update
@@ -752,6 +753,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
                     GameConfig.ENEMY.JUMP.COOLDOWN_MS * currentDifficulty().enemyJumpScale;
                 this.syncGroundVisuals();
                 this.play('enemyWalk', true);
+                this.scene.fx?.land(this);
             }
         });
     }

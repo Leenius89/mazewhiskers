@@ -26,6 +26,7 @@ import { SweatDrops } from '../systems/SweatDrops';
 import { CullingSystem } from '../systems/CullingSystem';
 import { SpriteStack, isStackEnabled } from '../systems/SpriteStack';
 import { StackGround } from '../systems/StackGround';
+import { PixelFx } from '../systems/PixelFx';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
 import { bodyCell, cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
@@ -226,6 +227,8 @@ export class GameScene extends Phaser.Scene {
     private stackGround: StackGround | null = null;
     private statusBar: PlayerStatusBar | null = null;
     private threat: ThreatFeedback | null = null;
+    /** Pixel effects, with `?stack`. Public: the cats and the towers call it. */
+    public fx: PixelFx | null = null;
 
     /**
      * The timer that charges rent. Also what the HUD counts down.
@@ -369,6 +372,7 @@ export class GameScene extends Phaser.Scene {
 
         this.barks = new BarkSystem(this);
         this.sweat = new SweatDrops(this);
+        this.fx = isStackEnabled() ? new PixelFx(this) : null;
         this.apartmentSystem = new ApartmentSystem(this, player, this.goal);
 
         // Towers are solid from Phase 1 on: the city actually closes in.
@@ -582,6 +586,7 @@ export class GameScene extends Phaser.Scene {
         this.soundManager?.playDyingSound();
         this.cameraDirector?.shakeFrom(this.player.x, this.player.groundY, hit.SHAKE, hit.SHAKE_MS);
         this.player.flashHit();
+        this.fx?.hit(this.player, enemy);
         this.barks?.hurt();
 
         // Hit-stop. A beat of frozen world is what turns a number going down
@@ -1226,6 +1231,7 @@ export class GameScene extends Phaser.Scene {
 
         this.sweat?.destroy();
         this.sweat = null;
+        this.fx = null;
 
         // Only the sounds need stopping — Phaser destroys the sprites with the
         // scene, and by the time this runs its plugins are already torn down.

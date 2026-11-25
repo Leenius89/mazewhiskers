@@ -594,6 +594,7 @@ export class ApartmentSystem {
         this.scene.time.delayedCall(GameConfig.APARTMENT.DUST_MS, () => {
             this.settleBlock(cells);
             this.scene.barks?.redevelopment();
+            this.scene.fx?.blockLanded(cells);
         });
 
         if (this.goal) {

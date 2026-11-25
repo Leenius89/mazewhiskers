@@ -645,6 +645,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
         this.isJumping = true;
         this.setVelocity(0, 0);
+        this.scene.fx?.takeOff(this);
 
         if (direction.x !== 0) this.setFlipX(direction.x < 0);
         this.facing.copy(direction);
@@ -698,7 +699,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.recoveryUntil = this.scene.runNow + GameConfig.PLAYER.JUMP.RECOVERY_MS;
         this.setVelocity(0);
 
-        this.spawnLandingDust();
+        if (this.scene.fx) this.scene.fx.land(this);
+        else this.spawnLandingDust();
         this.scene.cameraDirector?.shakeFrom(
             this.x,
             this.groundY,

@@ -55,7 +55,7 @@ export const createMilkItems = (
         scene.soundManager?.playFishSound();
 
         player.jumpCount++;
-        scene.events.emit('collectMilk');
+        scene.events.emit('collectMilk', milk);
 
         milk.destroy();
     });
