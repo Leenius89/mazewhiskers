@@ -3,7 +3,8 @@ import { GameConfig } from '../constants/GameConfig';
 import { DEPTH } from '../core/depth';
 import { TILE_UNIT } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
-import { drawPixelIce, isStackEnabled } from './SpriteStack';
+import { isStackEnabled } from './SpriteStack';
+import { drawPixelIce } from './StackGround';
 
 /**
  * The frozen streets, drawn flat on the road.

@@ -7,6 +7,8 @@ import { bodyCell, cellOf, hasClearWalk, isOpen, worldOf } from '../core/grid';
 import { axisOf, iceTakes, slideVelocity, turnOff } from '../core/ice';
 import type { Cell } from '../core/grid';
 import type { GameScene } from '../scenes/GameScene';
+import { isStackEnabled } from '../systems/SpriteStack';
+import { CONTACT_ALPHA, contactShadow } from '../systems/StackGround';
 
 // Hoisted: the route search visits thousands of cells, and this was five
 // fresh arrays for each. Same order as before, so ties break the same way.
@@ -32,7 +34,9 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
     public awareness: EnemyAwareness = 'chase';
 
     private readonly player: Phaser.Physics.Arcade.Sprite;
-    private shadow!: Phaser.GameObjects.Ellipse;
+    private shadow!: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Image;
+    /** How dark the shadow is with the cat on the ground. */
+    private readonly shadowAlpha = isStackEnabled() ? CONTACT_ALPHA : GameConfig.SHADOW.ALPHA;
     private cone!: Phaser.GameObjects.Graphics;
 
     /** Direction the headlight points; eased so it does not snap around. */
@@ -165,15 +169,19 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
         this.setScale(GameConfig.ENEMY.SCALE);
 
-        this.shadow = this.scene.add.ellipse(
-            this.x,
-            this.y,
-            GameConfig.SHADOW.ENEMY.WIDTH,
-            GameConfig.SHADOW.ENEMY.HEIGHT,
-            GameConfig.SHADOW.COLOR,
-            GameConfig.SHADOW.ALPHA
-        );
-        this.shadow.setDepth(DEPTH.GROUND);
+        // With `?stack`: a stepped pixel shadow sized to the stacked cat, over the pixel ice.
+        this.shadow = isStackEnabled()
+            ? contactShadow(this.scene, this.displayWidth)
+            : this.scene.add
+                  .ellipse(
+                      this.x,
+                      this.y,
+                      GameConfig.SHADOW.ENEMY.WIDTH,
+                      GameConfig.SHADOW.ENEMY.HEIGHT,
+                      GameConfig.SHADOW.COLOR,
+                      GameConfig.SHADOW.ALPHA
+                  )
+                  .setDepth(DEPTH.GROUND);
 
         // Under the actors but over the ground, so the beam reads as light on
         // the road rather than a shape floating above the city.
@@ -198,7 +206,7 @@ export class Enemy extends Phaser.Physics.Arcade.Sprite {
 
         const lift = Phaser.Math.Clamp(heightOffGround / GameConfig.ENEMY.JUMP.HEIGHT, 0, 1);
         this.shadow.setScale(1 - lift * 0.45);
-        this.shadow.setAlpha(GameConfig.SHADOW.ALPHA * (1 - lift * 0.55));
+        this.shadow.setAlpha(this.shadowAlpha * (1 - lift * 0.55));
     }
 
     /** Thrown away from a point — a tower landing beside it, usually. */

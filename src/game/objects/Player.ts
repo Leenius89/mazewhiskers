@@ -7,6 +7,8 @@ import type { Steering, Street } from '../core/steer';
 import { TILE_UNIT } from '../core/grid';
 import { DEPTH, sortDepth } from '../core/depth';
 import type { GameScene } from '../scenes/GameScene';
+import { isStackEnabled } from '../systems/SpriteStack';
+import { CONTACT_ALPHA, contactShadow } from '../systems/StackGround';
 
 const EIGHT_WAYS: ReadonlyArray<readonly [number, number]> = [
     [1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]
@@ -41,7 +43,9 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     private readonly speed: number = GameConfig.PLAYER.SPEED;
     private readonly goalIndicator: Phaser.GameObjects.Graphics;
     private readonly landingPreview: Phaser.GameObjects.Graphics;
-    private readonly shadow: Phaser.GameObjects.Ellipse;
+    private readonly shadow: Phaser.GameObjects.Ellipse | Phaser.GameObjects.Image;
+    /** How dark the shadow is with the cat on the ground. */
+    private readonly shadowAlpha = isStackEnabled() ? CONTACT_ALPHA : GameConfig.SHADOW.ALPHA;
 
     /** Facing used when a jump is taken with no direction held. */
     private readonly facing = new Phaser.Math.Vector2(1, 0);
@@ -120,15 +124,19 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         this.setOrigin(0.5, 1);
         this.setScale(GameConfig.PLAYER.SCALE);
 
-        this.shadow = scene.add.ellipse(
-            x,
-            y,
-            GameConfig.SHADOW.PLAYER.WIDTH,
-            GameConfig.SHADOW.PLAYER.HEIGHT,
-            GameConfig.SHADOW.COLOR,
-            GameConfig.SHADOW.ALPHA
-        );
-        this.shadow.setDepth(DEPTH.GROUND);
+        // With `?stack`: a stepped pixel shadow sized to the stacked cat, over the pixel ice.
+        this.shadow = isStackEnabled()
+            ? contactShadow(scene, this.displayWidth)
+            : scene.add
+                  .ellipse(
+                      x,
+                      y,
+                      GameConfig.SHADOW.PLAYER.WIDTH,
+                      GameConfig.SHADOW.PLAYER.HEIGHT,
+                      GameConfig.SHADOW.COLOR,
+                      GameConfig.SHADOW.ALPHA
+                  )
+                  .setDepth(DEPTH.GROUND);
 
         this.landingPreview = scene.add.graphics();
         this.landingPreview.setDepth(DEPTH.GROUND + 1);
@@ -450,7 +458,7 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
         // Shrinking and fading the shadow is what actually reads as height here.
         const lift = Phaser.Math.Clamp(heightOffGround / GameConfig.PLAYER.JUMP.HEIGHT, 0, 1);
         this.shadow.setScale(1 - lift * 0.45);
-        this.shadow.setAlpha(GameConfig.SHADOW.ALPHA * (1 - lift * 0.55));
+        this.shadow.setAlpha(this.shadowAlpha * (1 - lift * 0.55));
     }
 
     // ------------------------------------------------------------------ jump

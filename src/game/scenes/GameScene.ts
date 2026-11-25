@@ -25,6 +25,7 @@ import { BarkSystem } from '../systems/BarkSystem';
 import { SweatDrops } from '../systems/SweatDrops';
 import { CullingSystem } from '../systems/CullingSystem';
 import { SpriteStack, isStackEnabled } from '../systems/SpriteStack';
+import { StackGround } from '../systems/StackGround';
 import { PlayerStatusBar } from '../systems/PlayerStatusBar';
 import { bodyCell, cellOf, hasLineOfSight, openNeighbours, worldOf } from '../core/grid';
 import { sortDepth } from '../core/depth';
@@ -222,6 +223,7 @@ export class GameScene extends Phaser.Scene {
     private culling: CullingSystem | null = null;
     private stacks: SpriteStack | null = null;
     private flashlight: Flashlight | null = null;
+    private stackGround: StackGround | null = null;
     private statusBar: PlayerStatusBar | null = null;
     private threat: ThreatFeedback | null = null;
 
@@ -480,6 +482,12 @@ export class GameScene extends Phaser.Scene {
                 this.flashlight = new Flashlight(this, (gx, gy) => stacks.riseAt(gx, gy));
                 this.worldFog.lightWith(this.flashlight.hole);
             }
+            // The road and its shade. Under the torch there is no sun: see StackGround.
+            this.stackGround = new StackGround(this, this.stacks, {
+                maze: () => this.maze,
+                pickups: () => [...children(this.fishes), ...children(this.milks)],
+                sun: !this.flashlight
+            });
         }
 
         if (isDebugEnabled()) {
@@ -894,6 +902,7 @@ export class GameScene extends Phaser.Scene {
 
         this.cameraDirector?.update(this.controls.move);
         this.stacks?.update();
+        this.stackGround?.update();
         this.flashlight?.update();
 
         // After the actors move, so the silhouette matches this frame.
@@ -1208,6 +1217,8 @@ export class GameScene extends Phaser.Scene {
         this.apartmentSystem = null;
         this.flashlight?.destroy();
         this.flashlight = null;
+        this.stackGround?.destroy();
+        this.stackGround = null;
         this.stacks?.destroy();
         this.stacks = null;
         this.barks?.destroy();
